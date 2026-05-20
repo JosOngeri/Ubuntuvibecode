@@ -2,12 +2,14 @@ const dotenv = require('dotenv');
 const { connectDB } = require('./config/db');
 const app = require('./app');
 const { startKpiBonusProcessor } = require('./controllers/kpi.controller');
+// const { initScheduledJobs } = require('./jobs/index');
 
 dotenv.config();
 
 const startServer = async () => {
   await connectDB();
   startKpiBonusProcessor();
+  // initScheduledJobs(); // Disabled temporarily to fix issues
 
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

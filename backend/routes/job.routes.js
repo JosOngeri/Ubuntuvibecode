@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const jobController = require('../controllers/job.controller');
-const auth = require('../middleware/auth.middleware');
-const role = require('../middleware/roleMiddleware');
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 const upload = require('../middleware/cvUpload');
 
 // 3.4.1 Job Posting CRUD (protected)
@@ -30,6 +30,8 @@ router.delete('/:jobId/applicants/:appId', auth, role(['admin', 'manager', 'hr']
 // Applicant scoring
 router.post('/:id/score-applicants', auth, role(['admin', 'manager', 'hr']), jobController.scoreApplicants);
 router.post('/:id/filter-applicants', auth, role(['admin', 'manager', 'hr']), jobController.filterApplicants);
+router.post('/applications/reallocate-rating', auth, role(['admin', 'manager', 'hr']), jobController.reallocateRating);
+router.post('/applications/:applicationId/reverse-rating', auth, role(['admin', 'manager', 'hr']), jobController.reverseRating);
 
 // Interview and shortlist workflow
 router.post('/applications/:appId/shortlist', auth, role(['admin', 'manager', 'hr']), jobController.shortlistApplication);
@@ -43,5 +45,9 @@ router.post('/offers/negotiate', jobController.negotiateSalaryWithVerification);
 
 // Import application data to employee profile
 router.post('/applications/:appId/import-to-employee/:employeeId', auth, role(['admin', 'manager', 'hr']), jobController.importApplicationToEmployee);
+
+// Get applications by employee
+router.get('/applications/employee/:employeeId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByEmployee);
+router.get('/applications/applicant/:email', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByApplicant);
 
 module.exports = router;

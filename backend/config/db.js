@@ -171,6 +171,49 @@ const initDatabase = async () => {
     )
   `);
 
+  // Daily Labourers table
+  await query(`
+    CREATE TABLE IF NOT EXISTS daily_labourers (
+      id BIGSERIAL PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      id_number TEXT,
+      daily_rate NUMERIC(10,2) NOT NULL,
+      skills TEXT[],
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'converted')),
+      registered_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reasonable_payment_time_hours INTEGER DEFAULT 2,
+      calculated_at TIMESTAMPTZ,
+      urgency_level TEXT DEFAULT 'normal' CHECK (urgency_level IN ('normal', 'urgent', 'critical')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // Daily Attendance table for daily labourers
+  await query(`
+    CREATE TABLE IF NOT EXISTS daily_attendance (
+      id BIGSERIAL PRIMARY KEY,
+      labourer_id BIGINT NOT NULL REFERENCES daily_labourers(id) ON DELETE CASCADE,
+      date DATE NOT NULL,
+      check_in TIMESTAMPTZ,
+      check_out TIMESTAMPTZ,
+      status TEXT NOT NULL DEFAULT 'present' CHECK (status IN ('present', 'absent', 'late', 'early_leave')),
+      assigned_to TEXT,
+      assigned_contractor_id INTEGER,
+      assigned_milestone_id INTEGER,
+      wage_for_day NUMERIC(10,2),
+      approved BOOLEAN DEFAULT FALSE,
+      approved_at TIMESTAMPTZ,
+      approved_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      recorded_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (labourer_id, date)
+    )
+  `);
+
   // Recruitment: Jobs table
   await query(`
     CREATE TABLE IF NOT EXISTS jobs (
@@ -584,6 +627,63 @@ const initDatabase = async () => {
     FROM employees
     ON CONFLICT (employee_id, year) DO NOTHING
   `).catch(err => console.error('Failed to backfill leave balances:', err.message));
+
+  // Notifications table for automation
+  await query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      action_link TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'queued', 'sent', 'failed', 'read')),
+      channel TEXT NOT NULL CHECK (channel IN ('email', 'sms', 'in_app')),
+      sent_at TIMESTAMPTZ,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // Shift settings table for dynamic shift configuration
+  await query(`
+    CREATE TABLE IF NOT EXISTS shift_settings (
+      id BIGSERIAL PRIMARY KEY,
+      employment_type TEXT NOT NULL,
+      department TEXT,
+      shift_name TEXT NOT NULL,
+      start_time TIME NOT NULL,
+      end_time TIME NOT NULL,
+      is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // Add columns to payslips for automation
+  await query(`ALTER TABLE payslips ADD COLUMN IF NOT EXISTS urgency_level TEXT DEFAULT 'normal' CHECK (urgency_level IN ('normal', 'urgent', 'critical'))`);
+  await query(`ALTER TABLE payslips ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0`);
+  await query(`ALTER TABLE payslips ADD COLUMN IF NOT EXISTS last_retry_at TIMESTAMPTZ`);
+
+  // Add columns to employee_kpis for automation
+  await query(`ALTER TABLE employee_kpis ADD COLUMN IF NOT EXISTS due_date TIMESTAMPTZ`);
+
+  // Add columns to job_applications for ranking
+  await query(`ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS match_score NUMERIC(5,2) DEFAULT 0`);
+  await query(`ALTER TABLE job_applications ADD COLUMN IF NOT EXISTS ranking_breakdown JSONB`);
+
+  // Add columns to daily_labourers for wage urgency
+  await query(`ALTER TABLE daily_labourers ADD COLUMN IF NOT EXISTS reasonable_payment_time_hours INTEGER DEFAULT 2`);
+  await query(`ALTER TABLE daily_labourers ADD COLUMN IF NOT EXISTS calculated_at TIMESTAMPTZ`);
+  await query(`ALTER TABLE daily_labourers ADD COLUMN IF NOT EXISTS urgency_level TEXT DEFAULT 'normal' CHECK (urgency_level IN ('normal', 'urgent', 'critical'))`);
+
+  // Insert default shift settings for daily labourers
+  await query(`
+    INSERT INTO shift_settings (employment_type, department, shift_name, start_time, end_time, is_default)
+    VALUES ('Daily', NULL, 'Morning', '08:00:00', '13:00:00', TRUE),
+           ('Daily', NULL, 'Afternoon', '14:00:00', '18:00:00', FALSE)
+    ON CONFLICT DO NOTHING
+  `).catch(err => console.error('Failed to insert default shift settings:', err.message));
 };
 
 const connectDB = async () => {

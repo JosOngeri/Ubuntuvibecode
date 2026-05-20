@@ -133,7 +133,8 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-ubuntu-brown-dark dark:text-ubuntu-tan">Dark Mode</label>
                 <button
-                  onClick={() => setDarkMode(!darkMode)}
+                  onClick={handleDarkModeToggle}
+                  disabled={loading}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                     darkMode ? 'bg-ubuntu-brown' : 'bg-ubuntu-orange'
                   }`}
@@ -148,7 +149,8 @@ const Settings = () => {
                 <label className="text-sm font-medium text-ubuntu-brown-dark dark:text-ubuntu-tan">Language</label>
                 <select 
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  disabled={loading}
                   className="px-3 py-2 rounded-lg border border-ubuntu-tan dark:border-ubuntu-sienna bg-ubuntu-cream dark:bg-ubuntu-brown text-ubuntu-brown-dark dark:text-ubuntu-cream"
                 >
                   <option value="en">English</option>
@@ -159,7 +161,8 @@ const Settings = () => {
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-ubuntu-brown-dark dark:text-ubuntu-tan">Notifications</label>
                 <button
-                  onClick={() => setNotifications(!notifications)}
+                  onClick={handleNotificationsToggle}
+                  disabled={loading}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                     notifications ? 'bg-ubuntu-brown' : 'bg-gray-300'
                   }`}

@@ -152,4 +152,15 @@ export const contractorAPI = {
   getReports: (type) => api.get('/api/contractors/reports', { params: { type } }),
 }
 
+// Job Applications
+export const jobApplicationAPI = {
+  getByEmployeeId: (employeeId) => api.get(`/api/job-applications/employee/${employeeId}`),
+  getByApplicantEmail: (email) => api.get(`/api/job-applications/applicant/${email}`),
+}
+
+// Complaints
+export const complaintAPI = {
+  getByEmployee: (employeeId) => api.get(`/api/complaints/employee/${employeeId}`),
+}
+
 export default api

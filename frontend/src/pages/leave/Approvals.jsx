@@ -161,7 +161,7 @@ export default function LeaveApprovals() {
                     <tr key={leave.id} className="align-top">
                       <td className="px-4 py-4 text-slate-950 dark:text-white">
                         <button
-                          onClick={() => navigate(`/admin/employee-profile/${leave.employee_id}`)}
+                          onClick={() => navigate(`/admin/employees/${leave.employee_id}`)}
                           className="text-blue-500 hover:text-blue-700 hover:underline font-medium"
                         >
                           {employeeNameMap[String(leave.employee_id)] || leave.employee_name || `Employee ${leave.employee_id}`}

@@ -1,5 +1,7 @@
 const DailyLabourer = require('../models/DailyLabourer.model');
 const DailyAttendance = require('../models/DailyAttendance.model');
+const { sendUrgentNotification, NOTIFICATION_TYPES } = require('../utils/notification');
+const { query } = require('../config/db');
 
 // Daily Labourer CRUD
 exports.getAll = async (req, res) => {
@@ -149,6 +151,91 @@ exports.getWageSummary = async (req, res) => {
       summary[id].totalWage += r.wageForDay || r.labourerId?.dailyRate || 0;
     });
     res.json({ summary: Object.values(summary), totalRecords: records.length });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Batch approve wages
+exports.batchApproveWages = async (req, res) => {
+  try {
+    const { wageIds } = req.body;
+    if (!wageIds || !Array.isArray(wageIds) || wageIds.length === 0) {
+      return res.status(400).json({ msg: 'wageIds array is required' });
+    }
+
+    const results = [];
+    for (const wageId of wageIds) {
+      try {
+        const record = await DailyAttendance.findByIdAndUpdate(
+          wageId,
+          { approved: true, approvedAt: new Date(), approvedBy: req.user.id },
+          { new: true }
+        );
+        if (record) {
+          results.push({ id: wageId, status: 'approved' });
+        } else {
+          results.push({ id: wageId, status: 'not_found' });
+        }
+      } catch (err) {
+        results.push({ id: wageId, status: 'error', error: err.message });
+      }
+    }
+
+    res.json({ approved: results.filter(r => r.status === 'approved').length, results });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Get urgent wages
+exports.getUrgentWages = async (req, res) => {
+  try {
+    const { rows } = await query(
+      `SELECT da.*, dl.first_name, dl.last_name, dl.daily_rate
+       FROM daily_attendance da
+       JOIN daily_labourers dl ON dl.id = da.labourer_id
+       WHERE dl.urgency_level = 'urgent'
+         AND dl.calculated_at IS NOT NULL
+       ORDER BY dl.calculated_at DESC`
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+// Update wage urgency
+exports.updateWageUrgency = async (req, res) => {
+  try {
+    const { labourerId, urgencyLevel } = req.body;
+    
+    await query(
+      `UPDATE daily_labourers 
+       SET urgency_level = $1, calculated_at = NOW() 
+       WHERE id = $2`,
+      [urgencyLevel, labourerId]
+    );
+
+    // If urgent, send notifications to managers and admin
+    if (urgencyLevel === 'urgent') {
+      const { rows: managers } = await query(
+        `SELECT u.id FROM users u WHERE u.role IN ('manager', 'admin') AND u.status = 'active'`
+      );
+      
+      for (const manager of managers) {
+        await sendUrgentNotification({
+          userId: manager.id,
+          type: NOTIFICATION_TYPES.WAGE_URGENT,
+          title: 'Urgent: Daily Labour Wages Pending',
+          message: 'Daily labour wages need approval and payment.',
+          actionLink: '/admin/daily-labour',
+          channels: ['sms', 'in_app'],
+        });
+      }
+    }
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }

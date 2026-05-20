@@ -242,7 +242,7 @@ const Employees = () => {
       sortable: true,
       render: (_, row) => (
         <button
-          onClick={() => navigate(`/admin/employee-profile/${row.id || row._id}`)}
+          onClick={() => navigate(`/admin/employees/${row.id || row._id}`)}
           className="text-blue-500 hover:text-blue-700 hover:underline font-medium flex items-center gap-2"
         >
           <BsPerson size={14} />
@@ -281,7 +281,7 @@ const Employees = () => {
 
         return (
           <div className="flex gap-2">
-            <Button size="sm" variant="primary" onClick={() => navigate(`/admin/employee-profile/${rowId}`)}>View Details</Button>
+            <Button size="sm" variant="primary" onClick={() => navigate(`/admin/employees/${rowId}`)}>View Details</Button>
             {canManageEmployees && (
               <button className="btn-icon edit" onClick={() => openEditModal(row)} title="Edit">
                 <BsPencil size={16} />

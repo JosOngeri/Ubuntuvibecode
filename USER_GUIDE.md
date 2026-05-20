@@ -19,6 +19,7 @@
 16. [Contractor Management](#contractor-management)
 17. [Report Generation](#report-generation)
 18. [Settings](#settings)
+19. [Automation Features](#automation-features)
 
 ---
 
@@ -1342,6 +1343,154 @@ For technical support or questions:
 - Report suspicious activity
 - Keep contact information updated
 - Use strong passwords
+
+---
+
+## Automation Features
+
+The Ubuntu HRMS includes comprehensive automation features to streamline HR workflows and reduce manual intervention. These features leverage SMS notifications, scheduled jobs, and intelligent processing to improve efficiency.
+
+### Notification System
+
+The system supports multi-channel notifications via:
+- **SMS**: Using Blessed Text API for urgent notifications
+- **Email**: SMTP-based email notifications
+- **In-App**: Real-time in-app notifications with action links
+
+#### Notification Center
+- Access via bell icon in the navigation bar
+- Shows unread notification count
+- Filter by type: All, Urgent, Normal
+- Mark individual or all notifications as read
+- Action buttons for quick responses (approve/reject/escalate)
+
+### Automated Workflows
+
+#### Leave Management Automation
+- **Escalation**: Pending leave requests > 3 days are escalated to admin
+- **Reminders**: SMS reminders sent 1 day before leave start date
+- **Tagging**: Leave requests are tagged as urgent for priority handling
+- **No Auto-Approval**: All leave requests require human approval for compliance
+
+#### Daily Labour Wage Urgency
+- **Automatic Urgency Marking**: Wages become urgent after reasonable payment time (default 2 hours)
+- **Batch Approval**: Admin can approve multiple wages simultaneously
+- **SMS Alerts**: Managers and admins receive SMS notifications when wages become urgent
+- **Escalation**: Urgent wages > 2 hours are escalated with priority notifications
+
+#### KPI Assessment Automation
+- **Due Date Reminders**: Evaluators receive reminders 3 days before KPI due date
+- **Overdue Escalation**: Overdue KPIs are escalated to the evaluator's manager
+- **Reasonable Timeframes**: Due dates are set based on assessment period and complexity
+
+#### Recruitment Candidate Ranking
+- **Automatic Scoring**: Candidates are ranked based on criteria matching:
+  - Skills (0-100%): Match between required and applicant skills
+  - Experience (0-100%): Years of experience vs. required experience
+  - Education (0-100%): Match between required and applicant education
+  - Location (0-100%): Location proximity matching
+- **Overall Score**: Average of all criteria scores
+- **Breakdown Report**: Shows how each criterion contributed to the final score
+- **Manual Override**: Managers can reallocate ratings with reasons
+- **Reverse Rating**: Managers can revert to automatic scoring
+
+#### Payroll Automation
+- **Auto-Retry**: Failed payments are retried with exponential backoff (1 min, 5 min, 30 min, 2 hours)
+- **Urgency Levels**: Payslips marked as:
+  - Normal: Default status
+  - Urgent: Pending > 30 minutes
+  - Critical: Pending > 2 hours
+- **SMS Alerts**: Admins receive notifications for urgent and critical payments
+- **Batch Generation**: Admin can generate draft payslips for all employees in one operation
+
+#### Contract Management Automation
+- **Expiry Alerts**:
+  - 30 days before: Reminder to manager
+  - 7 days before: Urgent alert to manager and admin
+  - Expired: Critical alert to admin with action link
+- **Renewal Notifications**: Automatic reminders for contract renewals
+
+#### Complaint Escalation
+- **Open Complaints**: Escalated to admin if pending > 3 days
+- **Long-Running**: Escalated if in progress > 7 days
+- **Closure Reminders**: Reminders to close resolved complaints > 14 days
+
+### Dynamic Shift Settings
+
+Admins can configure shift times per employment type and department:
+- **Access**: Settings → Shift Settings
+- **Configuration**:
+  - Employment Type (e.g., Daily, Permanent, Contract)
+  - Department (optional)
+  - Shift Name (e.g., Morning, Afternoon, Night)
+  - Start Time and End Time
+  - Default flag for primary shifts
+- **Default Shifts**:
+  - Daily Labourers: Morning (8:00 AM - 1:00 PM), Afternoon (2:00 PM - 6:00 PM)
+- **Usage**: Shift times are used for automatic attendance shift detection
+
+### Scheduled Jobs
+
+The system runs automated jobs on the following schedule:
+- **8:00 AM Daily**: KPI reminder checks
+- **9:00 AM Daily**: Leave escalation checks
+- **10:00 AM Daily**: Complaint escalation checks
+- **7:00 AM Daily**: Contract expiry checks
+- **Every 30 Minutes**: Daily labour wage urgency checks
+- **Every 5 Minutes**: Payroll retry checks
+- **8:00 AM & 6:00 PM**: Batch notification processing
+
+### Configuration Requirements
+
+To enable SMS notifications, configure the following environment variables:
+```
+BLESSED_TEXT_API_KEY=your_api_key
+BLESSED_TEXT_SENDER_ID=23107
+```
+
+### Best Practices for Automation
+
+#### For Admins
+- Monitor notification center regularly for urgent items
+- Review escalated items promptly to prevent delays
+- Keep shift settings updated for accurate attendance tracking
+- Use batch approval features for efficiency
+- Review candidate rankings before making hiring decisions
+
+#### For Managers
+- Respond to SMS notifications promptly
+- Use action links for quick approvals/rejections
+- Check notification center daily
+- Review wage urgency alerts to ensure timely payments
+- Provide reasons when manually reallocating ratings
+
+#### For Employees
+- Keep phone numbers updated for SMS notifications
+- Check notification center for pending items
+- Respond to urgent requests promptly
+- Review KPI due date reminders
+
+### Troubleshooting
+
+#### SMS Not Working
+- Verify API key in environment variables
+- Check SMS credit balance
+- Ensure phone numbers are in correct format (2547XXXXXXXXX)
+
+#### Notifications Not Appearing
+- Refresh the page to load new notifications
+- Check notification filters (All/Urgent/Normal)
+- Verify user permissions for notification types
+
+#### Escalation Not Triggering
+- Check scheduled jobs are running
+- Verify timeframes in job configuration
+- Review server logs for errors
+
+#### Shift Detection Issues
+- Verify shift settings are configured
+- Check employee employment type and department
+- Ensure shift times cover the current time
 
 ---
 

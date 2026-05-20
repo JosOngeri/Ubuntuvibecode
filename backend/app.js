@@ -69,6 +69,9 @@ app.use('/api/assets', require('./routes/asset.routes'));
 // Settings and configuration
 app.use('/api/settings', require('./routes/settings.routes'));
 
+// Notifications
+app.use('/api/notifications', require('./routes/notification.routes'));
+
 // Job advertisements
 app.use('/api/advertisements', require('./routes/advertisement.routes'));
 

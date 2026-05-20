@@ -14,9 +14,13 @@ const {
   updateOfficeLocation,
   updateEmployeeAttendancePermission,
   getEmployeesAttendanceStatus,
+  getShiftSettings,
+  createShiftSetting,
+  updateShiftSetting,
+  deleteShiftSetting,
 } = require('../controllers/settings.controller');
-const auth = require('../middleware/auth.middleware');
-const roleMiddleware = require('../middleware/roleMiddleware');
+const auth = require('../middleware/auth');
+const roleMiddleware = require('../middleware/role');
 
 // All settings routes require authentication
 router.use(auth);
@@ -49,5 +53,13 @@ router.put('/location/office', roleMiddleware(['admin']), updateOfficeLocation);
  */
 router.get('/attendance/employees', roleMiddleware(['admin']), getEmployeesAttendanceStatus);
 router.put('/attendance/employee/:employeeId', roleMiddleware(['admin']), updateEmployeeAttendancePermission);
+
+/**
+ * Shift Settings endpoints (admin only)
+ */
+router.get('/shifts', roleMiddleware(['admin']), getShiftSettings);
+router.post('/shifts', roleMiddleware(['admin']), createShiftSetting);
+router.put('/shifts/:id', roleMiddleware(['admin']), updateShiftSetting);
+router.delete('/shifts/:id', roleMiddleware(['admin']), deleteShiftSetting);
 
 module.exports = router;

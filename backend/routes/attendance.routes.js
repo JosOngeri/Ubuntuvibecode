@@ -1,6 +1,6 @@
 const express = require('express');
-const auth = require('../middleware/auth.middleware');
-const roleMiddleware = require('../middleware/roleMiddleware');
+const auth = require('../middleware/auth');
+const roleMiddleware = require('../middleware/role');
 const {
 	pushBiometric,
 	manualSelfPunch,

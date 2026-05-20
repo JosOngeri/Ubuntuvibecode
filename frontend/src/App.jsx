@@ -42,7 +42,7 @@ import AdminUsers from './pages/admin/Users';
 import Permissions from './pages/admin/Permissions';
 import AdminSettings from './pages/admin/Settings';
 import UserDetail from './pages/admin/UserDetail';
-import EmployeeDetail from './pages/admin/EmployeeDetail';
+import EmployeeDetail from './pages/admin/EmployeeProfile';
 
 // Manager & Employee Pages
 import ManagerDashboard from './pages/manager/Dashboard';
@@ -111,7 +111,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />

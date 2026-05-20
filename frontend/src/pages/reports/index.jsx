@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import DateDropdown from '../../components/common/DateDropdown'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
+import { useAuth } from '../../contexts/AuthContext'
 import { BsGraphUp, BsPeople, BsCalendarCheck, BsCash, BsClock, BsDownload } from 'react-icons/bs'
 
 const REPORT_TYPES = [
@@ -21,6 +22,7 @@ const REPORT_TYPES = [
 
 export default function ReportsPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [type, setType] = useState('attendance')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -28,6 +30,21 @@ export default function ReportsPage() {
   const [fromDate, setFromDate] = useState(null)
   const [toDate, setToDate] = useState(null)
   const [dept, setDept] = useState('all')
+
+  const getRouteForReportType = (reportType) => {
+    const role = user?.role || 'admin'
+    const routes = {
+      attendance: role === 'admin' ? '/admin/attendance' : role === 'manager' || role === 'supervisor' ? '/manager/attendance' : '/employee/attendance',
+      leave: role === 'admin' ? '/admin/leaves' : role === 'manager' || role === 'supervisor' ? '/manager/leaves' : '/employee/leaves',
+      payroll: role === 'admin' ? '/admin/payroll' : '/payroll/disburse',
+      kpi: role === 'admin' ? '/admin/kpis' : '/kpi/manage',
+      employee: '/admin/employees',
+      recruitment: '/recruitment/jobs',
+      complaints: '/admin/complaints',
+      'daily-labour': '/admin/daily-labour',
+    }
+    return routes[reportType] || '/'
+  }
 
   const fetchReport = async () => {
     setLoading(true)
@@ -139,7 +156,7 @@ export default function ReportsPage() {
       ) : data?.summary ? (
         <div className="grid grid-cols-4 gap-4 mb-6">
           {Object.entries(data.summary).map(([k, v]) => (
-            <Card key={k} className="cursor-pointer hover:shadow-lg transition-shadow duration-200" onClick={() => navigate(`/${type.toLowerCase()}`)}>
+            <Card key={k} className="cursor-pointer hover:shadow-lg transition-shadow duration-200" onClick={() => navigate(getRouteForReportType(type))}>
               <div className="stat-card">
                 <span className="stat-label">{k.replace(/([A-Z])/g, ' $1').trim()}</span>
                 <span className="stat-value">{typeof v === 'number' ? v.toLocaleString() : v}</span>

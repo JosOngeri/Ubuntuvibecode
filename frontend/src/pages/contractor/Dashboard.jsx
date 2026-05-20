@@ -61,122 +61,135 @@ const ContractorDashboard = () => {
 
   return (
     <DashboardLayout>
-      <div className="page-header">
-        <h1 className="page-title">Contractor Dashboard</h1>
-        <p className="page-subtitle">Manage your projects, track earnings, and monitor deliverables.</p>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Contractor Dashboard</h1>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Active Projects */}
-        <div 
-          onClick={() => goTo('/contractor/projects')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsBriefcase size={28} /></div>
+      {/* Stat Cards Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { window.scrollTo(0, 0); goTo('/contractor/projects'); }}>
+          <div className="flex items-center justify-between mb-2">
+            <BsBriefcase size={24} />
             <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Active</span>
           </div>
           <div className="text-3xl font-bold">{stats.activeProjects}</div>
-          <h3 className="text-sm font-medium text-blue-100 mt-1">Active Projects</h3>
-          <p className="text-xs text-blue-200 mt-2">Click to manage →</p>
+          <div className="text-sm text-teal-100 mt-1">Active Projects</div>
+          <div className="text-xs text-teal-200 mt-2">Manage →</div>
         </div>
 
-        {/* Pending Invoices */}
-        <div 
-          onClick={() => goTo('/contractor/invoices')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsFileEarmarkText size={28} /></div>
+        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { window.scrollTo(0, 0); goTo('/contractor/invoices'); }}>
+          <div className="flex items-center justify-between mb-2">
+            <BsFileEarmarkText size={24} />
             <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Pending</span>
           </div>
           <div className="text-3xl font-bold">{stats.pendingInvoices}</div>
-          <h3 className="text-sm font-medium text-amber-100 mt-1">Pending Invoices</h3>
-          <p className="text-xs text-amber-200 mt-2">Click to view →</p>
+          <div className="text-sm text-green-100 mt-1">Pending Invoices</div>
+          <div className="text-xs text-green-200 mt-2">View →</div>
         </div>
 
-        {/* Delivery Rate */}
-        <div 
-          onClick={() => goTo('/contractor/reports')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsGraphUp size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">On time</span>
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { window.scrollTo(0, 0); goTo('/contractor/reports'); }}>
+          <div className="flex items-center justify-between mb-2">
+            <BsGraphUp size={24} />
+            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Rate</span>
           </div>
           <div className="text-3xl font-bold">{stats.deliveryRate}%</div>
-          <h3 className="text-sm font-medium text-emerald-100 mt-1">Delivery Rate</h3>
-          <p className="text-xs text-emerald-200 mt-2">Click for reports →</p>
+          <div className="text-sm text-amber-100 mt-1">Delivery Rate</div>
+          <div className="text-xs text-amber-200 mt-2">Reports →</div>
         </div>
 
-        {/* Total Earnings */}
-        <div 
-          onClick={() => goTo('/contractor/invoices')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsCurrencyDollar size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Lifetime</span>
+        <div className="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl p-5 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { window.scrollTo(0, 0); goTo('/contractor/invoices'); }}>
+          <div className="flex items-center justify-between mb-2">
+            <BsCurrencyDollar size={24} />
+            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Total</span>
           </div>
           <div className="text-3xl font-bold">KES {stats.totalEarnings?.toLocaleString() || 0}</div>
-          <h3 className="text-sm font-medium text-teal-100 mt-1">Total Earnings</h3>
-          <p className="text-xs text-teal-200 mt-2">Click to view →</p>
+          <div className="text-sm text-red-100 mt-1">Total Earnings</div>
+          <div className="text-xs text-red-200 mt-2">View →</div>
+        </div>
+      </div>
+
+      {/* Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Projects Table */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900">Recent Projects</h3>
+              <button onClick={() => { window.scrollTo(0, 0); goTo('/contractor/projects'); }} className="text-sm text-blue-600 hover:text-blue-700 font-medium">View All →</button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg"><BsBriefcase size={18} className="text-blue-600" /></div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Website Development</div>
+                    <div className="text-xs text-slate-500">Due in 5 days</div>
+                  </div>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">In Progress</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 rounded-lg"><BsBriefcase size={18} className="text-purple-600" /></div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Mobile App UI</div>
+                    <div className="text-xs text-slate-500">Due in 2 weeks</div>
+                  </div>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Pending</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg"><BsBriefcase size={18} className="text-green-600" /></div>
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Database Migration</div>
+                    <div className="text-xs text-slate-500">Completed</div>
+                  </div>
+                </div>
+                <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-800">Done</span>
+              </div>
+            </div>
+          </Card>
         </div>
 
-        {/* Upcoming Deadlines */}
-        <div 
-          onClick={() => goTo('/contractor/projects')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-red-500 to-red-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsCalendarCheck size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">7 days</span>
-          </div>
-          <div className="text-3xl font-bold">{stats.upcomingDeadlines}</div>
-          <h3 className="text-sm font-medium text-red-100 mt-1">Upcoming Deadlines</h3>
-          <p className="text-xs text-red-200 mt-2">Click to view →</p>
-        </div>
+        {/* Quick Actions Panel */}
+        <div>
+          <Card className="h-full">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h3>
+            <div className="space-y-2">
+              <button onClick={() => { window.scrollTo(0, 0); goTo('/contractor/portal'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-left">
+                <div className="p-2 bg-blue-100 rounded-lg"><BsCheckCircle size={18} className="text-blue-600" /></div>
+                <div>
+                  <div className="text-sm font-medium text-slate-900">Submit Milestone</div>
+                  <div className="text-xs text-slate-500">Upload deliverables</div>
+                </div>
+              </button>
 
-        {/* Completed Projects */}
-        <div 
-          onClick={() => goTo('/contractor/projects')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-green-500 to-green-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsCheckCircle size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Done</span>
-          </div>
-          <div className="text-3xl font-bold">{stats.completedProjects}</div>
-          <h3 className="text-sm font-medium text-green-100 mt-1">Completed Projects</h3>
-          <p className="text-xs text-green-200 mt-2">Click to view →</p>
-        </div>
+              <button onClick={() => { window.scrollTo(0, 0); goTo('/contractor/invoices'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-left">
+                <div className="p-2 bg-amber-100 rounded-lg"><BsFileEarmarkText size={18} className="text-amber-600" /></div>
+                <div>
+                  <div className="text-sm font-medium text-slate-900">View Invoices</div>
+                  <div className="text-xs text-slate-500">{stats.pendingInvoices} pending</div>
+                </div>
+              </button>
 
-        {/* Average Rating */}
-        <div 
-          onClick={() => goTo('/contractor/portal')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsPerson size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Rating</span>
-          </div>
-          <div className="text-3xl font-bold">{stats.averageRating}/5</div>
-          <h3 className="text-sm font-medium text-purple-100 mt-1">Average Rating</h3>
-          <p className="text-xs text-purple-200 mt-2">Click for profile →</p>
-        </div>
+              <button onClick={() => { window.scrollTo(0, 0); goTo('/contractor/reports'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-left">
+                <div className="p-2 bg-purple-100 rounded-lg"><BsGraphUp size={18} className="text-purple-600" /></div>
+                <div>
+                  <div className="text-sm font-medium text-slate-900">My KPI</div>
+                  <div className="text-xs text-slate-500">Performance metrics</div>
+                </div>
+              </button>
 
-        {/* Pending Payments */}
-        <div 
-          onClick={() => goTo('/contractor/invoices')}
-          className="cursor-pointer rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 text-white p-6 shadow-lg hover:scale-[1.03] hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-white/20 rounded-xl"><BsClockHistory size={28} /></div>
-            <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Awaiting</span>
-          </div>
-          <div className="text-3xl font-bold">KES {stats.pendingPayments?.toLocaleString() || 0}</div>
-          <h3 className="text-sm font-medium text-orange-100 mt-1">Pending Payments</h3>
-          <p className="text-xs text-orange-200 mt-2">Click to view →</p>
+              <button onClick={() => { window.scrollTo(0, 0); goTo('/contractor/projects'); }} className="w-full flex items-center gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-left">
+                <div className="p-2 bg-teal-100 rounded-lg"><BsBriefcase size={18} className="text-teal-600" /></div>
+                <div>
+                  <div className="text-sm font-medium text-slate-900">My Projects</div>
+                  <div className="text-xs text-slate-500">{stats.activeProjects} active</div>
+                </div>
+              </button>
+            </div>
+          </Card>
         </div>
       </div>
     </DashboardLayout>

@@ -508,6 +508,132 @@ const getEmployeesAttendanceStatus = async (req, res) => {
   }
 };
 
+/**
+ * Get all shift settings
+ */
+const getShiftSettings = async (req, res) => {
+  try {
+    const { employment_type, department } = req.query;
+    
+    let queryStr = 'SELECT * FROM shift_settings WHERE 1=1';
+    const params = [];
+    let paramIndex = 1;
+    
+    if (employment_type) {
+      queryStr += ` AND employment_type = $${paramIndex}`;
+      params.push(employment_type);
+      paramIndex++;
+    }
+    
+    if (department) {
+      queryStr += ` AND department = $${paramIndex}`;
+      params.push(department);
+      paramIndex++;
+    }
+    
+    queryStr += ' ORDER BY employment_type, department, shift_name';
+    
+    const result = await query(queryStr, params);
+    
+    res.status(200).json({
+      msg: 'Shift settings retrieved successfully',
+      shift_settings: result.rows,
+    });
+  } catch (err) {
+    console.error('Error fetching shift settings:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Create shift setting
+ */
+const createShiftSetting = async (req, res) => {
+  try {
+    const { employment_type, department, shift_name, start_time, end_time, is_default } = req.body;
+    
+    if (!employment_type || !shift_name || !start_time || !end_time) {
+      return res.status(400).json({ msg: 'employment_type, shift_name, start_time, and end_time are required' });
+    }
+    
+    const result = await query(
+      `INSERT INTO shift_settings (employment_type, department, shift_name, start_time, end_time, is_default, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+       RETURNING *`,
+      [employment_type, department || null, shift_name, start_time, end_time, is_default || false]
+    );
+    
+    res.status(201).json({
+      msg: 'Shift setting created successfully',
+      shift_setting: result.rows[0],
+    });
+  } catch (err) {
+    console.error('Error creating shift setting:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Update shift setting
+ */
+const updateShiftSetting = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { employment_type, department, shift_name, start_time, end_time, is_default } = req.body;
+    
+    const result = await query(
+      `UPDATE shift_settings 
+       SET employment_type = COALESCE($1, employment_type),
+           department = COALESCE($2, department),
+           shift_name = COALESCE($3, shift_name),
+           start_time = COALESCE($4, start_time),
+           end_time = COALESCE($5, end_time),
+           is_default = COALESCE($6, is_default),
+           updated_at = NOW()
+       WHERE id = $7
+       RETURNING *`,
+      [employment_type, department, shift_name, start_time, end_time, is_default, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ msg: 'Shift setting not found' });
+    }
+    
+    res.status(200).json({
+      msg: 'Shift setting updated successfully',
+      shift_setting: result.rows[0],
+    });
+  } catch (err) {
+    console.error('Error updating shift setting:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Delete shift setting
+ */
+const deleteShiftSetting = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await query(
+      `DELETE FROM shift_settings WHERE id = $1 RETURNING *`,
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ msg: 'Shift setting not found' });
+    }
+    
+    res.status(200).json({
+      msg: 'Shift setting deleted successfully',
+    });
+  } catch (err) {
+    console.error('Error deleting shift setting:', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
 module.exports = {
   getSettings,
   getSettingsByCategory,
@@ -522,4 +648,8 @@ module.exports = {
   updateOfficeLocation,
   updateEmployeeAttendancePermission,
   getEmployeesAttendanceStatus,
+  getShiftSettings,
+  createShiftSetting,
+  updateShiftSetting,
+  deleteShiftSetting,
 };

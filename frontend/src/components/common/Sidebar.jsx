@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import headerImage from '../../assets/ubuntu-header-hrms.png'
 import {
   BsSpeedometer2,
   BsPeople,
@@ -19,16 +20,17 @@ import {
   BsBriefcase,
   BsBox,
   BsFileEarmarkText,
-  BsBullseye,       // ✅ replace BsTarget
+  BsBullseye,
   BsCloudUpload,
   BsChevronLeft,
   BsChevronRight,
-  BsChevronDown
+  BsChevronDown,
+  BsBoxArrowRight
 } from 'react-icons/bs'
 
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const role = user?.role
   const [collapsedGroups, setCollapsedGroups] = useState({})
 
@@ -37,6 +39,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       ...prev,
       [title]: !prev[title]
     }))
+  }
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = '/'
   }
 
   const getMenuGroups = () => {
@@ -301,22 +308,29 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         />
       )}
       
-      <aside className={`fixed lg:static left-0 top-16 h-[calc(100vh-64px)] ${isCollapsed ? 'w-20' : 'w-64'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 transform transition-all duration-300 z-40 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+      <aside className={`fixed lg:static left-0 top-16 h-[calc(100vh-64px)] ${isCollapsed ? 'w-20' : 'w-64'} bg-[#1a1a2e] border-r border-slate-800 transform transition-all duration-300 z-40 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        {/* Logo at top */}
+        {!isCollapsed && (
+          <div className="p-4 border-b border-slate-700">
+            <img
+              src={headerImage}
+              alt="Ubuntu HRMS"
+              className="h-8 w-auto object-contain brightness-0 invert"
+            />
+          </div>
+        )}
+        
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-hide">
-          <nav className="flex flex-col gap-4 px-3">
+          <nav className="flex flex-col gap-1 px-3">
             {menuGroups.map((group, groupIdx) => (
-              <div key={groupIdx} className="flex flex-col gap-1">
-                {!isCollapsed && (
-                  <button 
-                    onClick={() => toggleGroup(group.title)}
-                    className="flex items-center justify-between w-full px-3 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-                  >
-                    <span>{group.title}</span>
-                    {collapsedGroups[group.title] ? <BsChevronRight size={12} /> : <BsChevronDown size={12} />}
-                  </button>
+              <div key={groupIdx} className="flex flex-col">
+                {/* Subtle section divider */}
+                {!isCollapsed && groupIdx > 0 && (
+                  <div className="border-t border-slate-700 my-3 mx-2" />
                 )}
-                {isCollapsed && groupIdx > 0 && <div className="border-t border-slate-200 dark:border-slate-700 my-1 mx-2" />}
-                {(!collapsedGroups[group.title] || isCollapsed) && group.items.map((item) => {
+                
+                {/* Items */}
+                {group.items.map((item) => {
                   const Icon = item.icon;
                   return (
                     <NavLink
@@ -324,8 +338,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                       to={item.path}
                       className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-200 ${
                         isActive
-                          ? 'bg-primary dark:bg-primary-dark text-white'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                          ? 'bg-orange-500 text-white'
+                          : 'text-slate-300 hover:bg-slate-800'
                       }`}
                       onClick={onClose}
                       title={isCollapsed ? item.label : undefined}
@@ -339,10 +353,23 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             ))}
           </nav>
         </div>
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end hidden lg:flex">
+        
+        {/* Logout button at bottom */}
+        <div className="p-4 border-t border-slate-700">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-slate-300 hover:bg-red-600 hover:text-white transition-colors"
+          >
+            <BsBoxArrowRight size={20} />
+            {!isCollapsed && <span className="font-medium">Logout</span>}
+          </button>
+        </div>
+        
+        {/* Collapse toggle */}
+        <div className="p-2 border-t border-slate-700 flex justify-center hidden lg:flex">
           <button 
             onClick={onToggleCollapse} 
-            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors flex items-center justify-center w-full"
+            className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white transition-colors flex items-center justify-center w-full"
             title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
             {isCollapsed ? <BsChevronRight size={18} /> : <BsChevronLeft size={18} />}

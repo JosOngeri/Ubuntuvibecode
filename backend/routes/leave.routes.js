@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const leaveController = require('../controllers/leave.controller');
-const auth = require('../middleware/auth.middleware');
+const auth = require('../middleware/auth');
 const upload = require('../middleware/leaveUpload');
 
 router.post('/request', auth, upload.single('attachment'), leaveController.requestLeave);

@@ -586,93 +586,162 @@ const jobController = {
       if (!job) return res.status(404).json({ msg: 'Job not found' });
 
       const applications = await JobApplication.findByJob(req.params.id);
-      const evalParams = job.evaluationParams || {};
-      const keywords = evalParams.keywords || [];
-      const criteria = evalParams.criteria || [];
+      const jobRequirements = job.requirements || '';
+      const jobSkills = job.skills || [];
+      const jobLocation = job.location || '';
+      const jobEducation = job.education || '';
+      const jobExperience = job.experience || 0;
 
       const scored = applications.map(app => {
         const appData = app.applicationData || {};
         const workHistory = appData.workHistory || [];
         const education = appData.education || [];
         const coverLetter = app.coverLetter || '';
+        const appSkills = app.skills || [];
+        const appLocation = app.addressInfo?.residentialAddress?.city || '';
+        const positionDetails = app.positionDetails || {};
 
-        // Build searchable text
-        const workText = workHistory.map(w => `${w.role||''} ${w.company||''} ${w.description||''}`).join(' ');
-        const eduText = education.map(e => `${e.institution||''} ${e.qualification||''} ${e.fieldOfStudy||''}`).join(' ');
-        const searchText = `${workText} ${eduText} ${coverLetter}`.toLowerCase();
+        // Skills matching (0-100)
+        let skillsScore = 0;
+        if (jobSkills.length > 0) {
+          const matchedSkills = jobSkills.filter(skill => 
+            appSkills.some(appSkill => 
+              appSkill.toLowerCase().includes(skill.toLowerCase())
+            )
+          );
+          skillsScore = (matchedSkills.length / jobSkills.length) * 100;
+        }
 
-        // Keyword scoring (40%)
-        let keywordScore = 0;
-        const keywordMatches = [];
-        keywords.forEach(kw => {
-          const regex = new RegExp(kw.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-          const matches = (searchText.match(regex) || []).length;
-          if (matches > 0) keywordMatches.push({ keyword: kw, matches });
-          keywordScore += matches * 10;
-        });
-        keywordScore = Math.min(100, keywordScore);
-
-        // Criteria scoring (60%)
-        let criteriaScore = 0;
-        let totalWeight = 0;
-        const criteriaResults = [];
-        criteria.forEach(c => {
-          let met = false;
-          if (c.name === 'yearsExperience') {
-            const totalYears = workHistory.reduce((sum, w) => {
-              if (w.startDate && w.endDate) {
-                return sum + (new Date(w.endDate).getFullYear() - new Date(w.startDate).getFullYear());
-              }
-              return sum;
-            }, 0);
-            met = c.operator === '>=' ? totalYears >= (c.value || 0) : totalYears <= (c.value || 0);
-            criteriaResults.push({ name: c.name, label: c.label, met, detail: `${totalYears} years` });
-          } else if (c.name === 'hasDegree') {
-            met = education.some(e => ['degree','bachelor','master','phd','diploma'].includes((e.qualification||'').toLowerCase()));
-            criteriaResults.push({ name: c.name, label: c.label, met });
-          } else if (c.name === 'hasCertification') {
-            const otherQuals = appData.otherQualifications || [];
-            met = otherQuals.length > 0;
-            criteriaResults.push({ name: c.name, label: c.label, met, detail: `${otherQuals.length} certifications` });
-          } else {
-            criteriaResults.push({ name: c.name, label: c.label, met: false });
+        // Experience matching (0-100)
+        let experienceScore = 0;
+        const totalYears = workHistory.reduce((sum, w) => {
+          if (w.startDate && w.endDate) {
+            const start = new Date(w.startDate);
+            const end = new Date(w.endDate);
+            return sum + (end.getFullYear() - start.getFullYear());
           }
-          if (met) criteriaScore += (c.weight || 5);
-          totalWeight += (c.weight || 5);
-        });
-        criteriaScore = totalWeight > 0 ? Math.round((criteriaScore / totalWeight) * 100) : 0;
+          return sum;
+        }, 0);
+        if (jobExperience > 0) {
+          experienceScore = Math.min(100, (totalYears / jobExperience) * 100);
+        }
 
-        const autoScore = Math.round((keywordScore * 0.4) + (criteriaScore * 0.6));
+        // Education matching (0-100)
+        let educationScore = 0;
+        if (jobEducation) {
+          const hasRequiredEducation = education.some(edu => 
+            edu.qualification?.toLowerCase().includes(jobEducation.toLowerCase())
+          );
+          educationScore = hasRequiredEducation ? 100 : 0;
+        }
+
+        // Location matching (0-100)
+        let locationScore = 0;
+        if (jobLocation && appLocation) {
+          locationScore = appLocation.toLowerCase().includes(jobLocation.toLowerCase()) ? 100 : 0;
+        }
+
+        // Final score = average of all criteria
+        const finalScore = (skillsScore + experienceScore + educationScore + locationScore) / 4;
+
+        const rankingBreakdown = {
+          skills: { score: skillsScore, matched: jobSkills.filter(skill => 
+            appSkills.some(appSkill => appSkill.toLowerCase().includes(skill.toLowerCase()))
+          ), total: jobSkills.length },
+          experience: { score: experienceScore, years: totalYears, required: jobExperience },
+          education: { score: educationScore, matched: education.some(edu => 
+            edu.qualification?.toLowerCase().includes(jobEducation.toLowerCase())
+          ), required: jobEducation },
+          location: { score: locationScore, applicantLocation: appLocation, required: jobLocation }
+        };
+
         return {
           applicationId: app.id,
           applicantName: app.applicantName,
           applicantEmail: app.applicantEmail,
-          autoScore,
-          keywordScore,
-          criteriaScore,
-          keywordMatches,
-          criteriaResults,
+          matchScore: Math.round(finalScore),
+          rankingBreakdown
         };
       });
 
-      scored.sort((a, b) => b.autoScore - a.autoScore);
+      scored.sort((a, b) => b.matchScore - a.matchScore);
 
       // Save scores to DB
       for (const scoredApp of scored) {
-        await JobApplication.update(scoredApp.applicationId, {
-          autoScore: scoredApp.autoScore,
-          scoreBreakdown: {
-            keywordScore: scoredApp.keywordScore,
-            criteriaScore: scoredApp.criteriaScore,
-            keywordMatches: scoredApp.keywordMatches,
-            criteriaResults: scoredApp.criteriaResults,
-          },
-        });
+        await query(
+          `UPDATE job_applications 
+           SET match_score = $1, ranking_breakdown = $2 
+           WHERE id = $3`,
+          [scoredApp.matchScore, JSON.stringify(scoredApp.rankingBreakdown), scoredApp.applicationId]
+        );
       }
 
       res.json(scored);
     } catch (err) {
       res.status(500).json({ msg: 'Scoring failed', error: err.message });
+    }
+  },
+
+  async reallocateRating(req, res) {
+    try {
+      const { applicationId, newScore, reason } = req.body;
+      
+      if (!applicationId || newScore === undefined) {
+        return res.status(400).json({ msg: 'applicationId and newScore are required' });
+      }
+
+      if (newScore < 0 || newScore > 100) {
+        return res.status(400).json({ msg: 'newScore must be between 0 and 100' });
+      }
+
+      // Update the score
+      await query(
+        `UPDATE job_applications 
+         SET match_score = $1, 
+             ranking_breakdown = jsonb_set(
+               COALESCE(ranking_breakdown, '{}'::jsonb),
+               '{manual_override}',
+               $2::jsonb
+             )
+         WHERE id = $3`,
+        [newScore, JSON.stringify({ score: newScore, reason, overriddenBy: req.user.id, overriddenAt: new Date() }), applicationId]
+      );
+
+      res.json({ success: true, newScore });
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to reallocate rating', error: err.message });
+    }
+  },
+
+  async reverseRating(req, res) {
+    try {
+      const { applicationId } = req.params;
+      
+      // Remove manual override and recalculate
+      const { rows } = await query(
+        `SELECT ranking_breakdown FROM job_applications WHERE id = $1`,
+        [applicationId]
+      );
+
+      if (!rows[0]) {
+        return res.status(404).json({ msg: 'Application not found' });
+      }
+
+      const breakdown = rows[0].ranking_breakdown;
+      if (breakdown && breakdown.manual_override) {
+        delete breakdown.manual_override;
+        
+        await query(
+          `UPDATE job_applications 
+           SET ranking_breakdown = $1 
+           WHERE id = $2`,
+          [JSON.stringify(breakdown), applicationId]
+        );
+      }
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to reverse rating', error: err.message });
     }
   },
 
@@ -719,6 +788,9 @@ const jobController = {
         updateData.skills = application.skills;
       }
 
+      // Also update the employee_id on the job application
+      await JobApplication.update(appId, { employeeId: parseInt(employeeId) });
+
       const updatedEmployee = await Employee.findByIdAndUpdate(employeeId, updateData);
 
       res.json({
@@ -727,6 +799,37 @@ const jobController = {
       });
     } catch (err) {
       res.status(500).json({ msg: 'Import failed', error: err.message });
+    }
+  },
+
+  async getApplicationsByEmployee(req, res) {
+    try {
+      const { employeeId } = req.params;
+      
+      // First try to find by employee_id
+      let applications = await JobApplication.findByEmployeeId(employeeId);
+      
+      // If no results, try to find by employee email
+      if (!applications || applications.length === 0) {
+        const employee = await Employee.findById(employeeId);
+        if (employee && employee.email) {
+          applications = await JobApplication.findByApplicantEmail(employee.email);
+        }
+      }
+      
+      res.json(applications || []);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to fetch applications', error: err.message });
+    }
+  },
+
+  async getApplicationsByApplicant(req, res) {
+    try {
+      const { email } = req.params;
+      const applications = await JobApplication.findByApplicantEmail(email);
+      res.json(applications || []);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to fetch applications', error: err.message });
     }
   },
 };

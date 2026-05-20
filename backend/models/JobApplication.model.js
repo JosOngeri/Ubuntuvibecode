@@ -9,6 +9,7 @@ const toJsonb = (value, fallback = null) => JSON.stringify(value ?? fallback);
 const APPLICATION_SELECT_COLUMNS = `
   id,
   user_id AS "userId",
+  employee_id AS "employeeId",
   jobid AS "jobId",
   applicantname AS "applicantName",
   applicantemail AS "applicantEmail",
@@ -88,6 +89,7 @@ const ensureColumns = async () => {
   await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS interview_date TIMESTAMP`);
   await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS offered_salary DECIMAL`);
   await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS interview_status VARCHAR(50)`);
+  await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS employee_id INTEGER REFERENCES employees(id)`);
 };
 
 const JobApplication = {
@@ -119,6 +121,13 @@ const JobApplication = {
     const res = await pool.query(
       `SELECT ${APPLICATION_SELECT_COLUMNS} FROM ${JOB_APPLICATION_TABLE} WHERE user_id = $1 ORDER BY appliedat DESC`,
       [userId]
+    );
+    return res.rows;
+  },
+  async findByEmployeeId(employeeId) {
+    const res = await pool.query(
+      `SELECT ${APPLICATION_SELECT_COLUMNS} FROM ${JOB_APPLICATION_TABLE} WHERE employee_id = $1 ORDER BY appliedat DESC`,
+      [employeeId]
     );
     return res.rows;
   },

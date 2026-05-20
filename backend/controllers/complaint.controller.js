@@ -1,4 +1,6 @@
 const Complaint = require('../models/Complaint.model');
+const User = require('../models/User.model');
+const Employee = require('../models/Employee.model');
 
 const SLA_TIMES = { critical: 1, high: 4, medium: 24, low: 48 };
 
@@ -129,6 +131,53 @@ exports.getStats = async (req, res) => {
       Complaint.aggregate([{ $group: { _id: '$urgency', count: { $sum: 1 } } }]),
     ]);
     res.json({ total, open, resolved, byType, byUrgency });
+  } catch (err) {
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+exports.getByEmployee = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    
+    // Find the user associated with this employee
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ msg: 'Employee not found' });
+    }
+    
+    let userId = employee.userId;
+    
+    // If no direct user link, try to find by email
+    if (!userId && employee.email) {
+      const user = await User.findOne({ email: employee.email.toLowerCase() });
+      if (user) {
+        userId = user._id;
+      }
+    }
+    
+    // Get complaints where employee is respondent (complained about)
+    const complaintsAsRespondent = await Complaint.find({ respondentId: employeeId })
+      .populate('submittedBy', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName')
+      .sort({ createdAt: -1 });
+    
+    // Get complaints submitted by this employee (if user found)
+    let complaintsAsComplainant = [];
+    if (userId) {
+      complaintsAsComplainant = await Complaint.find({ submittedBy: userId })
+        .populate('submittedBy', 'firstName lastName email')
+        .populate('assignedTo', 'firstName lastName')
+        .populate('respondentId', 'firstName lastName')
+        .sort({ createdAt: -1 });
+    }
+    
+    res.json({
+      complaintsAsRespondent,
+      complaintsAsComplainant,
+      employeeId,
+      userId
+    });
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }

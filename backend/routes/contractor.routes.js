@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const contractorController = require('../controllers/contractor.controller');
-const auth = require('../middleware/auth.middleware');
+const auth = require('../middleware/auth');
 
 router.get('/stats', auth, contractorController.getContractorStats);
 router.get('/projects', auth, contractorController.getContractorProjects);
