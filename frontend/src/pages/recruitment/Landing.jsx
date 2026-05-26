@@ -6,9 +6,7 @@ import beforeImage from '../../assets/before.jpeg'
 import afterImage from '../../assets/after.jpeg'
 
 export default function Landing() {
-  console.log('Landing component rendering')
-  try {
-    return (
+  return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <div className="relative text-white">
@@ -19,7 +17,7 @@ export default function Landing() {
           </div>
           <div className="flex items-center justify-center space-x-12">
             <div className="bg-white rounded-2xl p-8 shadow-xl">
-              <img src={ubuntuLogo} alt="Ubuntu Eco Lodge Logo" className="h-32" />
+              <img src={ubuntuLogo} alt="Ubuntu Eco Lodge Logo" className="h-32" loading="eager" />
             </div>
             <div className="text-center max-w-lg">
               <h2 className="text-4xl font-bold text-white mb-2">Ubuntu Eco Lodge</h2>
@@ -52,11 +50,11 @@ export default function Landing() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <img src={beforeImage} alt="Before Transformation" className="w-full h-64 object-cover rounded-lg shadow-lg" />
+                <img src={beforeImage} alt="Before Transformation" className="w-full h-64 object-cover rounded-lg shadow-lg" loading="lazy" />
                 <p className="mt-2 font-semibold text-[#CB7246]">Before</p>
               </div>
               <div className="text-center">
-                <img src={afterImage} alt="After Transformation" className="w-full h-64 object-cover rounded-lg shadow-lg" />
+                <img src={afterImage} alt="After Transformation" className="w-full h-64 object-cover rounded-lg shadow-lg" loading="lazy" />
                 <p className="mt-2 font-semibold text-[#CB7246]">After</p>
               </div>
             </div>
@@ -182,9 +180,5 @@ export default function Landing() {
         </div>
       </footer>
     </div>
-    )
-  } catch (error) {
-    console.error('Landing component error:', error)
-    return <div>Error: {error.message}</div>
-  }
+  )
 }

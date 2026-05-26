@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "db:init": "node scripts/init-db.js"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +26,7 @@
     "nodemailer": "^8.0.7",
     "pdfkit": "^0.18.0",
     "pg": "^8.16.3",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "xlsx": "^0.18.5"
   }
 }

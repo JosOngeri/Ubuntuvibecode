@@ -15,7 +15,7 @@ const NotificationCenter = () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const response = await api.get(`/notifications/${user.id}?status=pending&limit=20`);
+      const response = await api.get(`/notifications/${user.id}?status=pending&limit=20`).catch(() => ({ data: [] }));
       setNotifications(response.data || []);
       setUnreadCount(response.data?.filter(n => n.status === 'pending').length || 0);
     } catch (err) {

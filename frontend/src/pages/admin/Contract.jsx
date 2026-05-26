@@ -9,10 +9,11 @@ import Input from '../../components/common/Input'
 import Table from '../../components/common/Table'
 import Modal from '../../components/common/Modal'
 import DateDropdown from '../../components/common/DateDropdown'
+import { OnboardingEmptyState } from '../../components/common/EmptyState'
 import { toast } from 'react-toastify'
 import { downloadPdfReport } from '../../utils/reportExport';
 
-export default function Contract() {
+export default function Contract({ standalone = true }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('contracts'); // 'contracts', 'analytics'
   const [contracts, setContracts] = useState([]);
@@ -248,8 +249,8 @@ export default function Contract() {
     )}
   ];
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Contract Management</h1>
         <p className="page-subtitle">Track employee contracts, view terms, and generate compliance reports.</p>
@@ -331,7 +332,7 @@ export default function Contract() {
             <Card className="flex flex-col items-center">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6 w-full text-left">Status Distribution</h3>
               {stats.total === 0 ? (
-                <div className="text-slate-500 py-12">No data available</div>
+                <OnboardingEmptyState />
               ) : (
                 <>
                   <div className="w-48 h-48 rounded-full shadow-inner mb-6" style={{ background: pieGradient }} />
@@ -469,6 +470,8 @@ export default function Contract() {
           </div>
         )}
       </Modal>
-    </DashboardLayout>
+    </div>
   );
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content;
 }

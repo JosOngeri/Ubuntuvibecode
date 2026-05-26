@@ -8,7 +8,7 @@ import api from '../../services/api'
 import { toast } from 'react-toastify'
 import { BsBox, BsPerson, BsArrowReturnLeft, BsPlus } from 'react-icons/bs'
 
-export default function AssetsPage() {
+export default function AssetsPage({ standalone = true }) {
   const navigate = useNavigate()
   const [assets, setAssets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,8 +23,8 @@ export default function AssetsPage() {
     setLoading(true)
     try {
       const [assetRes, empRes] = await Promise.all([
-        api.get('/assets'),
-        employeeAPI.getAll()
+        api.get('/assets').catch(() => ({ data: [] })),
+        employeeAPI.getAll().catch(() => ({ data: [] }))
       ])
       setAssets(assetRes.data||[])
       setEmployees(empRes.data||[])
@@ -52,8 +52,8 @@ export default function AssetsPage() {
 
   const filteredAssets = statusFilter === 'all' ? assets : assets.filter(a => a.status === statusFilter)
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Asset Management</h1>
         <p className="page-subtitle">Register, assign, and track hotel assets and equipment.</p>
@@ -119,6 +119,8 @@ export default function AssetsPage() {
           </div>
         </Card>
       ))}</div>}
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

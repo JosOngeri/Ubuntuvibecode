@@ -1,8 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@300;400;500;600;700&display=swap');
+@import './fonts.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes loading-bar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;

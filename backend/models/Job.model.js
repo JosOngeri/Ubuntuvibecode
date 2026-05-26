@@ -5,38 +5,43 @@ const JOB_TABLE = 'jobs';
 const createTable = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ${JOB_TABLE} (
-      id SERIAL PRIMARY KEY,
+      id BIGSERIAL PRIMARY KEY,
       title VARCHAR(255) NOT NULL,
-      description TEXT NOT NULL,
+      description TEXT,
       department VARCHAR(100),
-      location VARCHAR(100),
-      employmenttype VARCHAR(50),
-      status VARCHAR(20) DEFAULT 'open',
-      salaryrange VARCHAR(100),
+      location VARCHAR(255),
+      employment_type VARCHAR(50),
+      status VARCHAR(50) DEFAULT 'open',
+      salary_min DECIMAL(12,2),
+      salary_max DECIMAL(12,2),
       requirements TEXT,
       responsibilities TEXT,
       benefits TEXT,
-      applicationdeadline DATE,
-      postedby INTEGER,
-      createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      closing_date DATE,
+      created_by BIGINT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
 };
 
 const ensureColumns = async () => {
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS employmenttype VARCHAR(50)`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS salaryrange VARCHAR(100)`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS requirements TEXT`);
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS responsibilities TEXT`);
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS benefits TEXT`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS applicationdeadline DATE`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS postedby INTEGER`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS updatedat TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS salary_range VARCHAR(100)`);
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS qualifications JSONB`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS evaluationparams JSONB`);
-  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS numberofpositions INTEGER DEFAULT 1`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS evaluation_params JSONB`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS advertisement_data JSONB`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS advertisement_image_path VARCHAR(255)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS number_of_positions INTEGER DEFAULT 1`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS career_level VARCHAR(100)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(50)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS work_schedule VARCHAR(255)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS required_languages VARCHAR(255)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS experience_level VARCHAR(100)`);
+  await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS education_requirements TEXT`);
 };
 
 const JOB_SELECT_COLUMNS = `
@@ -45,25 +50,35 @@ const JOB_SELECT_COLUMNS = `
   description,
   department,
   location,
-  employmenttype AS "employmentType",
+  employment_type AS "employmentType",
   status,
-  salaryrange AS "salaryRange",
+  COALESCE(salary_range, CONCAT(salary_min::text, CASE WHEN salary_max IS NOT NULL THEN ' - ' || salary_max::text ELSE '' END)) AS "salaryRange",
+  salary_min AS "salaryMin",
+  salary_max AS "salaryMax",
   requirements,
   responsibilities,
   benefits,
-  applicationdeadline AS "applicationDeadline",
-  postedby AS "postedBy",
+  closing_date AS "applicationDeadline",
+  created_by AS "postedBy",
   qualifications,
-  evaluationparams AS "evaluationParams",
+  evaluation_params AS "evaluationParams",
   advertisement_data AS "advertisementData",
-  numberofpositions AS "numberOfPositions",
-  createdat AS "createdAt",
-  updatedat AS "updatedAt"
+  COALESCE(number_of_positions, 1) AS "numberOfPositions",
+  career_level AS "careerLevel",
+  contact_person AS "contactPerson",
+  contact_phone AS "contactPhone",
+  contact_email AS "contactEmail",
+  work_schedule AS "workSchedule",
+  required_languages AS "requiredLanguages",
+  experience_level AS "experienceLevel",
+  education_requirements AS "educationRequirements",
+  created_at AS "createdAt",
+  updated_at AS "updatedAt"
 `;
 
 const Job = {
   async create(data) {
-    const { title, description, department, location, employmentType, status = 'open', salaryRange, requirements, responsibilities, benefits, applicationDeadline, postedBy, qualifications, evaluationParams, advertisementData, numberOfPositions = 1 } = data;
+    const { title, description, department, location, employmentType, status = 'open', salaryRange, requirements, responsibilities, benefits, applicationDeadline, postedBy, qualifications, evaluationParams, advertisementData, numberOfPositions = 1, careerLevel, contactPerson, contactPhone, contactEmail, workSchedule, requiredLanguages, experienceLevel, educationRequirements } = data;
     const res = await pool.query(
       `
         INSERT INTO ${JOB_TABLE} (
@@ -71,23 +86,31 @@ const Job = {
           description,
           department,
           location,
-          employmenttype,
+          employment_type,
           status,
-          salaryrange,
+          salary_range,
           requirements,
           responsibilities,
           benefits,
-          applicationdeadline,
-          postedby,
+          closing_date,
+          created_by,
           qualifications,
-          evaluationparams,
+          evaluation_params,
           advertisement_data,
-          numberofpositions
+          number_of_positions,
+          career_level,
+          contact_person,
+          contact_phone,
+          contact_email,
+          work_schedule,
+          required_languages,
+          experience_level,
+          education_requirements
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
         RETURNING ${JOB_SELECT_COLUMNS}
       `,
-      [title, description, department, location, employmentType, status, salaryRange, requirements, responsibilities, benefits, applicationDeadline, postedBy, JSON.stringify(qualifications || []), JSON.stringify(evaluationParams || {}), JSON.stringify(advertisementData || {}), numberOfPositions]
+      [title, description, department, location, employmentType, status, salaryRange, requirements, responsibilities, benefits, applicationDeadline || null, postedBy, JSON.stringify(qualifications || []), JSON.stringify(evaluationParams || {}), JSON.stringify(advertisementData || {}), numberOfPositions, careerLevel || null, contactPerson || null, contactPhone || null, contactEmail || null, workSchedule || null, requiredLanguages || null, experienceLevel || null, educationRequirements || null]
     );
     return res.rows[0];
   },
@@ -96,8 +119,8 @@ const Job = {
       `
         SELECT ${JOB_SELECT_COLUMNS}
         FROM ${JOB_TABLE}
-        ${onlyOpen ? "WHERE status = 'open'" : ''}
-        ORDER BY createdat DESC
+        ${onlyOpen ? "WHERE status IN ('open', 'active')" : ''}
+        ORDER BY created_at DESC
       `
     );
     return res.rows;
@@ -112,17 +135,25 @@ const Job = {
       description: 'description',
       department: 'department',
       location: 'location',
-      employmentType: 'employmenttype',
+      employmentType: 'employment_type',
       status: 'status',
-      salaryRange: 'salaryrange',
+      salaryRange: 'salary_range',
       requirements: 'requirements',
       responsibilities: 'responsibilities',
       benefits: 'benefits',
-      applicationDeadline: 'applicationdeadline',
-      postedBy: 'postedby',
+      applicationDeadline: 'closing_date',
+      postedBy: 'created_by',
       qualifications: 'qualifications',
-      evaluationParams: 'evaluationparams',
-      numberOfPositions: 'numberofpositions',
+      evaluationParams: 'evaluation_params',
+      numberOfPositions: 'number_of_positions',
+      careerLevel: 'career_level',
+      contactPerson: 'contact_person',
+      contactPhone: 'contact_phone',
+      contactEmail: 'contact_email',
+      workSchedule: 'work_schedule',
+      requiredLanguages: 'required_languages',
+      experienceLevel: 'experience_level',
+      educationRequirements: 'education_requirements',
     };
     const fields = [];
     const values = [];
@@ -141,7 +172,7 @@ const Job = {
 
     values.push(id);
     const res = await pool.query(
-      `UPDATE ${JOB_TABLE} SET ${fields.join(', ')}, updatedat = CURRENT_TIMESTAMP WHERE id = $${idx} RETURNING ${JOB_SELECT_COLUMNS}`,
+      `UPDATE ${JOB_TABLE} SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${idx} RETURNING ${JOB_SELECT_COLUMNS}`,
       values
     );
     return res.rows[0];

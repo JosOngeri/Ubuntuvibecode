@@ -1,4 +1,5 @@
 import React from 'react'
+import { cn } from '../../lib/utils'
 
 const Input = React.forwardRef(
   (
@@ -8,6 +9,8 @@ const Input = React.forwardRef(
       size = 'md',
       className = '',
       type = 'text',
+      autocomplete,
+      id,
       ...props
     },
     ref
@@ -28,12 +31,23 @@ const Input = React.forwardRef(
         <input
           ref={ref}
           type={type}
-          className={`w-full ${sizeClasses[size] || sizeClasses.md} rounded-lg border ${
+          id={id}
+          autoComplete={autocomplete}
+          className={cn(
+            'w-full rounded-lg border bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none transition-all duration-200',
+            sizeClasses[size] || sizeClasses.md,
             error
               ? 'border-red-500 dark:border-red-600 focus:border-red-900 dark:focus:border-red-400'
-              : 'border-slate-300 dark:border-slate-600 focus:border-slate-900 dark:focus:border-slate-100'
-          } bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none transition-all duration-200 ${className}`}
+              : 'border-slate-300 dark:border-slate-600 focus:border-slate-900 dark:focus:border-slate-100',
+            className
+          )}
           {...props}
+          onInput={(e) => {
+            // Allow AI form fillers to work by calling onChange if value differs
+            if (props.onChange && e.target.value !== props.value) {
+              props.onChange(e);
+            }
+          }}
         />
         {error && (
           <span className="text-sm text-red-600 dark:text-red-400 font-medium">

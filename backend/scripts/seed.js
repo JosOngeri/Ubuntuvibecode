@@ -99,21 +99,45 @@ async function seedDatabase() {
     // Insert admin users
     for (const admin of adminUsers) {
       const result = await query(
-        `INSERT INTO users (username, email, password, role, status) VALUES ($1, $2, $3, $4, $5) 
+        `INSERT INTO users (username, email, password, role, status) VALUES ($1, $2, $3, $4, $5)
          ON CONFLICT (username) DO UPDATE SET updated_at = NOW() RETURNING id`,
         [admin.username, admin.email, admin.password, admin.role, admin.status]
       );
       userIds.push(result.rows[0].id);
     }
 
+    // Insert canonical test users (one per role)
+    console.log('   Creating canonical test users...');
+    const testUserDefs = [
+      { username: 'admin',     email: 'admin@ubuntu-hrms.local',     role: 'admin',          password: 'admin123' },
+      { username: 'owner',     email: 'owner@ubuntu-hrms.local',     role: 'owner',          password: 'owner123' },
+      { username: 'manager',   email: 'manager@ubuntu-hrms.local',   role: 'manager',        password: 'manager123' },
+      { username: 'supervisor',email: 'supervisor@ubuntu-hrms.local',role: 'supervisor',     password: 'supervisor123' },
+      { username: 'employee',  email: 'employee@ubuntu-hrms.local',  role: 'employee',       password: 'employee123' },
+      { username: 'contractor',email: 'contractor@ubuntu-hrms.local',role: 'contractor',     password: 'contractor123' },
+      { username: 'daily_labourer', email: 'labourer@ubuntu-hrms.local', role: 'daily_labourer', password: 'daily_labourer123' },
+    ];
+
+    const canonicalTestUserIds = {};
+    for (const u of testUserDefs) {
+      const hp = await hashPassword(u.password);
+      const result = await query(
+        `INSERT INTO users (username, email, password, role, status) VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (username) DO UPDATE SET updated_at = NOW() RETURNING id`,
+        [u.username, u.email, hp, u.role, 'active']
+      );
+      canonicalTestUserIds[u.role] = result.rows[0].id;
+      userIds.push(result.rows[0].id);
+    }
+
     // Generate other users (managers, supervisors, employees)
-    const roles = ['manager', 'supervisor', 'employee'];
+    const userRoles = ['manager', 'supervisor', 'employee'];
     const generatedUserData = [];
     for (let i = 0; i < 18; i++) {
       const firstName = randomFrom(SAMPLE_DATA.firstNames);
       const lastName = randomFrom(SAMPLE_DATA.lastNames);
-      const role = roles[i % roles.length];
-      
+      const role = userRoles[i % userRoles.length];
+
       const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i > 0 ? i : ''}`;
 
       const result = await query(
@@ -159,10 +183,10 @@ async function seedDatabase() {
 
       const result = await query(
         `INSERT INTO employees (
-          user_id, first_name, last_name, email, phone, mpesa_phone_number, 
-          employment_type, wage_rate, department, status, payment_method,
+          user_id, first_name, last_name, email, phone, mpesa_phone_number,
+          employment_type, wage_rate, department, status,
           can_self_record_attendance, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW()) 
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
          ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW() RETURNING id`,
         [
           userIds[i % userIds.length] || null,
@@ -175,7 +199,6 @@ async function seedDatabase() {
           randomBetween(20000, 100000),
           dept,
           'active',
-          randomFrom(['MPESA', 'BANK']),
           canSelfRecord,
         ]
       );
@@ -183,6 +206,66 @@ async function seedDatabase() {
     }
 
     console.log(`✅ Created ${employeeIds.length} employees`);
+
+    // Create canonical test employee records (manager, supervisor, employee, contractor)
+    console.log('   Creating canonical test employee records...');
+    const testEmployeeRoles = [
+      { role: 'manager',    firstName: 'Manager',   lastName: 'Test',   dept: 'Operations',   empType: 'Permanent' },
+      { role: 'supervisor', firstName: 'Supervisor',lastName: 'Test',   dept: 'Operations',   empType: 'Permanent' },
+      { role: 'employee',   firstName: 'Employee',  lastName: 'Test',   dept: 'IT',           empType: 'Permanent' },
+      { role: 'contractor', firstName: 'Contractor',lastName: 'Test',   dept: 'Finance',      empType: 'Contractor' },
+    ];
+
+    for (const te of testEmployeeRoles) {
+      const uid = canonicalTestUserIds[te.role];
+      if (!uid) continue;
+      const result = await query(
+        `INSERT INTO employees (
+          user_id, first_name, last_name, email, phone, mpesa_phone_number,
+          employment_type, wage_rate, department, status,
+          can_self_record_attendance, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW() RETURNING id`,
+        [
+          uid,
+          te.firstName,
+          te.lastName,
+          `${te.role}@ubuntu-hrms.local`,
+          generatePhoneNumber(),
+          generatePhoneNumber(),
+          te.empType,
+          randomBetween(30000, 100000),
+          te.dept,
+          'active',
+          true,
+        ]
+      );
+      employeeIds.push(result.rows[0].id);
+    }
+
+    // Create canonical daily labourer record
+    const labourerUid = canonicalTestUserIds['daily_labourer'];
+    if (labourerUid) {
+      await query(
+        `INSERT INTO daily_labourers (
+          user_id, full_name, first_name, last_name, phone, department,
+          daily_wage, daily_rate, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+         ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()`,
+        [
+          labourerUid,
+          'Daily Labourer Test',
+          'Daily',
+          'Labourer',
+          generatePhoneNumber(),
+          'Operations',
+          800,
+          800,
+          'active',
+        ]
+      );
+      console.log('   Created daily_labourer test record');
+    }
 
     // 3. CREATE LEAVE BALANCES (auto-created with employees, add more if needed)
     console.log('\n📅 Ensuring leave balances...');
@@ -224,7 +307,7 @@ async function seedDatabase() {
     for (let i = 0; i < 15; i++) {
       const result = await query(
         `INSERT INTO jobs (
-          title, description, department, location, employmenttype, status, createdat
+          title, description, department, location, employment_type, status, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING id`,
         [
           randomFrom(SAMPLE_DATA.jobTitles),
@@ -248,11 +331,12 @@ async function seedDatabase() {
       
       await query(
         `INSERT INTO job_applications (
-          jobid, applicantname, applicantemail, applicantphone, status, appliedat
-        ) VALUES ($1, $2, $3, $4, $5, NOW())`,
+          job_id, first_name, last_name, email, phone, status, applied_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
         [
           randomFrom(jobIds),
-          `${firstName} ${lastName}`,
+          firstName,
+          lastName,
           generateEmail(firstName, lastName, i),
           generatePhoneNumber(),
           randomFrom(['pending', 'under_review', 'accepted', 'rejected']),
@@ -525,6 +609,53 @@ async function seedDatabase() {
     }
     console.log(`✅ Created ${bonusCount} pending bonuses`);
 
+    // 17. CREATE MESSAGES (sample messages between test users)
+    console.log('\n💬 Creating sample messages...');
+    let messageCount = 0;
+    const messageTemplates = [
+      'Hi, just checking in on the project status.',
+      'Can you review the latest document when you get a chance?',
+      'Meeting scheduled for tomorrow at 10 AM.',
+      'Thanks for the update!',
+      'Please send over the quarterly report.',
+      'I have a question about the new policy.',
+      'Great work on the recent deliverable.',
+      'Reminder: Performance review next week.',
+      'Let me know if you need any assistance.',
+      'The client feedback has been positive.',
+    ];
+
+    // Get test user IDs for messaging
+    const msgTestUserIds = await query(
+      `SELECT id, role FROM users WHERE username IN ('admin','owner','manager','supervisor','employee','contractor','daily_labourer')`
+    );
+    const testUsersMap = {};
+    msgTestUserIds.rows.forEach(u => testUsersMap[u.role] = u.id);
+
+    // Create messages between test users
+    const msgRoles = Object.keys(testUsersMap);
+    for (let i = 0; i < 30; i++) {
+      const senderRole = msgRoles[Math.floor(Math.random() * msgRoles.length)];
+      const receiverRole = msgRoles[Math.floor(Math.random() * msgRoles.length)];
+      if (senderRole === receiverRole) continue;
+
+      const senderId = testUsersMap[senderRole];
+      const receiverId = testUsersMap[receiverRole];
+
+      await query(
+        `INSERT INTO messages (sender_id, receiver_id, content, is_read, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [
+          senderId,
+          receiverId,
+          randomFrom(messageTemplates),
+          Math.random() > 0.5,
+        ]
+      );
+      messageCount++;
+    }
+    console.log(`✅ Created ${messageCount} sample messages`);
+
     console.log('\n✨ Database seeding completed successfully!');
     console.log('\n📊 Summary:');
     console.log(`   - Users: ${userIds.length} (2 admins)`);
@@ -545,7 +676,15 @@ async function seedDatabase() {
     console.log('\n🔐 Default credentials:');
     console.log('   Admin 1: admin1 / Admin@123');
     console.log('   Admin 2: admin2 / Admin@123');
-    console.log(`   Others (e.g. ${generatedUserData[0].username}): Password@123`);
+    console.log(`   Others (e.g. ${generatedUserData[0]?.username || 'john.smith'}): Password@123`);
+    console.log('\n🔐 Canonical test accounts (one per role):');
+    console.log('   admin            / admin123');
+    console.log('   owner            / owner123');
+    console.log('   manager          / manager123');
+    console.log('   supervisor       / supervisor123');
+    console.log('   employee         / employee123');
+    console.log('   contractor       / contractor123');
+    console.log('   daily_labourer   / daily_labourer123');
 
     process.exit(0);
   } catch (error) {

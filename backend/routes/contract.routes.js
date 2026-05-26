@@ -7,6 +7,7 @@ const upload = require('../utils/multer'); // Import your existing multer utilit
 
 router.post('/', upload.single('document'),  contractController.createContract);
 router.get('/', contractController.getContracts);
+router.get('/:id', contractController.getContractById);
 router.put('/:id', upload.single('document'), contractController.updateContract);
 router.delete('/:id', contractController.deleteContract);
 

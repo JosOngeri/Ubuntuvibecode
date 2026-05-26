@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import DashboardLayout from '../../components/DashboardLayout'
 import api, { employeeAPI, payrollAPI } from '../../services/api'
+import { PayrollEmptyState } from '../../components/common/EmptyState'
 import { toast } from 'react-toastify'
 
 const formatMoney = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(Number(value || 0))
@@ -65,7 +66,7 @@ export default function EmployeePayslips() {
         </div>
       ) : employeePayslips.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm text-slate-600 dark:text-slate-300">No payslips found for {[employee?.firstName, employee?.lastName].filter(Boolean).join(' ') || 'your profile'}.</p>
+          <PayrollEmptyState />
         </div>
       ) : (
         <>

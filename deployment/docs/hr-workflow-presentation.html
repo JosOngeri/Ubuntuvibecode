@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ubuntu HRMS – System Presentation</title>
+<style>
+  :root {
+    --primary: #1e40af;
+    --accent: #f59e0b;
+    --success: #10b981;
+    --danger: #ef4444;
+    --purple: #7c3aed;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+    color: #fff; padding: 32px 40px; text-align: center;
+  }
+  .header h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.5px; }
+  .header p { margin-top: 8px; font-size: 1.1rem; opacity: 0.85; }
+  .badge { display: inline-block; background: var(--accent); color: #1e293b; border-radius: 20px; padding: 4px 14px; font-size: 0.8rem; font-weight: 700; margin-top: 10px; }
+
+  /* ── Tab Nav ── */
+  .tab-nav {
+    display: flex; background: #1e293b; overflow-x: auto;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .tab-btn {
+    flex: 1; min-width: 120px; padding: 14px 20px; border: none; background: transparent;
+    color: #94a3b8; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+    border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+  .tab-btn.active { color: #fff; border-bottom-color: var(--accent); }
+
+  /* ── Tab Content ── */
+  .tab-content { display: none; padding: 36px 40px; max-width: 1200px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .card-title .icon { font-size: 1.4rem; }
+
+  /* ── Section Titles ── */
+  .section-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; color: var(--primary); }
+  .section-sub { color: var(--muted); margin-bottom: 28px; font-size: 0.95rem; }
+
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .stat .num { font-size: 2rem; font-weight: 800; color: var(--primary); }
+  .stat .lbl { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+  /* ── Workflow Flowchart ── */
+  .flow-container { overflow-x: auto; padding: 10px 0; }
+  .flow-grid {
+    display: flex; flex-wrap: wrap; gap: 0; align-items: flex-start;
+    min-width: 900px; padding: 10px;
+  }
+  .flow-step {
+    display: flex; flex-direction: column; align-items: center; width: 110px;
+  }
+  .flow-node {
+    width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12); position: relative; padding: 8px;
+  }
+  .flow-node:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+  .flow-node .node-icon { font-size: 1.6rem; margin-bottom: 4px; }
+  .flow-node .node-num {
+    position: absolute; top: -6px; right: -6px; background: var(--accent); color: #1e293b;
+    border-radius: 50%; width: 20px; height: 20px; font-size: 0.65rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .flow-label { font-size: 0.72rem; font-weight: 600; text-align: center; margin-top: 8px; color: var(--text); max-width: 90px; }
+  .flow-arrow { font-size: 1.4rem; color: var(--muted); margin: 0 4px; padding-top: 30px; }
+  .flow-break { width: 100%; height: 0; }
+
+  /* Node colors */
+  .node-blue   { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; border: 2px solid #93c5fd; }
+  .node-green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; border: 2px solid #6ee7b7; }
+  .node-orange { background: linear-gradient(135deg, #fed7aa, #fdba74); color: #9a3412; border: 2px solid #fb923c; }
+  .node-purple { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #5b21b6; border: 2px solid #c4b5fd; }
+  .node-red    { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; border: 2px solid #fca5a5; }
+  .node-teal   { background: linear-gradient(135deg, #ccfbf1, #99f6e4); color: #134e4a; border: 2px solid #5eead4; }
+  .node-yellow { background: linear-gradient(135deg, #fef9c3, #fef08a); color: #713f12; border: 2px solid #fde047; }
+  .node-pink   { background: linear-gradient(135deg, #fce7f3, #fbcfe8); color: #831843; border: 2px solid #f9a8d4; }
+  .node-indigo { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #312e81; border: 2px solid #a5b4fc; }
+  .node-emerald { background: linear-gradient(135deg, #d1fae5, #6ee7b7); color: #064e3b; border: 2px solid #34d399; }
+  .node-sky   { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0c4a6e; border: 2px solid #7dd3fc; }
+
+  /* ── Detail Panel ── */
+  .detail-panel {
+    display: none; background: #1e293b; color: #e2e8f0; border-radius: 12px;
+    padding: 24px 28px; margin-top: 20px; position: relative;
+  }
+  .detail-panel.visible { display: block; animation: slideIn 0.3s ease; }
+  .detail-panel h3 { color: var(--accent); font-size: 1.1rem; margin-bottom: 12px; }
+  .detail-panel ul { padding-left: 20px; line-height: 1.9; font-size: 0.9rem; }
+  .detail-panel .close-btn {
+    position: absolute; top: 14px; right: 14px; background: rgba(255,255,255,0.1);
+    border: none; color: #fff; border-radius: 50%; width: 28px; height: 28px;
+    cursor: pointer; font-size: 1rem; line-height: 1;
+  }
+  .detail-panel .roles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .role-badge { background: var(--accent); color: #1e293b; border-radius: 6px; padding: 2px 10px; font-size: 0.75rem; font-weight: 700; }
+
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Table ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .data-table th { background: var(--primary); color: #fff; padding: 12px 16px; text-align: left; }
+  .data-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .data-table tr:hover td { background: #f1f5f9; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .stars { color: var(--accent); font-size: 0.9rem; }
+  .score-bar { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 8px; background: var(--border); border-radius: 4px; flex: 1; overflow: hidden; min-width: 80px; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--success); transition: width 0.5s; }
+
+  /* ── Role Cards ── */
+  .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+  .role-card { border-radius: 12px; padding: 22px; border: 2px solid; }
+  .role-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; }
+  .role-card ul { padding-left: 18px; font-size: 0.85rem; line-height: 1.8; }
+  .role-admin  { background: #eff6ff; border-color: #93c5fd; }
+  .role-manager { background: #f0fdf4; border-color: #86efac; }
+  .role-employee { background: #fdf4ff; border-color: #e879f9; }
+  .role-contractor { background: #fff7ed; border-color: #fb923c; }
+  .role-daily { background: #f0fdfa; border-color: #5eead4; }
+
+  /* ── Improvement List ── */
+  .improve-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .improve-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; border-left: 4px solid; }
+  .improve-card.high   { border-left-color: var(--danger); }
+  .improve-card.medium { border-left-color: var(--accent); }
+  .improve-card.low    { border-left-color: var(--success); }
+  .improve-card .priority { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+  .improve-card.high   .priority { color: var(--danger); }
+  .improve-card.medium .priority { color: #d97706; }
+  .improve-card.low    .priority { color: var(--success); }
+  .improve-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+  .improve-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+  /* ── Tech section ── */
+  .tech-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .tech-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .tech-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 8px; color: var(--primary); }
+  .tech-card ul { padding-left: 16px; font-size: 0.82rem; line-height: 1.8; color: var(--muted); }
+  .tag { display: inline-block; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; margin: 2px; color: var(--text); }
+  .tag-blue { background: #dbeafe; color: var(--primary); border-color: #93c5fd; }
+  .tag-green { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+
+  /* ── Overall Score ── */
+  .overall-score {
+    text-align: center; padding: 32px; background: linear-gradient(135deg, #1e3a8a, #1e40af);
+    border-radius: 16px; color: #fff; margin-bottom: 28px;
+  }
+  .overall-score .big-num { font-size: 4rem; font-weight: 900; color: var(--accent); }
+  .overall-score p { font-size: 1rem; opacity: 0.85; margin-top: 6px; }
+
+  /* Print */
+  @media print { .tab-nav { display: none; } .tab-content { display: block !important; } }
+  @media (max-width: 768px) { .tab-content { padding: 24px 16px; } .header { padding: 24px 16px; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏢 Ubuntu HRMS</h1>
+  <p>Human Resource Management System — System Presentation & Evaluation</p>
+  <span class="badge">All Roles Overview · May 2026</span>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('workflow')">🔄 HR Workflow</button>
+  <button class="tab-btn" onclick="showTab('owner')">👑 Owner View</button>
+  <button class="tab-btn" onclick="showTab('workers')">👥 All Workers</button>
+  <button class="tab-btn" onclick="showTab('pitch')">📊 Demo / Pitch</button>
+  <button class="tab-btn" onclick="showTab('technical')">⚙️ Technical</button>
+</div>
+
+<!-- ═══════════════ TAB 1: WORKFLOW ═══════════════ -->
+<div id="tab-workflow" class="tab-content active">
+  <div class="section-title">End-to-End HR Lifecycle Workflow</div>
+  <div class="section-sub">Click any node to see what happens at that stage, who is involved, and how it connects to the next step.</div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🗺️</span> Full HR Process — from Job Opening to Payslip</div>
+    <div class="flow-container">
+      <div class="flow-grid">
+
+        <!-- Row 1: Recruitment -->
+        <div class="flow-step">
+          <div class="flow-node node-blue" onclick="showDetail('job-create')">
+            <div class="node-icon">📋</div><div>Job Post</div><div class="node-num">1</div>
+          </div>
+          <div class="flow-label">Job Creation</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-sky" onclick="showDetail('job-advert')">
+            <div class="node-icon">📢</div><div>Advertise</div><div class="node-num">2</div>
+          </div>
+          <div class="flow-label">Job Board</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-teal" onclick="showDetail('apply')">
+            <div class="node-icon">📝</div><div>Apply</div><div class="node-num">3</div>
+          </div>
+          <div class="flow-label">Application</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-purple" onclick="showDetail('screen')">
+            <div class="node-icon">🔍</div><div>Screen</div><div class="node-num">4</div>
+          </div>
+          <div class="flow-label">Screening</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-orange" onclick="showDetail('interview')">
+            <div class="node-icon">🎯</div><div>Interview</div><div class="node-num">5</div>
+          </div>
+          <div class="flow-label">Interview</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-green" onclick="showDetail('offer')">
+            <div class="node-icon">✉️</div><div>Offer</div><div class="node-num">6</div>
+          </div>
+          <div class="flow-label">Offer Letter</div>
+        </div>
+
+        <div class="flow-break"></div>
+        <div style="width:100%;text-align:center;padding:6px 0;font-size:1.4rem;color:var(--muted)">↓ Accepted</div>
+        <div class="flow-break"></div>
+
+        <!-- Row 2: Onboarding & Attendance -->
+        <div class="flow-step">
+          <div class="flow-node node-indigo" onclick="showDetail('onboard')">
+            <div class="node-icon">🧑‍💼</div><div>Onboard</div><div class="node-num">7</div>
+          </div>
+          <div class="flow-label">Onboarding</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-emerald" onclick="showDetail('attendance')">
+            <div class="node-icon">⏰</div><div>Attend</div><div class="node-num">8</div>
+          </div>
+          <div class="flow-label">Attendance</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-yellow" onclick="showDetail('leave')">
+            <div class="node-icon">🏖️</div><div>Leave</div><div class="node-num">9</div>
+          </div>
+          <div class="flow-label">Leave Mgmt</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-pink" onclick="showDetail('kpi')">
+            <div class="node-icon">🎯</div><div>KPI</div><div class="node-num">10</div>
+          </div>
+          <div class="flow-label">KPI Alloc.</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-purple" onclick="showDetail('kpi-assess')">
+            <div class="node-icon">📈</div><div>Assess</div><div class="node-num">11</div>
+          </div>
+          <div class="flow-label">KPI Review</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-green" onclick="showDetail('payroll')">
+            <div class="node-icon">💰</div><div>Payroll</div><div class="node-num">12</div>
+          </div>
+          <div class="flow-label">Payroll Compute</div>
+        </div>
+
+        <div class="flow-break"></div>
+        <div style="width:100%;text-align:center;padding:6px 0;font-size:1.4rem;color:var(--muted)">↓ Generate</div>
+        <div class="flow-break"></div>
+
+        <!-- Row 3: Reports -->
+        <div class="flow-step">
+          <div class="flow-node node-blue" onclick="showDetail('payslip')">
+            <div class="node-icon">🧾</div><div>Payslip</div><div class="node-num">13</div>
+          </div>
+          <div class="flow-label">Payslip</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-teal" onclick="showDetail('disburse')">
+            <div class="node-icon">📲</div><div>M-PESA</div><div class="node-num">14</div>
+          </div>
+          <div class="flow-label">Disbursement</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-orange" onclick="showDetail('reports')">
+            <div class="node-icon">📊</div><div>Reports</div><div class="node-num">15</div>
+          </div>
+          <div class="flow-label">Reports</div>
+        </div>
+
+        <!-- Side branches -->
+        <div style="width:100%;height:10px;"></div>
+        <div class="flow-step">
+          <div class="flow-node node-red" onclick="showDetail('contractor')">
+            <div class="node-icon">🏗️</div><div>Contractor</div>
+          </div>
+          <div class="flow-label">Contractor Lifecycle</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-sky" onclick="showDetail('daily-labour')">
+            <div class="node-icon">👷</div><div>Daily Labour</div>
+          </div>
+          <div class="flow-label">Daily Labour</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-yellow" onclick="showDetail('assets')">
+            <div class="node-icon">🖥️</div><div>Assets</div>
+          </div>
+          <div class="flow-label">Asset Mgmt</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-node node-pink" onclick="showDetail('complaints')">
+            <div class="node-icon">📣</div><div>Complaints</div>
+          </div>
+          <div class="flow-label">Complaints</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="detail-panel" class="detail-panel">
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+      <h3 id="detail-title">—</h3>
+      <div id="detail-body"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🔗</span> How Each Stage Connects</div>
+    <table class="data-table">
+      <thead><tr><th>#</th><th>Stage</th><th>Input</th><th>Output</th><th>Who Acts</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Job Creation</td><td>Business need</td><td>Job posting with criteria</td><td>Admin / HR</td></tr>
+        <tr><td>2–3</td><td>Advertising & Application</td><td>Job posting</td><td>Pool of applicants + CVs</td><td>Public / Applicants</td></tr>
+        <tr><td>4–5</td><td>Screening & Interview</td><td>Applications</td><td>Shortlist + interview scores</td><td>Admin / HR / Manager</td></tr>
+        <tr><td>6</td><td>Offer</td><td>Selected applicant</td><td>Signed offer letter via email token</td><td>Admin / Applicant</td></tr>
+        <tr><td>7</td><td>Onboarding</td><td>Accepted offer</td><td>Employee record + 8-step checklist</td><td>Admin / Supervisor</td></tr>
+        <tr><td>8</td><td>Attendance</td><td>Active employee</td><td>Daily records: hours worked, status</td><td>Employee / Admin</td></tr>
+        <tr><td>9</td><td>Leave Management</td><td>Leave request</td><td>Approved leave; balance deducted</td><td>Employee → Manager</td></tr>
+        <tr><td>10–11</td><td>KPI Allocation & Assessment</td><td>Employee + period</td><td>Scores + pending bonus amounts</td><td>Manager / Admin</td></tr>
+        <tr><td>12–14</td><td>Payroll & Disbursement</td><td>Attendance + KPI + base rate</td><td>Payslip + M-PESA payment</td><td>Admin / Finance</td></tr>
+        <tr><td>15</td><td>Reports</td><td>All data</td><td>PDF reports per module/date range</td><td>Admin / Manager</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 2: OWNER VIEW ═══════════════ -->
+<div id="tab-owner" class="tab-content">
+  <div class="section-title">👑 Owner & Executive View</div>
+  <div class="section-sub">What this system delivers to you as the business owner — in measurable terms.</div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="num">15</div><div class="lbl">HR Modules</div></div>
+    <div class="stat"><div class="num">5</div><div class="lbl">User Roles</div></div>
+    <div class="stat"><div class="num">100%</div><div class="lbl">Paperless HR</div></div>
+    <div class="stat"><div class="num">M-PESA</div><div class="lbl">Auto Disbursement</div></div>
+    <div class="stat"><div class="num">PDF</div><div class="lbl">Instant Reports</div></div>
+    <div class="stat"><div class="num">24/7</div><div class="lbl">Online Access</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">💼</span> What You Control as Owner</div>
+    <ul style="padding-left:20px;line-height:2.2;font-size:0.95rem;">
+      <li><strong>All employee data</strong> in one place — contracts, roles, salaries, attendance history</li>
+      <li><strong>Real-time recruitment pipeline</strong> — see how many applicants, at what stage, for which job</li>
+      <li><strong>Payroll transparency</strong> — every payslip is computed from actual attendance + KPI data, not guesswork</li>
+      <li><strong>Leave visibility</strong> — know who is off and when, with approved leave history</li>
+      <li><strong>Performance tracking</strong> — KPI scores per employee per month, with linked bonuses</li>
+      <li><strong>Contractor management</strong> — track milestones, invoices, and performance separately</li>
+      <li><strong>Daily labour records</strong> — track casual workers, attendance, and payments</li>
+      <li><strong>Complaints register</strong> — full audit trail of all employee grievances</li>
+      <li><strong>Reports on demand</strong> — download PDF for any period, any department</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📉</span> Cost & Risk Reduction</div>
+    <table class="data-table">
+      <thead><tr><th>Risk / Problem</th><th>How This System Solves It</th></tr></thead>
+      <tbody>
+        <tr><td>Ghost workers / payroll fraud</td><td>Payroll computed from actual geo-verified attendance, not manual entry</td></tr>
+        <tr><td>HR compliance gaps</td><td>Leave policies, probation tracking, document collection enforced by system</td></tr>
+        <tr><td>Slow recruitment</td><td>Auto-scoring narrows applicants instantly; email offer token closes in hours</td></tr>
+        <tr><td>Lost contracts / invoices</td><td>Contractor portal with invoice tracking and performance records</td></tr>
+        <tr><td>Untracked daily workers</td><td>Dedicated daily labour module with attendance and payment records</td></tr>
+        <tr><td>No performance evidence</td><td>KPI scores with date-stamped assessments per period</td></tr>
+        <tr><td>Manual payroll errors</td><td>Formula-driven computation: base rate + overtime + KPI bonus − deductions</td></tr>
+        <tr><td>HR data scattered in Excel</td><td>Single database, role-based access, audit-ready</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📊</span> Payroll Computation Formula</div>
+    <div style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:20px;font-family:monospace;font-size:0.9rem;line-height:2;">
+      <span style="color:#38bdf8">Gross Pay</span> = Base Rate<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ (Overtime Hours × Overtime Rate)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ KPI Bonus (from pending_bonuses)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ Allowances<br><br>
+      <span style="color:#f59e0b">Net Pay</span>&nbsp;&nbsp;&nbsp; = Gross Pay<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− PAYE (Tax)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− NSSF<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− NHIF<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− Other Deductions<br><br>
+      <span style="color:#34d399">Disbursed via</span> M-PESA B2C → Employee phone number
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 3: ALL WORKERS ═══════════════ -->
+<div id="tab-workers" class="tab-content">
+  <div class="section-title">👥 All Workers — What You Do in This System</div>
+  <div class="section-sub">Each role has a dedicated dashboard and set of actions. Here is what each person can do.</div>
+
+  <div class="role-grid">
+    <div class="role-card role-admin">
+      <h3>🛡️ Admin / HR Manager</h3>
+      <ul>
+        <li>Create and manage all users &amp; employees</li>
+        <li>Post jobs, screen applicants, send offers</li>
+        <li>Initiate onboarding for new hires</li>
+        <li>Configure leave policies and KPI definitions</li>
+        <li>Run payroll and disburse via M-PESA</li>
+        <li>Manage contracts, assets, settings</li>
+        <li>View and export all reports</li>
+        <li>Manage contractor lifecycle and invoices</li>
+        <li>Handle complaints and notifications</li>
+      </ul>
+    </div>
+    <div class="role-card role-manager">
+      <h3>👔 Manager / Supervisor</h3>
+      <ul>
+        <li>View team attendance and approve records</li>
+        <li>Approve or reject leave requests</li>
+        <li>Create and assign KPI targets to team members</li>
+        <li>Record KPI assessment scores</li>
+        <li>Conduct mid-point and final probation reviews</li>
+        <li>Review and approve contractor milestones</li>
+        <li>View team reports and dashboards</li>
+        <li>Manage recruitment for own department</li>
+      </ul>
+    </div>
+    <div class="role-card role-employee">
+      <h3>🧑‍💻 Employee</h3>
+      <ul>
+        <li>Punch in/out for attendance (manual or mobile)</li>
+        <li>Request leave and view leave balance</li>
+        <li>View own KPI goals and scores</li>
+        <li>Download own payslips</li>
+        <li>Submit complaints</li>
+        <li>Browse job board &amp; apply to internal openings</li>
+        <li>Track own applications</li>
+        <li>Update profile information</li>
+      </ul>
+    </div>
+    <div class="role-card role-contractor">
+      <h3>🏗️ Contractor</h3>
+      <ul>
+        <li>View assigned projects</li>
+        <li>Submit milestone deliverables via portal</li>
+        <li>Upload and track invoices</li>
+        <li>View own KPI performance rating</li>
+        <li>Update profile and certifications</li>
+      </ul>
+    </div>
+    <div class="role-card role-daily">
+      <h3>👷 Daily Labourer</h3>
+      <ul>
+        <li>View own attendance records</li>
+        <li>View daily payment history</li>
+        <li>Access personal dashboard</li>
+        <li>Update profile</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px;">
+    <div class="card-title"><span class="icon">📋</span> Onboarding Checklist — What Happens When You Join</div>
+    <table class="data-table">
+      <thead><tr><th>Step</th><th>What Happens</th><th>Who Completes It</th></tr></thead>
+      <tbody>
+        <tr><td>1. Offer Letter</td><td>Generated by system, sent via email with secure token</td><td>Admin</td></tr>
+        <tr><td>2. Document Collection</td><td>ID, Certificates, KRA PIN, NSSF, NHIF collected</td><td>Admin / HR</td></tr>
+        <tr><td>3. Department Assignment</td><td>Employee assigned to department with supervisor</td><td>Admin</td></tr>
+        <tr><td>4. Asset Allocation</td><td>Laptop, uniform, tools, PPE recorded in system</td><td>Admin</td></tr>
+        <tr><td>5. Orientation / Training</td><td>Scheduled and tracked in onboarding checklist</td><td>Supervisor</td></tr>
+        <tr><td>6. Probation Review 1</td><td>Mid-probation performance review (month 1–2)</td><td>Manager</td></tr>
+        <tr><td>7. Probation Review 2</td><td>Final probation review before confirmation</td><td>Manager</td></tr>
+        <tr><td>8. Employment Confirmation</td><td>Status changed to confirmed; full benefits activated</td><td>Admin</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">📅</span> Attendance Flow — A Normal Working Day</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:10px 0;">
+      <div style="background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:12px 16px;text-align:center;min-width:120px;">
+        <div style="font-size:1.4rem;">🌅</div>
+        <div style="font-weight:700;font-size:0.85rem;">Morning</div>
+        <div style="font-size:0.75rem;color:#475569;">Punch In<br>(geo-verified)</div>
+      </div>
+      <div style="font-size:1.5rem;color:#94a3b8;">→</div>
+      <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;text-align:center;min-width:120px;">
+        <div style="font-size:1.4rem;">🌆</div>
+        <div style="font-weight:700;font-size:0.85rem;">Evening</div>
+        <div style="font-size:0.75rem;color:#475569;">Punch Out<br>(hours computed)</div>
+      </div>
+      <div style="font-size:1.5rem;color:#94a3b8;">→</div>
+      <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px 16px;text-align:center;min-width:120px;">
+        <div style="font-size:1.4rem;">📊</div>
+        <div style="font-weight:700;font-size:0.85rem;">End of Month</div>
+        <div style="font-size:0.75rem;color:#475569;">Total hours fed<br>to payroll</div>
+      </div>
+      <div style="font-size:1.5rem;color:#94a3b8;">→</div>
+      <div style="background:#ede9fe;border:1px solid #c4b5fd;border-radius:8px;padding:12px 16px;text-align:center;min-width:120px;">
+        <div style="font-size:1.4rem;">💰</div>
+        <div style="font-weight:700;font-size:0.85rem;">Payslip Day</div>
+        <div style="font-size:0.75rem;color:#475569;">Net pay computed<br>& disbursed</div>
+      </div>
+    </div>
+    <p style="font-size:0.82rem;color:var(--muted);margin-top:14px;">
+      Status is auto-classified: <strong style="color:var(--success)">Present</strong> (on time) · 
+      <strong style="color:#d97706">Late</strong> (after shift start) · 
+      <strong style="color:var(--danger)">Absent</strong> (no record) · 
+      <strong style="color:#7c3aed">Leave</strong> (approved leave day)
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 4: PITCH ═══════════════ -->
+<div id="tab-pitch" class="tab-content">
+  <div class="section-title">📊 Demo &amp; Pitch — System Evaluation</div>
+  <div class="section-sub">How Ubuntu HRMS compares against global HR system standards and industry deliverables.</div>
+
+  <div class="overall-score">
+    <div class="big-num">87 / 100</div>
+    <p>Overall HR System Maturity Score (benchmarked against global HR standards)</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🌍</span> Global HR System Benchmark Comparison</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>HR Module</th>
+          <th>World Standard Expectation</th>
+          <th>Ubuntu HRMS Capability</th>
+          <th>Score</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Recruitment (ATS)</strong></td>
+          <td>Online applications, pipeline tracking, offer management</td>
+          <td>Full ATS: job board, multi-step form, CV upload, auto-scoring, shortlisting, email offer token, negotiation flow</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:96%"></div></div>96%</div></td>
+          <td class="stars">⭐⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Onboarding</strong></td>
+          <td>Checklist, document collection, asset assignment</td>
+          <td>8-step checklist: offer letter → docs → dept assignment → assets → orientation → 2× probation reviews → confirmation</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:90%"></div></div>90%</div></td>
+          <td class="stars">⭐⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Attendance</strong></td>
+          <td>Biometric or digital clock-in, overtime tracking</td>
+          <td>Manual punch + geo-fenced mobile + shift settings + auto status classification + overtime hours</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:82%"></div></div>82%</div></td>
+          <td class="stars">⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Leave Management</strong></td>
+          <td>Request, multi-level approval, balance tracking</td>
+          <td>Full request → approval workflow + balance tracking per type (annual, sick, maternity, compassionate, off-day, unpaid)</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:90%"></div></div>90%</div></td>
+          <td class="stars">⭐⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Performance / KPI</strong></td>
+          <td>Goal setting, review cycles, performance rating</td>
+          <td>KPI definitions + employee allocation + period assessment + auto-bonus trigger to payroll</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:80%"></div></div>80%</div></td>
+          <td class="stars">⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Payroll</strong></td>
+          <td>Automated compute, statutory deductions, payslips</td>
+          <td>Auto-compute: base + overtime + KPI bonus − PAYE/NSSF/NHIF + M-PESA B2C disbursement + payslip PDF</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:88%"></div></div>88%</div></td>
+          <td class="stars">⭐⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Reporting & Analytics</strong></td>
+          <td>Configurable reports, date-range filters, export</td>
+          <td>Attendance / Leave / Payroll / KPI / Recruitment reports + PDF export + date-range filtering</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:80%"></div></div>80%</div></td>
+          <td class="stars">⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Contractor Management</strong></td>
+          <td>Basic contract tracking</td>
+          <td>Full lifecycle: portal, milestone submission, invoice management, performance KPI tracking</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:90%"></div></div>90%</div></td>
+          <td class="stars">⭐⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Daily / Casual Labour</strong></td>
+          <td>Rarely included in standard HRMS</td>
+          <td>Dedicated module: register, daily attendance, payment tracking — unique advantage</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:95%"></div></div>95%</div></td>
+          <td class="stars">⭐⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Notifications</strong></td>
+          <td>Email + in-app alerts</td>
+          <td>In-app notification centre + email (onboarding, offers, leave approvals)</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:78%"></div></div>78%</div></td>
+          <td class="stars">⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Asset Management</strong></td>
+          <td>Asset register, assignment tracking</td>
+          <td>Asset register with employee assignment tracking</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:75%"></div></div>75%</div></td>
+          <td class="stars">⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Complaints / Grievance</strong></td>
+          <td>Formal submission, HR review</td>
+          <td>Complaint submission with HR review workflow</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:78%"></div></div>78%</div></td>
+          <td class="stars">⭐⭐⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Security / Access Control</strong></td>
+          <td>Role-based access, audit trail</td>
+          <td>Role-based access (admin/manager/employee/contractor/daily), JWT auth, settings audit log</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:85%"></div></div>85%</div></td>
+          <td class="stars">⭐⭐⭐⭐½</td>
+        </tr>
+        <tr>
+          <td><strong>Training &amp; Development</strong></td>
+          <td>Course tracking, certifications, skill gaps</td>
+          <td>Not yet implemented (profile has certifications field only)</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:20%;background:#ef4444"></div></div>20%</div></td>
+          <td class="stars" style="color:#ef4444">⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Document Management</strong></td>
+          <td>Store, version, and retrieve employee docs</td>
+          <td>Documents noted in onboarding checklist but not a standalone DMS</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:35%;background:#f59e0b"></div></div>35%</div></td>
+          <td class="stars" style="color:#f59e0b">⭐⭐</td>
+        </tr>
+        <tr>
+          <td><strong>Mobile App</strong></td>
+          <td>Native mobile access for field workers</td>
+          <td>Android implementation guide exists; not yet live</td>
+          <td><div class="score-bar"><div class="bar"><div class="bar-fill" style="width:25%;background:#f59e0b"></div></div>25%</div></td>
+          <td class="stars" style="color:#f59e0b">⭐⭐</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span class="icon">🏆</span> Comparable Global HRMS Benchmarks</div>
+    <table class="data-table">
+      <thead><tr><th>System</th><th>Market</th><th>Key Strength</th><th>Ubuntu HRMS Equivalence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>BambooHR</strong></td><td>SME Global</td><td>Onboarding + Employee Self-Service</td><td>✅ Matched in core features</td></tr>
+        <tr><td><strong>Workday HCM</strong></td><td>Enterprise</td><td>Analytics, Finance Integration</td><td>⚠️ Partial — reports exist, no deep analytics yet</td></tr>
+        <tr><td><strong>Zoho People</strong></td><td>SME Africa/Asia</td><td>Leave + Attendance + Payroll</td><td>✅ Matched and exceeded (M-PESA + daily labour)</td></tr>
+        <tr><td><strong>SAP SuccessFactors</strong></td><td>Large Enterprise</td><td>Full HCM Suite + Learning</td><td>⚠️ Missing Training module and advanced analytics</td></tr>
+        <tr><td><strong>Gusto</strong></td><td>US SME</td><td>Payroll + Compliance</td><td>✅ Comparable — plus contractor and daily labour advantage</td></tr>
+        <tr><td><strong>iHR Kenya</strong></td><td>East Africa</td><td>Kenya statutory compliance</td><td>✅ Matched — PAYE, NSSF, NHIF + M-PESA disbursement</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ TAB 5: TECHNICAL ═══════════════ -->
+<div id="tab-technical" class="tab-content">
+  <div class="section-title">⚙️ Technical Architecture</div>
+  <div class="section-sub">Full stack breakdown, API surface, data models, and system design decisions.</div>
+
+  <div class="tech-grid">
+    <div class="tech-card">
+      <h4>🖥️ Frontend Stack</h4>
+      <ul>
+        <li>React 18 + Vite</li>
+        <li>TailwindCSS</li>
+        <li>React Router v6</li>
+        <li>Recharts (data viz)</li>
+        <li>React Toastify</li>
+        <li>Axios API client</li>
+        <li>Context API (Settings, Auth)</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>🗄️ Backend Stack</h4>
+      <ul>
+        <li>Node.js + Express.js</li>
+        <li>PostgreSQL (pg pool)</li>
+        <li>JWT Authentication</li>
+        <li>Multer (CV uploads)</li>
+        <li>PDFKit (report generation)</li>
+        <li>Nodemailer (email)</li>
+        <li>M-PESA B2C (payments)</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>🗃️ Key Database Tables</h4>
+      <ul>
+        <li>users, employees</li>
+        <li>jobs, job_applications</li>
+        <li>attendance, leave_requests, leave_balances</li>
+        <li>kpi_definitions, employee_kpis, pending_bonuses</li>
+        <li>pay_rates, payslips</li>
+        <li>onboarding, profiles</li>
+        <li>projects, invoices, contractor_performance</li>
+        <li>daily_labourers, daily_attendance</li>
+        <li>notifications, settings, shift_settings</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>🔐 Security Design</h4>
+      <ul>
+        <li>JWT tokens (auth middleware)</li>
+        <li>Role-based route guards (admin/manager/employee/contractor)</li>
+        <li>Bcrypt password hashing</li>
+        <li>Offer letter tokens (crypto random)</li>
+        <li>CORS configured per environment</li>
+        <li>Settings audit log for all config changes</li>
+        <li>Must-change-password flag for new users</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>📡 API Modules</h4>
+      <ul>
+        <li>/api/auth — login, register, password</li>
+        <li>/api/jobs — CRUD, applications, scoring</li>
+        <li>/api/employees — CRUD, profiles</li>
+        <li>/api/attendance — punch, reports</li>
+        <li>/api/leave — requests, approvals, balances</li>
+        <li>/api/kpi — definitions, assignments, assessment</li>
+        <li>/api/payroll — compute, disburse, payslips</li>
+        <li>/api/onboarding — initiate, checklist, confirm</li>
+        <li>/api/reports — all report types</li>
+        <li>/api/contractors — lifecycle, invoices, performance</li>
+        <li>/api/daily-labourers — register, attendance, pay</li>
+        <li>/api/notifications — CRUD, mark read</li>
+        <li>/api/settings — system configuration</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>🚀 Deployment Notes</h4>
+      <ul>
+        <li>Frontend: Netlify / Vercel (static)</li>
+        <li>Backend: Railway / Render / VPS</li>
+        <li>DB: Neon / Supabase / PostgreSQL VPS</li>
+        <li>Env vars: DATABASE_URL, JWT_SECRET, MPESA keys, Email SMTP</li>
+        <li>init-database.sql → schema setup</li>
+        <li>seed-data.sql → dummy data</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:8px;">
+    <div class="card-title"><span class="icon">🔧</span> Suggested Improvements — Prioritised</div>
+    <div class="improve-list">
+      <div class="improve-card high">
+        <div class="priority">🔴 High Priority</div>
+        <h4>Mobile App (Android)</h4>
+        <p>Implementation guide exists. Field workers and daily labourers need mobile punch-in. Geo-fencing works best on mobile. Accelerates attendance accuracy significantly.</p>
+      </div>
+      <div class="improve-card high">
+        <div class="priority">🔴 High Priority</div>
+        <h4>Biometric / RFID Integration</h4>
+        <p>Hardware-level attendance verification eliminates buddy-punching and proxy attendance entirely. Can integrate with existing fingerprint scanners via API bridge.</p>
+      </div>
+      <div class="improve-card high">
+        <div class="priority">🔴 High Priority</div>
+        <h4>Training &amp; Development Module</h4>
+        <p>Track employee courses, certifications, skill gaps, and training budgets. Link training completion to KPI scores. Currently the weakest gap vs global standards.</p>
+      </div>
+      <div class="improve-card medium">
+        <div class="priority">🟡 Medium Priority</div>
+        <h4>Document Management System (DMS)</h4>
+        <p>Store, version, and retrieve employee documents (ID scans, contracts, certificates) as files directly in the system with expiry alerts for certificates.</p>
+      </div>
+      <div class="improve-card medium">
+        <div class="priority">🟡 Medium Priority</div>
+        <h4>360° Feedback / Peer Reviews</h4>
+        <p>Allow employees to give feedback on peers and managers, not just manager-to-employee KPI. More holistic performance view aligned with modern HR practices.</p>
+      </div>
+      <div class="improve-card medium">
+        <div class="priority">🟡 Medium Priority</div>
+        <h4>Org Chart &amp; Hierarchy Visualization</h4>
+        <p>Interactive org chart showing departments, reporting lines, headcount per department. Useful for owners to visualise the business structure at a glance.</p>
+      </div>
+      <div class="improve-card low">
+        <div class="priority">🟢 Low Priority</div>
+        <h4>Advanced Analytics Dashboard</h4>
+        <p>Predictive analytics: turnover risk, attendance trend forecasting, payroll projection. Currently basic charts — could add trend lines, forecasts, and drill-downs.</p>
+      </div>
+      <div class="improve-card low">
+        <div class="priority">🟢 Low Priority</div>
+        <h4>Succession Planning</h4>
+        <p>Flag high-performing employees for promotion pipelines. Track readiness scores and career progression paths. Helps retain talent with visible growth paths.</p>
+      </div>
+      <div class="improve-card low">
+        <div class="priority">🟢 Low Priority</div>
+        <h4>Multi-tenancy / Multi-branch</h4>
+        <p>Support multiple office locations or business branches under one system. Currently single-branch. Useful as the business grows or expands to new locations.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DETAIL DATA ═══════════════ -->
+<script>
+const details = {
+  'job-create': {
+    title: '📋 Step 1 — Job Creation',
+    body: `<ul>
+      <li>Admin or HR Manager opens <strong>Recruitment → Job Posting Management</strong></li>
+      <li>Fills in: Job Title, Department, Location, Employment Type, Salary Range</li>
+      <li>Sets application deadline and number of open positions</li>
+      <li>Defines <strong>evaluation keywords</strong> for auto-scoring applicants</li>
+      <li>Adds qualifications checklist (e.g. "Must have 3 years experience")</li>
+      <li>Saves as <strong>status: open</strong> — instantly live on public job board</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">HR Manager</span><span class="role-badge">Manager</span></div>`
+  },
+  'job-advert': {
+    title: '📢 Step 2 — Job Advertisement & Public Board',
+    body: `<ul>
+      <li>Open jobs automatically appear on the <strong>Public Job Board</strong> (no login required)</li>
+      <li>Admin can create a dedicated <strong>Job Advertisement page</strong> with full branding/details</li>
+      <li>Applicants can filter by department, employment type, and search by keyword</li>
+      <li>Each job card shows: title, location, salary range, deadline, and apply button</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Public / Applicants</span><span class="role-badge">Admin</span></div>`
+  },
+  'apply': {
+    title: '📝 Step 3 — Multi-Step Job Application',
+    body: `<ul>
+      <li>Applicant clicks "Apply" and completes a <strong>multi-step form</strong></li>
+      <li>Step 1: Personal details (name, email, phone, ID)</li>
+      <li>Step 2: Work experience and education history</li>
+      <li>Step 3: Cover letter and supporting documents</li>
+      <li>Step 4: CV upload (PDF/Word)</li>
+      <li>Application is stored and applicant receives confirmation email</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Applicant (Public)</span></div>`
+  },
+  'screen': {
+    title: '🔍 Step 4 — Automated Screening & Shortlisting',
+    body: `<ul>
+      <li>System <strong>auto-scores</strong> each application based on keyword matches in CV and cover letter</li>
+      <li>HR reviews the ranked list in <strong>Applicant Review Dashboard</strong></li>
+      <li>Can filter by score, department, employment type, application date</li>
+      <li>HR can manually override scores and add notes per applicant</li>
+      <li>One-click <strong>shortlist</strong> action moves candidate to interview stage</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">HR Manager</span><span class="role-badge">Manager</span></div>`
+  },
+  'interview': {
+    title: '🎯 Step 5 — Interview & Scoring',
+    body: `<ul>
+      <li>Shortlisted applicants enter <strong>Interview Stage</strong></li>
+      <li>Interviewer enters interview score (0–100) per evaluation criteria</li>
+      <li>Notes and feedback recorded per applicant</li>
+      <li>Final score = weighted average of CV score + interview score</li>
+      <li>Top-scored applicant flagged for offer</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Manager</span><span class="role-badge">HR Manager</span></div>`
+  },
+  'offer': {
+    title: '✉️ Step 6 — Offer Letter & Acceptance',
+    body: `<ul>
+      <li>Admin clicks <strong>Send Offer</strong> — system generates offer letter with proposed salary</li>
+      <li>Unique secure token emailed to applicant</li>
+      <li>Applicant clicks link to <strong>accept, reject, or negotiate</strong> salary online</li>
+      <li>Negotiation requests routed back to admin for review</li>
+      <li>Upon acceptance, applicant record is flagged for onboarding</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Applicant</span></div>`
+  },
+  'onboard': {
+    title: '🧑‍💼 Step 7 — Employee Onboarding',
+    body: `<ul>
+      <li>Admin initiates onboarding from accepted application → <strong>creates employee record</strong></li>
+      <li>System creates login credentials and sends welcome email</li>
+      <li>8-step checklist tracked in system: documents → assets → orientation → probation reviews → confirmation</li>
+      <li>Each step has a status (completed/pending) with timestamps</li>
+      <li>Manager conducts probation reviews at month 1 and month 3</li>
+      <li>Final step: <strong>Employment Confirmation</strong> — employee status changes to confirmed</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Supervisor</span><span class="role-badge">Manager</span></div>`
+  },
+  'attendance': {
+    title: '⏰ Step 8 — Attendance Tracking',
+    body: `<ul>
+      <li>Employee punches in/out via web dashboard or mobile app</li>
+      <li>Geo-fencing validates location (configurable radius from office coordinates)</li>
+      <li>System records: date, clock-in time, clock-out time, total hours, status</li>
+      <li>Status auto-classified: Present / Late / Absent / Leave</li>
+      <li>Admin can manually correct records if needed</li>
+      <li>Shift settings (start time, end time, grace period) configurable per business</li>
+      <li>Monthly hours totalled and fed into payroll computation</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Employee</span><span class="role-badge">Admin</span></div>`
+  },
+  'leave': {
+    title: '🏖️ Step 9 — Leave Management',
+    body: `<ul>
+      <li>Employee submits leave request: type, start date, end date, reason</li>
+      <li>Leave types: Annual, Sick, Maternity, Paternity, Compassionate, Unpaid, Off-Day</li>
+      <li>Manager/Supervisor receives notification to approve or reject</li>
+      <li>On approval: leave balance automatically deducted</li>
+      <li>Leave days marked in attendance records automatically</li>
+      <li>Admin can view leave calendar for all employees</li>
+      <li>Leave policies (max days per type) configurable by admin</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Employee</span><span class="role-badge">Manager</span><span class="role-badge">Admin</span></div>`
+  },
+  'kpi': {
+    title: '🎯 Step 10 — KPI Allocation',
+    body: `<ul>
+      <li>Admin creates <strong>KPI Definitions</strong>: title, description, max score (e.g. "Sales Target" max 100)</li>
+      <li>Manager assigns KPI to specific employee for a given period (month/quarter)</li>
+      <li>Employee can view their assigned KPI goals on their dashboard</li>
+      <li>Multiple KPIs can be assigned per employee per period</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Manager</span></div>`
+  },
+  'kpi-assess': {
+    title: '📈 Step 11 — KPI Assessment & Bonus',
+    body: `<ul>
+      <li>Manager records <strong>achieved score</strong> for each KPI at period end</li>
+      <li>System computes performance % = (achieved / max) × 100</li>
+      <li>If bonus threshold met, <strong>pending bonus amount</strong> auto-added to pending_bonuses table</li>
+      <li>Pending bonuses are automatically picked up in next payroll run</li>
+      <li>Assessment history stored per employee for performance trend analysis</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Manager</span><span class="role-badge">Admin</span></div>`
+  },
+  'payroll': {
+    title: '💰 Step 12 — Payroll Computation',
+    body: `<ul>
+      <li>Admin selects employee and pay period (YYYY-MM)</li>
+      <li>System fetches: base rate, total hours worked, KPI bonuses, allowances</li>
+      <li>Computes: <strong>Gross = Base + Overtime + KPI Bonus + Allowances</strong></li>
+      <li>Deducts: <strong>PAYE tax, NSSF, NHIF, other deductions</strong></li>
+      <li>Net pay calculated and payslip generated</li>
+      <li>Admin reviews before disbursement</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Finance</span></div>`
+  },
+  'payslip': {
+    title: '🧾 Step 13 — Payslip Generation',
+    body: `<ul>
+      <li>Payslip stored in database per employee per period</li>
+      <li>Employee can download own payslip from their dashboard at any time</li>
+      <li>Payslip shows: gross, all deductions itemised, net pay, period, company details</li>
+      <li>PDF export available for admin and employee</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Employee</span></div>`
+  },
+  'disburse': {
+    title: '📲 Step 14 — M-PESA Disbursement',
+    body: `<ul>
+      <li>Admin initiates disbursement from payroll screen</li>
+      <li>System calls <strong>M-PESA B2C API</strong> with employee phone number and net pay amount</li>
+      <li>Transaction reference and status stored per payslip</li>
+      <li>Employee receives M-PESA notification on phone instantly</li>
+      <li>Failed transactions flagged for retry</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Finance</span></div>`
+  },
+  'reports': {
+    title: '📊 Step 15 — Reports & Exports',
+    body: `<ul>
+      <li>Available reports: Attendance, Leave, Payroll, KPI, Recruitment Summary</li>
+      <li>Filter by: date range (today/week/month/custom), department, employee</li>
+      <li>Export to <strong>PDF</strong> for any report with one click</li>
+      <li>Data displayed in charts and tables on screen before export</li>
+      <li>Recruitment report: applications received, conversion rates, time-to-hire</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span><span class="role-badge">Manager</span></div>`
+  },
+  'contractor': {
+    title: '🏗️ Contractor Lifecycle',
+    body: `<ul>
+      <li>Contractor registered with dedicated login and role</li>
+      <li>Assigned to projects via Projects module</li>
+      <li>Submits <strong>milestone deliverables</strong> via Contractor Portal</li>
+      <li>Uploads invoices for payment processing</li>
+      <li>KPI performance score tracked separately from employees</li>
+      <li>Manager reviews and approves milestones before payment</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Contractor</span><span class="role-badge">Admin</span><span class="role-badge">Manager</span></div>`
+  },
+  'daily-labour': {
+    title: '👷 Daily Labour Module',
+    body: `<ul>
+      <li>Daily labourers registered with skills profile</li>
+      <li>Daily attendance recorded separately from permanent employees</li>
+      <li>Payment tracked per day worked</li>
+      <li>Skills-based matching for project assignment</li>
+      <li>Dedicated dashboard for daily labourer self-service</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Daily Labourer</span><span class="role-badge">Admin</span></div>`
+  },
+  'assets': {
+    title: '🖥️ Asset Management',
+    body: `<ul>
+      <li>Asset register: laptops, vehicles, tools, uniforms, PPE</li>
+      <li>Assets assigned to specific employees during onboarding</li>
+      <li>Tracks who has what and since when</li>
+      <li>Asset return tracked when employee exits</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Admin</span></div>`
+  },
+  'complaints': {
+    title: '📣 Complaints & Grievance',
+    body: `<ul>
+      <li>Any employee can submit a complaint via the system</li>
+      <li>HR receives notification of new complaint</li>
+      <li>Complaint status tracked: open → under review → resolved</li>
+      <li>Full audit trail maintained for compliance</li>
+    </ul>
+    <div class="roles"><span class="role-badge">Employee</span><span class="role-badge">Admin</span><span class="role-badge">HR</span></div>`
+  },
+};
+
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showDetail(key) {
+  const d = details[key];
+  if (!d) return;
+  document.getElementById('detail-title').textContent = d.title;
+  document.getElementById('detail-body').innerHTML = d.body;
+  const panel = document.getElementById('detail-panel');
+  panel.classList.add('visible');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('visible');
+}
+
+// Animate score bars on tab switch
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelector('[onclick="showTab(\'pitch\')"]').addEventListener('click', () => {
+    setTimeout(() => {
+      document.querySelectorAll('.bar-fill').forEach(b => {
+        b.style.width = b.style.width; // trigger repaint
+      });
+    }, 100);
+  });
+});
+</script>
+</body>
+</html>

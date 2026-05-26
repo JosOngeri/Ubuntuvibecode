@@ -95,7 +95,11 @@ export default function PublicJobBoard() {
                 <p className="text-slate-600 text-sm mb-4 line-clamp-2">{(job.description||'').slice(0,150)}</p>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1 text-xs text-slate-400"><BsClock size={12}/>{job.createdAt?new Date(job.createdAt).toLocaleDateString():'recently'}</span>
-                  <Link to={'/recruitment/apply/'+(job.id||job._id)} className="px-5 py-2.5 bg-[#CB7246] text-white rounded-xl font-semibold text-sm hover:bg-[#F27C12] shadow-sm">Apply Now</Link>
+                  {(job.id||job._id) && !String(job.id||job._id).startsWith('fallback') ? (
+                    <Link to={'/recruitment/job/'+(job.id||job._id)} className="px-5 py-2.5 bg-[#CB7246] text-white rounded-xl font-semibold text-sm hover:bg-[#F27C12] shadow-sm">View Details</Link>
+                  ) : (
+                    <span className="px-5 py-2.5 bg-slate-200 text-slate-500 rounded-xl font-semibold text-sm cursor-not-allowed">Sample Job</span>
+                  )}
                 </div>
               </div>
             ))}

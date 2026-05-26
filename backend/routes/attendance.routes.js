@@ -14,6 +14,7 @@ const {
 const router = express.Router();
 
 router.get('/today', auth, getTodayAttendance);
+router.get('/me', auth, getAttendance);
 router.post('/biometrics/push', pushBiometric);  
 router.post('/manual/self', auth, manualSelfPunch);
 router.post('/manual/manager', auth, roleMiddleware(['admin', 'manager', 'supervisor']), managerPunchForEmployee);

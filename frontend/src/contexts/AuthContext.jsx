@@ -16,6 +16,11 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
   const [portalDisplayName, setPortalDisplayName] = useState('')
+  const [additionalRoles, setAdditionalRoles] = useState([])
+  const [supervisorAllocations, setSupervisorAllocations] = useState([])
+  const [departmentHeadAssignment, setDepartmentHeadAssignment] = useState(null)
+  const [isAdminMode, setIsAdminMode] = useState(false)
+  const [adminModeExpiresAt, setAdminModeExpiresAt] = useState(null)
 
   const refreshPortalProfile = useCallback(async () => {
     const t = localStorage.getItem('authToken')
@@ -24,7 +29,7 @@ export const AuthProvider = ({ children }) => {
       return
     }
     try {
-      const res = await api.get('/profile/me')
+      const res = await api.get('/profile/me').catch(() => ({ data: null }))
       const name = normalizeProfileName(res.data || {})
       setPortalDisplayName(name)
     } catch {
@@ -46,6 +51,68 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Fetch additional roles and allocations from backend
+  const fetchUserRolesAndAllocations = useCallback(async (userId) => {
+    if (!userId) return
+    try {
+      // Fetch supervisor allocations
+      const superRes = await api.get('/supervisor-allocations/me/supervisees').catch(() => ({ data: { data: [] } }))
+      setSupervisorAllocations(superRes.data?.data || [])
+
+      // Fetch department head assignment
+      const deptRes = await api.get('/department-heads/me').catch(() => ({ data: { data: null } }))
+      setDepartmentHeadAssignment(deptRes.data?.data || null)
+
+      // Determine additional roles
+      const roles = []
+      if (superRes.data?.data?.length > 0) roles.push('supervisor')
+      if (deptRes.data?.data) roles.push('department_head')
+      setAdditionalRoles(roles)
+    } catch (error) {
+      console.error('Error fetching roles:', error)
+    }
+  }, [])
+
+  // Admin mode functions for Owner role
+  const enableAdminMode = useCallback((durationMinutes = 10) => {
+    if (user?.role !== 'owner') return false
+    
+    const expiresAt = new Date(Date.now() + durationMinutes * 60000)
+    setIsAdminMode(true)
+    setAdminModeExpiresAt(expiresAt)
+    
+    // Set timeout to auto-disable
+    setTimeout(() => {
+      setIsAdminMode(false)
+      setAdminModeExpiresAt(null)
+    }, durationMinutes * 60000)
+    
+    return true
+  }, [user])
+
+  const disableAdminMode = useCallback(() => {
+    setIsAdminMode(false)
+    setAdminModeExpiresAt(null)
+  }, [])
+
+  const isAdminModeActive = useCallback(() => {
+    if (!isAdminMode || !adminModeExpiresAt) return false
+    return new Date() < new Date(adminModeExpiresAt)
+  }, [isAdminMode, adminModeExpiresAt])
+
+  // Helper functions for checking roles
+  const isSupervisor = useCallback(() => {
+    return additionalRoles.includes('supervisor') || supervisorAllocations.length > 0
+  }, [additionalRoles, supervisorAllocations])
+
+  const isDepartmentHead = useCallback(() => {
+    return additionalRoles.includes('department_head') || !!departmentHeadAssignment
+  }, [additionalRoles, departmentHeadAssignment])
+
+  const getSupervisedEmployees = useCallback(() => {
+    return supervisorAllocations.map(a => a.superviseeId)
+  }, [supervisorAllocations])
+
   useEffect(() => {
     const savedToken = localStorage.getItem('authToken')
     if (savedToken) {
@@ -56,13 +123,28 @@ export const AuthProvider = ({ children }) => {
         setUser(decoded)
         axios.defaults.headers.common['x-auth-token'] = savedToken
         refreshPortalProfile()
+        fetchUserRolesAndAllocations(decoded.id)
       } else {
         localStorage.removeItem('authToken')
         delete axios.defaults.headers.common['x-auth-token']
       }
     }
     setLoading(false)
-  }, [refreshPortalProfile])
+  }, [refreshPortalProfile, fetchUserRolesAndAllocations])
+
+  // Check admin mode expiry periodically
+  useEffect(() => {
+    if (!isAdminMode || !adminModeExpiresAt) return
+    
+    const interval = setInterval(() => {
+      if (new Date() >= new Date(adminModeExpiresAt)) {
+        setIsAdminMode(false)
+        setAdminModeExpiresAt(null)
+      }
+    }, 30000) // Check every 30 seconds
+    
+    return () => clearInterval(interval)
+  }, [isAdminMode, adminModeExpiresAt])
 
   const login = async (username, password) => {
     try {
@@ -92,6 +174,7 @@ export const AuthProvider = ({ children }) => {
       setUser(decoded)
       console.log('[AuthContext] Decoded token after login:', decoded)
       await refreshPortalProfile()
+      await fetchUserRolesAndAllocations(decoded.id)
       
       return {
         mustChangePassword: false,
@@ -120,6 +203,7 @@ export const AuthProvider = ({ children }) => {
       }
       setUser(decoded)
       await refreshPortalProfile()
+      await fetchUserRolesAndAllocations(decoded.id)
       
       return decoded
     } catch (error) {
@@ -154,6 +238,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
     setToken(null)
     setPortalDisplayName('')
+    setAdditionalRoles([])
+    setSupervisorAllocations([])
+    setDepartmentHeadAssignment(null)
+    setIsAdminMode(false)
+    setAdminModeExpiresAt(null)
     localStorage.removeItem('authToken')
     delete axios.defaults.headers.common['x-auth-token']
   }
@@ -176,6 +265,18 @@ export const AuthProvider = ({ children }) => {
       portalDisplayName,
       refreshPortalProfile,
       displayName,
+      additionalRoles,
+      supervisorAllocations,
+      departmentHeadAssignment,
+      isAdminMode,
+      adminModeExpiresAt,
+      enableAdminMode,
+      disableAdminMode,
+      isAdminModeActive,
+      isSupervisor,
+      isDepartmentHead,
+      getSupervisedEmployees,
+      fetchUserRolesAndAllocations,
     }}>
       {children}
     </AuthContext.Provider>

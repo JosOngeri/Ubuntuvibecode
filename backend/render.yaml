@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ubuntu-hrms-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://ubuntu-hrms.vercel.app
+      - key: FRONTEND_URL
+        value: https://ubuntu-hrms.vercel.app

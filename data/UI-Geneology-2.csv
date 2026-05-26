@@ -1,0 +1,65 @@
+Dashboard,Sidebar + Header,Interactive Elements (Drill-down),Leaf Node Content
+Admin,Overview → Dashboard,Stats cards (clickable): Total Employees → /admin/employees, Present Today → /admin/attendance, Pending Payroll → /admin/payroll, Avg KPI → /admin/kpis,Stats cards display, Quick Actions grid, System Status (API/DB/Last Sync)
+Admin,Overview → Dashboard,Quick Actions: Approve Leaves → /admin/leaves, Generate Payroll → /admin/payroll, View Complaints → /admin/complaints, Check Attendance → /admin/attendance, Review KPIs → /admin/kpis, Settings → /admin/settings,Quick Actions grid with navigation buttons
+Admin,Overview → Dashboard,Tabs: Overview, Employees, Attendance, Payroll, KPIs, Analytics,Employees tab: DataTable with employee list → click row → /admin/employees/:id. Attendance tab: Empty state. Payroll tab: 3 stat cards + button. KPIs tab: 2 stat cards + button. Analytics tab: BarChart + PieChart
+Admin,Employees → Employees,DataTable: Employee list → click row → /admin/employees/:id,Employee list table with Name, Department, Role, Status (Active badge)
+Admin,Employees → Users,DataTable: User list → click row → /admin/users/:userId,User list table with user information
+Admin,Attendance → Attendance,Tabs: Overview, Employees, Attendance, Payroll, KPIs, Analytics,Attendance records table with Date, Check In, Check Out, Status → click row → /admin/attendance/:attendanceId
+Admin,Attendance → Leave and Off-days,Leave request list: Approve/Reject buttons,Leave requests table with Employee, Type, Dates, Status
+Admin,Attendance → Statutory Leave Review,Statutory leave rules table: Edit buttons,Statutory leave policy table with leave types, entitlements, rules
+Admin,Payroll → Payroll Management,Payroll list table: Generate button → opens period selection form, Export button,Payroll records table with Employee, Period, Gross, Net, Status
+Admin,Payroll → Disburse Payroll,Payroll list with Pending status: Approve button per row, Batch Approve button,Pending payroll records table
+Admin,Settings → Settings,Settings categories: General, Attendance, Payroll, Leave, KPI, Notifications, Save button,Settings form with category tabs and input fields
+Admin,Reports → Reports,Report type selector: Attendance, Payroll, Leave, KPI, Employee, Date range picker, Generate button, Export button,Report type selection form → Generate displays table/chart → Export downloads PDF/Excel
+Admin,Assets → Assets,Asset list table: Add Asset button → opens form, Edit/Delete buttons per row,Asset inventory table with Name, Type, Status, Assigned To
+Admin,Contracts → Contracts,Contract list table: Create Contract button → opens form, View button per row,Contract records table with Employee, Type, Start Date, End Date, Status
+Admin,Contracts → Review Submissions,Pending contract submissions: Approve/Reject buttons,Contract review table with Contractor, Project, Terms
+Admin,Contractors → Contractors,Contractor list table: Add Contractor button → opens form, View button per row,Contractor records table with Name, Company, Status
+Admin,Workforce → Onboarding,Onboarding checklist table: Start Onboarding button, Progress tracker,Onboarding tasks table with Task, Status, Due Date
+Admin,Workforce → Daily Labour,Daily labourer list table: Add Labourer button → opens form, Approve Wages button,Labourer records table with Name, Skill Set, Daily Rate, Status
+Admin,Performance → KPIs,KPI list table: Set KPI button → opens form, Assess button per row,KPI records table with Employee, Definition, Target, Achieved, Score
+Admin,Performance → Training & Development,Training list table: Add Training button → opens form, Assign button per row,Training records table with Title, Type, Date, Attendees
+Admin,Organisation → Org Chart,Department hierarchy tree: Expand/collapse nodes, Click department → shows employees,Visual org chart with departments as nodes
+Admin,Organisation → Document Vault,Document list table: Upload button → opens file picker, Download button per row,Employee documents table with Employee, Type (National ID, KRA, NSSF, NHIF, Certificate), Status
+Admin,Complaints → Complaints,Complaint list table: Resolve button per row, View button per row,Complaint records table with Employee, Type, Description, Status, Date
+Admin,Hiring → Recruitment,Job postings list table: Create Job button → opens form, View Applicants button per row,Job postings table with Title, Department, Status, Deadline → View Applicants → /recruitment/jobs/:jobId/applicants
+Manager,Overview → Dashboard,Stats cards: Team Size → /admin/employees, Present Today → /manager/attendance, Pending Approvals → /leave/approvals, Team Avg KPI → /kpi/manage,Stats cards, Quick Actions grid, Performance progress bars
+Manager,Overview → Dashboard,Quick Actions: Review Leaves → /leave/approvals, Manage Attendance → /manager/attendance, Set KPI Goals → /kpi/manage, Disburse Payroll → /payroll/disburse, Leave Overview → /manager/leaves,Quick Actions grid with navigation buttons
+Manager,Overview → Dashboard,Tabs: Overview, Team Members, Attendance, Leaves, KPIs,Team Members tab: DataTable → click row → /admin/employees/:id. Attendance tab: Empty state. Leaves tab: 3 stat cards + button. KPIs tab: Empty state
+Manager,Attendance → Attendance,Attendance records table: Filter by date range, Export button,Team attendance table with Employee, Date, Check In, Check Out, Status
+Manager,Attendance → Leave and Off-days Overview,Leave balance summary: Leave request list,Leave balance cards per employee, Leave requests table with status
+Manager,Attendance → Leave and Off-days Management,Pending leave requests: Approve/Reject buttons,Leave approval queue table
+Manager,Attendance → Statutory Leave Review,Statutory leave policy table: View-only,Statutory leave rules display (read-only for managers)
+Manager,Team → Team Members,DataTable: Team list → click row → /admin/employees/:id,Team members table with Name, Department, Type (Permanent/Contract)
+Manager,Performance → Manage KPIs,KPI list table: Set KPI button → opens form, Assess button per row,KPI records table with Employee, Definition, Target
+Manager,Performance → KPI Assessment,Assessment form: Score inputs, Submit button,KPI evaluation form with score fields per criterion
+Manager,Onboarding → Onboarding,Onboarding checklist table: Start Onboarding button, Progress tracker,Onboarding tasks table with Task, Status, Due Date
+Manager,Daily Labour → Daily Labour,Labourer list table: Add Labourer button → opens form, Approve Wages button,Labourer records table with Name, Skill Set, Daily Rate, Status
+Manager,Complaints → Complaints,Complaint list table: Resolve button per row, View button per row,Complaint records table with Employee, Type, Description, Status
+Manager,Assets → Assets,Asset list table (view-only): View button per row,Asset inventory table (read-only)
+Manager,Contractors → Contractors,Contractor list table: View button per row,Contractor records table with Name, Company, Status
+Manager,Reports → Reports,Report type selector: Date range picker, Generate button, Export button,Report generation form → Generate displays table/chart → Export downloads PDF/Excel
+Manager,Hiring → Recruitment,Job postings list: View Applicants button per row,Job postings table with Title, Department, Status → View Applicants → /recruitment/jobs/:jobId/applicants
+Employee,Overview → My Dashboard,Stats cards: Attendance Days → /employee/attendance, Leave Balance → /employee/leaves, Pending Leaves → /leave/request, KPI Score → /kpi/my-goals,Welcome banner, Stats cards, Quick Actions grid, Recent Activity feed
+Employee,Overview → My Dashboard,Quick Actions: Quick Punch (records attendance), Request Leave → /leave/request, My Profile → /profile/view, My Payslips → /payroll/payslips, Submit Complaint → /admin/complaints,Quick Actions grid with action buttons
+Employee,Overview → My Dashboard,Tabs: Overview, Attendance, Leaves, Payslips,Attendance tab: CalendarHeatmap showing attendance for past 3 months. Leaves tab: 3 stat cards + button. Payslips tab: Empty state
+Employee,Attendance → Manual Punch,Punch button: Check In/Check Out, Biometric device ID input,Punch form with device ID field
+Employee,Attendance → My Attendance,Attendance records table: Filter by date range, Export button,Personal attendance table with Date, Check In, Check Out, Total Hours, Status
+Employee,Attendance → My Leave and Off-days,Leave balance cards: Leave request list, Request Leave button → /leave/request,Leave balance summary (Annual, Sick, Casual), Leave requests table with Type, Dates, Status
+Employee,Leave Request → Request Leave and Off-days,Leave type selector: Annual, Sick, Casual, Unpaid, Date range picker, Reason textarea, Submit button,Leave request form with type, dates, reason fields
+Employee,Payslips → My Payslips,Payslip list table: Download button per row, Filter by period,Payslip records table with Period, Gross, Net, Deductions
+Employee,KPIs → My Goals,KPI goals list table: View details button per row,Personal KPI goals table with Definition, Target, Progress, Deadline
+Employee,Complaints → Submit Complaint,Complaint type selector: Description textarea, Submit button,Complaint submission form with type, description fields
+Employee,Job Board → Job Board,Job postings list (public): Apply button per job,Public job board with Title, Department, Description, Deadline → Apply → /recruitment/apply/:jobId
+Employee,Job Board → My Applications,Application list table: View Application button per row,Job applications table with Job Title, Applied Date, Status
+Daily Labourer,Overview → Dashboard,Stats cards (clickable): Days Present → switches to Attendance tab, Days Absent → switches to Attendance tab, Total Earnings → switches to Payments tab, Pending Payments → switches to Payments tab,4 stat cards, Profile Summary, Recent Attendance list
+Daily Labourer,Overview → Dashboard,Tabs: Overview, Attendance, Payments,Attendance tab: Attendance History table with Date, Check In, Check Out, Status. Payments tab: Payment History table with Date, Amount, Days Worked, Status
+Daily Labourer,Attendance → My Attendance,Attendance records table: Status badges (present, absent, late),Personal attendance table with Date, Check In, Check Out, Status
+Daily Labourer,Payments → Payments,Payment records table: Status badges (paid, pending, rejected),Payment history table with Date, Amount, Days Worked, Status
+Contractor,Overview → Dashboard,Stats cards: Active Projects → /contractor/projects, Pending Invoices → /contractor/invoices, Delivery Rate → /contractor/reports, Total Earnings → /contractor/invoices,Stats cards, Quick Actions grid, Performance Summary
+Contractor,Overview → Dashboard,Quick Actions: Submit Milestone → /contractor/portal, View Invoices → /contractor/invoices, My KPI → /contractor/reports, My Projects → /contractor/projects,Quick Actions grid with navigation buttons
+Contractor,Overview → Dashboard,Tabs: Overview, Projects, Invoices, Performance,Projects tab: Empty state. Invoices tab: 3 stat cards + button. Performance tab: 2 stat cards + button
+Contractor,Projects → Projects,Project list table: View Project button per row, Submit Milestone button per project,Project records table with Name, Client, Start Date, End Date, Status → Submit Milestone → /contractor/portal
+Contractor,Milestones → Submit Milestones,Project selector: Milestone description textarea, File upload for deliverables, Submit button,Milestone submission form with project, description, file fields
+Contractor,Invoices → Invoices,Invoice list table: Create Invoice button → opens form, Download button per row,Invoice records table with Project, Amount, Date, Status
+Contractor,KPIs → My KPI,KPI metrics display: Performance charts, Historical data table,KPI dashboard with Delivery Rate, Average Rating, Completed Projects, Charts showing performance trends

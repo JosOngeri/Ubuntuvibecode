@@ -6,6 +6,7 @@ import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
 import Table from '../../components/common/Table'
 import DateDropdown from '../../components/common/DateDropdown'
+import PageInfoPanel from '../../components/common/PageInfoPanel'
 import { toast } from 'react-toastify'
 import { downloadPdfReport } from '../../utils/reportExport'
 
@@ -477,6 +478,42 @@ const ManagerLeaves = () => {
           </Card>
         </div>
       )}
+      <PageInfoPanel
+        title="Leave Management"
+        description="Request, approve, and track employee leave"
+        steps={[
+          'Employees can submit leave requests from the Request tab.',
+          'Managers review pending requests in the Approvals tab.',
+          'Approve or reject requests with optional comments.',
+          'View all leave history and balances in the All Leaves tab.',
+        ]}
+        faqs={[
+          { q: 'How is leave balance calculated?', a: 'Leave balance is based on annual entitlement minus approved leave days. Check individual employee profiles for current balances.' },
+          { q: 'Can an employee request leave with insufficient balance?', a: 'Yes, but it requires manager approval. The system will warn about negative balance.' },
+          { q: 'What happens when leave is approved?', a: 'The employee\'s leave balance is reduced and the dates are marked as leave in attendance records.' },
+          { q: 'Can I cancel an approved leave?', a: 'Only before the leave start date. Contact HR for cancellations of in-progress leave.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const today = new Date().toISOString().split('T')[0];
+            const [leaveRes, empRes] = await Promise.allSettled([
+              api.get('/api/leaves').catch(() => ({ data: [] })),
+              api.get('/api/employees').catch(() => ({ data: [] })),
+            ]);
+            const leaves = leaveRes.status === 'fulfilled' ? (leaveRes.value.data || []) : [];
+            const emps = empRes.status === 'fulfilled' ? (empRes.value.data || []) : [];
+            const pending = leaves.filter(l => l.status === 'Pending');
+            if (pending.length > 0) items.push({ level: 'warn', message: `${pending.length} leave request${pending.length > 1 ? 's are' : ' is'} awaiting approval`, detail: 'Review and approve or reject pending requests in the Approvals tab.' });
+            const onLeaveToday = leaves.filter(l => l.status === 'Approved' && l.startDate <= today && l.endDate >= today);
+            if (onLeaveToday.length > 0) items.push({ level: 'info', message: `${onLeaveToday.length} employee${onLeaveToday.length > 1 ? 's are' : ' is'} on leave today`, detail: 'Plan coverage for absent employees.' });
+            const lowBalance = emps.filter(e => e.leave_balance < 5);
+            if (lowBalance.length > 0) items.push({ level: 'warn', message: `${lowBalance.length} employee${lowBalance.length > 1 ? 's have' : ' has'} low leave balance (< 5 days)`, detail: 'Consider planning leave allocation for these employees.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'Leave management is up to date — no issues found.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve leave status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
     </DashboardLayout>
   )
 }

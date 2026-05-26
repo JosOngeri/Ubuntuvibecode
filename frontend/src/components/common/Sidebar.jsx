@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import headerImage from '../../assets/ubuntu-header-hrms.png'
 import {
   BsSpeedometer2,
   BsPeople,
@@ -25,14 +24,30 @@ import {
   BsChevronLeft,
   BsChevronRight,
   BsChevronDown,
-  BsBoxArrowRight
+  BsBoxArrowRight,
+  BsDiagram3,
+  BsBook,
+  BsPersonGear,
+  BsBuilding,
+  BsChatDots
 } from 'react-icons/bs'
 
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
-  const { user, logout } = useAuth()
+  const { user, logout, displayName } = useAuth()
   const role = user?.role
   const [collapsedGroups, setCollapsedGroups] = useState({})
+
+  const initialsFromName = (name) => {
+    if (!name || name === 'Guest') return '?'
+    const parts = String(name).trim().split(/\s+/).filter(Boolean)
+    if (!parts.length) return '?'
+    const a = parts[0][0]
+    const b = parts.length > 1 ? parts[parts.length - 1][0] : parts[0][1]
+    return `${(a || '').toUpperCase()}${(b || '').toUpperCase()}`.trim() || '?'
+  }
+
+  const avatarInitials = initialsFromName(displayName)
 
   const toggleGroup = (title) => {
     setCollapsedGroups(prev => ({
@@ -47,251 +62,302 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   }
 
   const getMenuGroups = () => {
-    // Profile link for all logged-in users
-    const profileItems = [
-      { path: '/profile/view', label: 'Profile', icon: BsPersonCircle },
-    ];
-
-    // Recruitment links for relevant roles
     const recruitmentItems = [
       { path: '/recruitment/jobs', label: 'Recruitment', icon: BsClipboard },
+      { path: '/recruitment/shortlist', label: 'Shortlist', icon: BsClipboardCheck },
     ];
 
     if (role === 'admin') return [
       {
-        title: 'Overview',
+        title: 'Dashboard',
+        priority: 1,
         items: [
           { path: '/admin/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
         ]
       },
       {
-        title: 'Administration',
+        title: 'People',
+        priority: 2,
         items: [
-          { path: '/admin/users', label: 'Users', icon: BsPersonCircle },
-          { path: '/admin/employees', label: 'Employees', icon: BsPeople },
-          { path: '/admin/settings', label: 'Settings', icon: BsGear },
+          { path: '/admin/people', label: 'People', icon: BsPeople },
         ]
       },
       {
-        title: 'Time & Leave and Off-days',
+        title: 'Attendance',
+        priority: 3,
         items: [
           { path: '/admin/attendance', label: 'Attendance', icon: BsClipboardCheck },
-          { path: '/admin/leaves', label: 'Leave and Off-days', icon: BsCalendarCheck },
-          { path: '/leave/statutory', label: 'Statutory Leave Review', icon: BsFileEarmarkText },
         ]
       },
       {
-        title: 'Finance',
+        title: 'Payroll',
+        priority: 4,
         items: [
-          // { path: '/admin/payroll', label: 'Payroll', icon: BsCreditCard },
-          { path: '/payroll/disburse', label: 'Disburse Payroll', icon: BsCreditCard },
+          { path: '/admin/payroll', label: 'Payroll', icon: BsCreditCard },
         ]
       },
       {
         title: 'Performance',
+        priority: 5,
         items: [
-          { path: '/admin/kpis', label: 'KPIs', icon: BsGraphUp },
+          { path: '/admin/performance', label: 'Performance', icon: BsGraphUp },
+          { path: '/admin/training', label: 'Training', icon: BsBook },
         ]
       },
       {
-        title: 'Contracts & Projects',
+        title: 'Contracts',
+        priority: 6,
         items: [
           { path: '/admin/contracts', label: 'Contracts', icon: BsFileEarmarkText },
-          { path: '/contracts/review', label: 'Review Submissions', icon: BsCheckCircle },
         ]
       },
       {
-        title: 'Workforce',
+        title: 'HR Operations',
+        priority: 7,
         items: [
-          { path: '/admin/onboarding', label: 'Onboarding', icon: BsPersonCheck },
-          { path: '/admin/daily-labour', label: 'Daily Labour', icon: BsPeople },
+          { path: '/admin/hr-ops', label: 'HR Operations', icon: BsPersonCheck },
+          { path: '/recruitment/shortlist', label: 'Shortlist', icon: BsClipboardCheck },
+          { path: '/recruitment/applicants', label: 'All Applicants', icon: BsPeople },
         ]
       },
       {
-        title: 'Complaints',
+        title: 'Organisation',
+        priority: 8,
         items: [
-          { path: '/admin/complaints', label: 'Complaints', icon: BsHandThumbsUp },
+          { path: '/admin/org-chart', label: 'Org Chart', icon: BsDiagram3 },
+          { path: '/admin/supervisor-allocations', label: 'Supervisor Allocations', icon: BsPersonGear },
+          { path: '/admin/department-head-assignments', label: 'Dept Heads', icon: BsBuilding },
+          { path: '/admin/documents', label: 'Document Vault', icon: BsFileText },
         ]
       },
       {
-        title: 'Assets',
+        title: 'Resources',
+        priority: 9,
         items: [
-          { path: '/admin/assets', label: 'Assets', icon: BsBox },
+          { path: '/admin/resources', label: 'Resources', icon: BsBox },
         ]
       },
       {
-        title: 'Contractors',
+        title: 'Communications',
+        priority: 10,
         items: [
-          { path: '/admin/contractors', label: 'Contractors', icon: BsBriefcase },
+          { path: '/messages', label: 'Messages', icon: BsChatDots },
         ]
       },
       {
-        title: 'Reports',
+        title: 'Settings',
+        priority: 11,
         items: [
-          { path: '/admin/reports', label: 'Reports', icon: BsGraphUp },
+          { path: '/admin/settings', label: 'Settings', icon: BsGear },
         ]
       },
-      {
-        title: 'Hiring',
-        items: recruitmentItems,
-      },
-      {
-        title: 'Account',
-        items: profileItems,
-      }
     ];
 
     if (role === 'manager' || role === 'supervisor') return [
       {
-        title: 'Overview',
+        title: 'Dashboard',
+        priority: 1,
         items: [
           { path: '/manager/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
         ]
       },
       {
-        title: 'Team Time & Leave and Off-days',
+        title: 'Team',
+        priority: 2,
+        items: [
+          { path: '/admin/employees', label: 'Team', icon: BsPeople },
+        ]
+      },
+      {
+        title: 'Attendance',
+        priority: 3,
         items: [
           { path: '/manager/attendance', label: 'Attendance', icon: BsClipboardCheck },
-          { path: '/manager/leaves', label: 'Leave and Off-days Overview', icon: BsCalendarCheck },
-          { path: '/leave/approvals', label: 'Leave and Off-days Management', icon: BsCheckCircle },
-          { path: '/leave/statutory', label: 'Statutory Leave Review', icon: BsFileEarmarkText },
         ]
       },
       {
         title: 'Performance',
+        priority: 4,
         items: [
-          { path: '/kpi/manage', label: 'Manage KPIs', icon: BsGraphUp },
-          { path: '/kpi/assesment', label: 'KPI Assessment', icon: BsCheckCircle },
+          { path: '/kpi/manage', label: 'Performance', icon: BsGraphUp },
         ]
       },
-      // {
-      //   title: 'Finance',
-      //   items: [
-      //     { path: '/payroll/disburse', label: 'Disburse Payroll', icon: BsCreditCard },
-      //     { path: '/contracts/review', label: 'Review Submissions', icon: BsCheckCircle },
-      //   ]
-      // },
       {
-        title: 'Hiring',
-        items: recruitmentItems,
-      },
-      {
-        title: 'Workforce',
+        title: 'Operations',
+        priority: 5,
         items: [
           { path: '/admin/onboarding', label: 'Onboarding', icon: BsPersonCheck },
           { path: '/admin/daily-labour', label: 'Daily Labour', icon: BsPeople },
-        ]
-      },
-      {
-        title: 'Complaints',
-        items: [
           { path: '/admin/complaints', label: 'Complaints', icon: BsHandThumbsUp },
         ]
       },
       {
-        title: 'Assets',
+        title: 'Resources',
+        priority: 6,
         items: [
           { path: '/admin/assets', label: 'Assets', icon: BsBox },
-        ]
-      },
-      {
-        title: 'Contractors',
-        items: [
           { path: '/admin/contractors', label: 'Contractors', icon: BsBriefcase },
         ]
       },
       {
         title: 'Reports',
+        priority: 7,
         items: [
           { path: '/admin/reports', label: 'Reports', icon: BsGraphUp },
         ]
       },
       {
-        title: 'Account',
-        items: profileItems,
+        title: 'Hiring',
+        priority: 8,
+        items: recruitmentItems,
+      },
+      {
+        title: 'Communications',
+        priority: 9,
+        items: [
+          { path: '/messages', label: 'Messages', icon: BsChatDots },
+        ]
       }
-    ];
+    ].sort((a, b) => a.priority - b.priority);
 
     if (role === 'employee') return [
       {
-        title: 'Overview',
+        title: 'Dashboard',
+        priority: 1,
         items: [
-          { path: '/employee/dashboard', label: 'My Dashboard', icon: BsSpeedometer2 },
+          { path: '/employee/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
         ]
       },
       {
-        title: 'Time & Leave and Off-days',
+        title: 'Attendance',
+        priority: 2,
         items: [
-          { path: '/employee/punch', label: 'Manual Punch', icon: BsPersonCheck },
+          { path: '/employee/punch', label: 'Punch In/Out', icon: BsPersonCheck },
           { path: '/employee/attendance', label: 'My Attendance', icon: BsClipboardCheck },
-          { path: '/employee/leaves', label: 'My Leave and Off-days', icon: BsCalendarCheck },
-          { path: '/leave/request', label: 'Request Leave and Off-days', icon: BsCalendarX },
+          { path: '/employee/leaves', label: 'My Leaves', icon: BsCalendarCheck },
+          { path: '/leave/request', label: 'Request Leave', icon: BsCalendarX },
         ]
       },
       {
-        title: 'Performance',
-        items: [
-          { path: '/kpi/my-goals', label: 'My Goals', icon: BsBullseye },
-        ]
-      },
-      {
-        title: 'Finance',
+        title: 'Payroll',
+        priority: 3,
         items: [
           { path: '/payroll/payslips', label: 'My Payslips', icon: BsFileText },
         ]
       },
       {
-        title: 'Complaints',
+        title: 'Performance',
+        priority: 4,
         items: [
-          { path: '/admin/complaints', label: 'Submit Complaint', icon: BsHandThumbsUp },
+          { path: '/kpi/my-goals', label: 'My Goals', icon: BsBullseye },
         ]
       },
       {
-        title: 'Careers',
+        title: 'Complaints',
+        priority: 5,
+        items: [
+          { path: '/admin/complaints', label: 'Complaints', icon: BsHandThumbsUp },
+        ]
+      },
+      {
+        title: 'Jobs',
+        priority: 6,
         items: [
           { path: '/recruitment/jobs-board', label: 'Job Board', icon: BsClipboard },
           { path: '/recruitment/my-applications', label: 'My Applications', icon: BsFileText },
         ]
       },
       {
-        title: 'Account',
-        items: profileItems,
+        title: 'Communications',
+        priority: 7,
+        items: [
+          { path: '/messages', label: 'Messages', icon: BsChatDots },
+        ]
       }
-    ];
+    ].sort((a, b) => a.priority - b.priority);
 
     if (role === 'contractor') return [
       {
         title: 'Overview',
+        priority: 1,
         items: [
           { path: '/contractor/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
         ]
       },
       {
-        title: 'Work',
+        title: 'Projects',
+        priority: 2,
         items: [
           { path: '/contractor/projects', label: 'Projects', icon: BsBriefcase },
+        ]
+      },
+      {
+        title: 'Milestones',
+        priority: 3,
+        items: [
           { path: '/contractor/portal', label: 'Submit Milestones', icon: BsCloudUpload },
+        ]
+      },
+      {
+        title: 'Invoices',
+        priority: 4,
+        items: [
           { path: '/contractor/invoices', label: 'Invoices', icon: BsFileEarmarkText },
         ]
       },
       {
-        title: 'Performance',
+        title: 'KPIs',
+        priority: 5,
         items: [
           { path: '/contractor/reports', label: 'My KPI', icon: BsGraphUp },
         ]
       },
       {
-        title: 'Account',
-        items: profileItems,
+        title: 'Communications',
+        priority: 6,
+        items: [
+          { path: '/messages', label: 'Messages', icon: BsChatDots },
+        ]
       }
-    ];
+    ].sort((a, b) => a.priority - b.priority);
+
+    if (role === 'daily_labourer') return [
+      {
+        title: 'Overview',
+        priority: 1,
+        items: [
+          { path: '/daily-labour/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
+        ]
+      },
+      {
+        title: 'Attendance',
+        priority: 2,
+        items: [
+          { path: '/daily-labour/attendance', label: 'My Attendance', icon: BsClipboardCheck },
+        ]
+      },
+      {
+        title: 'Payments',
+        priority: 3,
+        items: [
+          { path: '/daily-labour/payments', label: 'Payments', icon: BsFileText },
+        ]
+      },
+      {
+        title: 'Communications',
+        priority: 4,
+        items: [
+          { path: '/messages', label: 'Messages', icon: BsChatDots },
+        ]
+      }
+    ].sort((a, b) => a.priority - b.priority);
 
     return [
       {
         title: 'Overview',
+        priority: 1,
         items: [
           { path: '/dashboard', label: 'Dashboard', icon: BsSpeedometer2 },
-          ...profileItems
         ]
       }
     ];
@@ -309,15 +375,22 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       )}
       
       <aside className={`fixed lg:static left-0 top-16 h-[calc(100vh-64px)] ${isCollapsed ? 'w-20' : 'w-64'} bg-[#1a1a2e] border-r border-slate-800 transform transition-all duration-300 z-40 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        {/* Logo at top */}
+        {/* User Profile at top */}
         {!isCollapsed && (
-          <div className="p-4 border-b border-slate-700">
-            <img
-              src={headerImage}
-              alt="Ubuntu HRMS"
-              className="h-8 w-auto object-contain brightness-0 invert"
-            />
-          </div>
+          <NavLink
+            to="/profile/view"
+            className="p-4 border-b border-slate-700 hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold shrink-0">
+                {avatarInitials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{displayName}</p>
+                <p className="text-xs text-slate-400 capitalize">{role || 'User'}</p>
+              </div>
+            </div>
+          </NavLink>
         )}
         
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-hide">

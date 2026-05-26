@@ -9,6 +9,7 @@ const {
   isValidObjectId,
   validateEmployeePayload,
 } = require('../utils/validation');
+const logger = require('../utils/logger');
 
 const getCurrentYear = () => new Date().getFullYear();
 
@@ -41,50 +42,60 @@ const generateTemporaryPassword = () => {
   return `${raw}Aa1!`;
 };
 
-const handleDbError = (res, err) => {
+const handleDbError = (res, err, tag = 'employee') => {
   if (err?.code === '23505') {
+    logger.warn(tag, 'Duplicate key constraint', { code: err.code, detail: err.detail });
     if ((err?.detail || '').toLowerCase().includes('(email)')) {
       return res.status(400).json({ msg: 'A user account already exists with this email' });
     }
     return res.status(400).json({ msg: 'Employee already exists with the same unique field' });
   }
-
+  logger.error(tag, 'DB error', err);
   return res.status(500).send('Server error');
 };
 
 // Get all employees
 const getEmployees = async (req, res) => {
+  logger.info('employee.getAll', 'Entry', { userId: req.user?.id, role: req.user?.role });
   try {
     const employees = await Employee.find();
+    logger.info('employee.getAll', `Returning ${employees.length} employees`);
     res.json(employees);
   } catch (err) {
+    logger.error('employee.getAll', 'Unhandled error', err);
     res.status(500).send('Server error');
   }
 };
 
 const getMyEmployee = async (req, res) => {
+  const userId = req.user?.id;
+  logger.info('employee.getMe', 'Entry', { userId });
   try {
-    const userId = req.user?.id;
     if (!userId) {
+      logger.warn('employee.getMe', 'No userId in token');
       return res.status(401).json({ msg: 'Unauthorized' });
     }
 
     const employee = await Employee.findOne({ userId });
     if (!employee) {
+      logger.warn('employee.getMe', 'Employee not found for user', { userId });
       return res.status(404).json({ msg: 'Employee profile not found for current user' });
     }
 
+    logger.info('employee.getMe', 'Found', { userId, employeeId: employee.id });
     return res.json(employee.toJSON());
   } catch (err) {
+    logger.error('employee.getMe', 'Unhandled error', err, { userId });
     return res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 const getEmployeeById = async (req, res) => {
+  const { id } = req.params;
+  logger.info('employee.getById', 'Entry', { id, userId: req.user?.id });
   try {
-    const { id } = req.params;
-
     if (!isValidObjectId(id)) {
+      logger.warn('employee.getById', 'Invalid id', { id });
       return res.status(400).json({ msg: 'Invalid employee id' });
     }
 
@@ -94,6 +105,7 @@ const getEmployeeById = async (req, res) => {
 
     const employee = await Employee.findById(id);
     if (!employee) {
+      logger.warn('employee.getById', 'Not found', { id });
       return res.status(404).json({ msg: 'Employee not found' });
     }
 
@@ -112,10 +124,12 @@ const getEmployeeById = async (req, res) => {
 
 // Add employee
 const addEmployee = async (req, res) => {
+  logger.info('employee.add', 'Entry', { userId: req.user?.id, body: req.body });
   try {
     const { normalized, errors } = validateEmployeePayload(req.body);
 
     if (errors.length > 0) {
+      logger.warn('employee.add', 'Validation failed', { errors });
       return res.status(400).json({ msg: 'Validation failed', errors });
     }
 
@@ -161,7 +175,7 @@ const addEmployee = async (req, res) => {
           [employeeId, year, 30, 15, 30]
         );
       } catch (leaveError) {
-        console.warn('Failed to auto-allocate leave balance:', leaveError);
+        logger.warn('employee.add', 'Failed to auto-allocate leave balance', { error: leaveError.message });
         // Don't fail employee creation if leave balance allocation fails
       }
     } catch (error) {
@@ -191,26 +205,31 @@ const addEmployee = async (req, res) => {
       response.emailError = emailResult.reason;
     }
 
+    logger.info('employee.add', 'Created', { employeeId: newEmployee.id, username });
     return res.status(201).json(response);
   } catch (err) {
-    return handleDbError(res, err);
+    return handleDbError(res, err, 'employee.add');
   }
 };
 
 // Update employee
 const updateEmployee = async (req, res) => {
+  logger.info('employee.update', 'Entry', { id: req.params.id, userId: req.user?.id });
   try {
     if (!isValidObjectId(req.params.id)) {
+      logger.warn('employee.update', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ msg: 'Invalid employee id' });
     }
 
     const { normalized, errors } = validateEmployeePayload(req.body, { partial: true });
     if (errors.length > 0) {
+      logger.warn('employee.update', 'Validation failed', { errors });
       return res.status(400).json({ msg: 'Validation failed', errors });
     }
 
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
+      logger.warn('employee.update', 'Not found', { id: req.params.id });
       return res.status(404).json({ msg: 'Employee not found' });
     }
 
@@ -220,27 +239,33 @@ const updateEmployee = async (req, res) => {
 
     employee.set(updates);
     await employee.save();
+    logger.info('employee.update', 'Updated', { id: req.params.id });
     return res.json(employee);
   } catch (err) {
-    return handleDbError(res, err);
+    return handleDbError(res, err, 'employee.update');
   }
 };
 
 // Delete employee
 const deleteEmployee = async (req, res) => {
+  logger.info('employee.delete', 'Entry', { id: req.params.id, userId: req.user?.id });
   try {
     if (!isValidObjectId(req.params.id)) {
+      logger.warn('employee.delete', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ msg: 'Invalid employee id' });
     }
 
     const employee = await Employee.findByIdAndDelete(req.params.id);
     if (!employee) {
+      logger.warn('employee.delete', 'Not found', { id: req.params.id });
       return res.status(404).json({ msg: 'Employee not found' });
     }
 
     await Attendance.deleteMany({ employeeId: req.params.id });
+    logger.info('employee.delete', 'Deleted', { id: req.params.id });
     return res.json({ msg: 'Employee deleted' });
   } catch (err) {
+    logger.error('employee.delete', 'Unhandled error', err, { id: req.params.id });
     return res.status(500).send('Server error');
   }
 };

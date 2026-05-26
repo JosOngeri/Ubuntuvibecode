@@ -39,7 +39,7 @@ export default function ApplicantDetail() {
     const fetchApplicant = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/jobs/${jobId}/applicants/${applicantId}`);
+        const res = await api.get(`/jobs/${jobId}/applicants/${applicantId}`).catch(() => ({ data: null }));
         const normalized = normalizeApplication(res.data || {});
         setApplicant(normalized);
         setStatus(normalized.status || 'pending');

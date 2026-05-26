@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
 import { BsPersonCheck, BsFileText, BsBoxArrowRight, BsCalendarCheck, BsStar, BsCheckCircle, BsClock, BsBuilding, BsPerson } from 'react-icons/bs'
+import PageInfoPanel from '../../components/common/PageInfoPanel'
+import { OnboardingEmptyState } from '../../components/common/EmptyState'
 
 const STEPS = [
   { name: 'offer_letter', label: 'Offer Letter', icon: BsFileText },
@@ -16,7 +19,8 @@ const STEPS = [
   { name: 'probation_review_2', label: 'Probation Review #2', icon: BsStar },
   { name: 'confirmation', label: 'Confirmation', icon: BsCheckCircle },
 ]
-export default function OnboardingPage() {
+export default function OnboardingPage({ standalone = true }) {
+  const navigate = useNavigate()
   const [onboardings, setOnboardings] = useState([])
   const [loading, setLoading] = useState(true)
   const [employees, setEmployees] = useState([])
@@ -32,7 +36,11 @@ export default function OnboardingPage() {
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [oRes, eRes, aRes] = await Promise.all([api.get('/onboarding'), api.get('/employees'), api.get('/jobs/my-applications')])
+      const [oRes, eRes, aRes] = await Promise.all([
+        api.get('/onboarding').catch(() => ({ data: [] })),
+        api.get('/employees').catch(() => ({ data: [] })),
+        api.get('/jobs/my-applications').catch(() => ({ data: [] }))
+      ])
       setOnboardings(oRes.data || [])
       setEmployees((eRes.data || []).filter(e => e.status !== 'Active'))
       setApplications(aRes.data || [])
@@ -84,27 +92,23 @@ const initiate = async () => {
     }
   }
 
-  const handleApplicationSelect = async (applicationId) => {
+  const handleApplicationSelect = (applicationId) => {
     setSelectedApplication(applicationId)
-    try {
-      const res = await api.get(`/jobs/applications/${applicationId}`)
-      const app = res.data
-      const positionDetails = app.positionDetails || {}
-      setForm({
-        ...form,
-        department: positionDetails.department || form.department,
-        position: positionDetails.position || form.position,
-      })
-    } catch (err) {
-      toast.error('Failed to load application details')
-    }
+    const app = applications.find(a => String(a.id) === String(applicationId))
+    if (!app) return
+    const positionDetails = app.positionDetails || {}
+    setForm({
+      ...form,
+      department: positionDetails.department || form.department,
+      position: positionDetails.position || form.position,
+    })
   }
 
   const getDone = (o, name) => o.steps?.find(s => s.name === name)?.completed
   const inProg = onboardings.filter(o => o.status === 'in_progress').length
   const done = onboardings.filter(o => o.status === 'completed').length
-return (
-    <DashboardLayout>
+const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Onboarding</h1>
         <p className="page-subtitle">Track employee onboarding from offer letter to confirmation.</p>
@@ -123,7 +127,7 @@ return (
           <div className="grid grid-cols-2 gap-3">
             <select className="form-select text-sm" value={form.employeeId} onChange={e => setForm({...form, employeeId: e.target.value})}>
               <option value="">Select Employee</option>
-              {employees.map(e => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
+              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
             </select>
             <input className="form-input text-sm" placeholder="Department" value={form.department} onChange={e => setForm({...form, department: e.target.value})} />
             <input className="form-input text-sm" placeholder="Position" value={form.position} onChange={e => setForm({...form, position: e.target.value})} />
@@ -137,7 +141,7 @@ return (
             </select>
             <select className="form-select text-sm" value={form.supervisorId} onChange={e => setForm({...form, supervisorId: e.target.value})}>
               <option value="">Select Supervisor</option>
-              {employees.filter(e => e.role === form.supervisorRole).map(e => <option key={e._id} value={e._id}>{e.firstName} {e.lastName}</option>)}
+              {employees.filter(e => e.role === form.supervisorRole).map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
             </select>
           </div>
 
@@ -154,8 +158,8 @@ return (
               <h4 className="font-medium text-sm mb-2">Import from Job Application (Optional)</h4>
               <select className="form-select text-sm mb-2" value={selectedApplication || ''} onChange={e => handleApplicationSelect(e.target.value)}>
                 <option value="">Select Application</option>
-                {applications.filter(a => a.applicantEmail === employees.find(e => e._id === form.employeeId)?.email).map(a => (
-                  <option key={a.id} value={a.id}>{a.applicantName} - {a.jobId?.title || 'Unknown Position'}</option>
+                {applications.filter(a => a.email === employees.find(e => e.id === Number(form.employeeId))?.email).map(a => (
+                  <option key={a.id} value={a.id}>{a.first_name} {a.last_name} — Job #{a.job_id}</option>
                 ))}
               </select>
               {selectedApplication && (
@@ -181,10 +185,10 @@ return (
       : onboardings.length === 0 ? <Card><div className="text-center py-8 text-slate-500">No onboardings.</div></Card>
 : <div className="grid gap-4">
         {onboardings.map(o => {
-          const emp = o.employeeId || {}
+          const emp = employees.find(e => e.id === o.employee_id) || {}
           const cnt = o.steps?.filter(s => s.completed).length || 0
           return (
-            <Card key={o._id}>
+            <Card key={o.id}>
               <div className="flex items-center gap-3 mb-2">
           <BsPerson size={20} className="text-primary" />
           <div><h3 className="font-bold">{emp.firstName} {emp.lastName}</h3><p className="text-sm text-slate-500">{o.department||emp.department} — {o.position||emp.position}</p></div>
@@ -194,12 +198,25 @@ return (
           {STEPS.map(step => {
                   const isDone = getDone(o, step.name)
                   const Icon = step.icon
-                  return <button key={step.name} onClick={() => {
+                  const handleStepClick = () => {
                     if (isDone) return
-                    if (step.name.startsWith('probation_review')) addReview(o._id)
-                    else if (step.name === 'offer_letter') generateLetter(o._id)
-                    else completeStep(o._id, step.name)
-                  }} className={'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium '+(isDone?'bg-green-50 text-green-700 cursor-default':'bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary cursor-pointer')}><Icon size={12}/>{step.label}{isDone&&' ✓'}</button>
+                    if (step.name.startsWith('probation_review')) {
+                      addReview(o.id)
+                    } else if (step.name === 'offer_letter') {
+                      generateLetter(o.id)
+                    } else if (step.name === 'documents') {
+                      navigate('/admin/documents')
+                    } else if (step.name === 'department_assignment') {
+                      navigate(`/employees/${o.employee_id}`)
+                    } else if (step.name === 'asset_allocation') {
+                      navigate('/assets')
+                    } else if (step.name === 'orientation') {
+                      navigate('/admin/training')
+                    } else {
+                      completeStep(o.id, step.name)
+                    }
+                  }
+                  return <button key={step.name} onClick={handleStepClick} className={'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium '+(isDone?'bg-green-50 text-green-700 cursor-default':'bg-slate-100 text-slate-600 hover:bg-primary/10 hover:text-primary cursor-pointer')}><Icon size={12}/>{step.label}{isDone&&' ✓'}</button>
                 })}
               </div>
               {o.probationEndDate && <p className="text-xs text-slate-400 mt-2">Probation ends: {new Date(o.probationEndDate).toLocaleDateString()}</p>}
@@ -251,6 +268,40 @@ return (
           </div>
         </Modal>
       )}
-    </DashboardLayout>
+      <PageInfoPanel
+        title="Onboarding"
+        description="Manage the 8-step new employee onboarding process"
+        steps={[
+          'Initiate onboarding from an accepted job application (Recruitment → Applications → Send Offer → Accept).',
+          'Complete Step 1 (Offer Letter) — system generates and emails the offer with a secure token.',
+          'Collect required documents: National ID, Certificates, KRA PIN, NSSF, NHIF.',
+          'Assign the employee to their department and supervisor.',
+          'Allocate company assets: laptop, uniform, tools, PPE.',
+          'Schedule and complete orientation/training session.',
+          'Conduct Mid-Probation Review (Step 6) and Final Probation Review (Step 7).',
+          'Complete Step 8 (Confirm Employment) to activate full benefits and confirm the employee.',
+        ]}
+        faqs={[
+          { q: 'How do I initiate onboarding without a job application?', a: 'Go to the employee record and click "Initiate Onboarding" to start the checklist manually.' },
+          { q: 'What happens when onboarding is complete?', a: 'The employee status changes from "probation" to "confirmed" and full leave entitlements are activated.' },
+          { q: 'Can steps be completed out of order?', a: 'Yes — steps can be checked off independently, but the system recommends completing them in sequence.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const res = await api.get('/api/onboarding').catch(() => ({ data: [] }));
+            const records = Array.isArray(res.data) ? res.data : [];
+            const incomplete = records.filter(r => r.status !== 'completed' && r.status !== 'confirmed');
+            if (incomplete.length > 0) items.push({ level: 'warn', message: `${incomplete.length} employee${incomplete.length > 1 ? 's have' : ' has'} incomplete onboarding`, detail: 'Review their checklists and complete any pending steps.' });
+            const overdueProbation = records.filter(r => r.probation_end && new Date(r.probation_end) < new Date() && r.status !== 'completed');
+            if (overdueProbation.length > 0) items.push({ level: 'error', message: `${overdueProbation.length} employee${overdueProbation.length > 1 ? 's are' : ' is'} past their probation end date`, detail: 'Complete the final probation review and confirm their employment.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'All onboarding records are up to date.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve onboarding status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

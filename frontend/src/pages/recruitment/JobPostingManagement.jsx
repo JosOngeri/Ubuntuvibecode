@@ -9,6 +9,8 @@ import Modal from '../../components/common/Modal';
 import Input from '../../components/common/Input';
 import DateDropdown from '../../components/common/DateDropdown';
 import api from '../../services/api';
+import PageInfoPanel from '../../components/common/PageInfoPanel';
+import { RecruitmentEmptyState } from '../../components/common/EmptyState';
 import DashboardLayout from '../../components/DashboardLayout';
 import { downloadPdfReport } from '../../utils/reportExport';
 
@@ -27,9 +29,17 @@ const defaultJob = {
   qualifications: [],
   evaluationParams: { keywords: [], criteria: [] },
   numberOfPositions: 1,
+  careerLevel: '',
+  contactPerson: '',
+  contactPhone: '',
+  contactEmail: '',
+  workSchedule: '',
+  requiredLanguages: '',
+  experienceLevel: '',
+  educationRequirements: '',
 };
 
-export default function JobPostingManagement() {
+export default function JobPostingManagement({ standalone = true }) {
   const navigate = useNavigate();
   const { getDepartments, getEmploymentTypes, getJobStatuses } = useSettings();
   const [jobs, setJobs] = useState([]);
@@ -53,7 +63,7 @@ export default function JobPostingManagement() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/jobs');
+      const res = await api.get('/jobs').catch(() => ({ data: [] }));
       setJobs(res.data || []);
     } catch (err) {
       toast.error('Failed to load jobs');
@@ -285,8 +295,8 @@ export default function JobPostingManagement() {
     });
   };
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         <Card>
           <div className="flex justify-between items-center mb-4">
@@ -430,9 +440,15 @@ export default function JobPostingManagement() {
             </div>
             <div className="form-group">
               <label>Application Deadline</label>
-              <DateDropdown 
+              <DateDropdown
                   selectedDate={applicationDeadline}
                   onDateChange={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (date && date < today) {
+                      toast.error('Application deadline cannot be before today');
+                      return;
+                    }
                     setApplicationDeadline(date);
                     setForm({...form, applicationDeadline: date ? date.toISOString().split('T')[0] : ''});
                   }}
@@ -442,6 +458,45 @@ export default function JobPostingManagement() {
                   showDay={true}
                   yearRange={5}
                 />
+            </div>
+            <div className="form-group">
+              <label>Career Level</label>
+              <select className="form-input" value={form.careerLevel} onChange={e => setForm({ ...form, careerLevel: e.target.value })}>
+                <option value="">Select</option>
+                <option value="Entry Level">Entry Level</option>
+                <option value="Mid Level">Mid Level</option>
+                <option value="Senior Level">Senior Level</option>
+                <option value="Management">Management</option>
+                <option value="Executive">Executive</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Contact Person</label>
+              <input className="form-input" value={form.contactPerson} onChange={e => setForm({ ...form, contactPerson: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Contact Phone</label>
+              <input className="form-input" value={form.contactPhone} onChange={e => setForm({ ...form, contactPhone: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Contact Email</label>
+              <input type="email" className="form-input" value={form.contactEmail} onChange={e => setForm({ ...form, contactEmail: e.target.value })} />
+            </div>
+            <div className="form-group">
+              <label>Work Schedule</label>
+              <input className="form-input" value={form.workSchedule} onChange={e => setForm({ ...form, workSchedule: e.target.value })} placeholder="e.g., Monday-Friday, 9am-5pm" />
+            </div>
+            <div className="form-group">
+              <label>Required Languages</label>
+              <input className="form-input" value={form.requiredLanguages} onChange={e => setForm({ ...form, requiredLanguages: e.target.value })} placeholder="e.g., English, Swahili" />
+            </div>
+            <div className="form-group">
+              <label>Experience Level</label>
+              <input className="form-input" value={form.experienceLevel} onChange={e => setForm({ ...form, experienceLevel: e.target.value })} placeholder="e.g., 2+ years" />
+            </div>
+            <div className="form-group">
+              <label>Education Requirements</label>
+              <input className="form-input" value={form.educationRequirements} onChange={e => setForm({ ...form, educationRequirements: e.target.value })} placeholder="e.g., Bachelor's degree in related field" />
             </div>
             <div className="form-group md:col-span-2">
               <label>Description</label>
@@ -538,6 +593,43 @@ export default function JobPostingManagement() {
           </form>
         </Modal>
       </div>
-    </DashboardLayout>
+      <PageInfoPanel
+        title="Job Posting Management"
+        description="Create and manage job openings and the recruitment pipeline"
+        steps={[
+          'Click + New Job to create a job posting with title, department, salary range, and deadline.',
+          'Add evaluation keywords (e.g. "Excel", "5 years") — the system will auto-score applicants against these.',
+          'Set the job status to Open to make it visible on the public job board.',
+          'Monitor incoming applications in the Applicant Review Dashboard.',
+          'Shortlist, interview, and send an offer to the selected candidate.',
+          'Once the offer is accepted, initiate onboarding from the applicant record.',
+        ]}
+        faqs={[
+          { q: 'How does auto-scoring work?', a: 'The system matches applicant CVs and cover letters against the evaluation keywords you defined. Higher keyword match = higher score.' },
+          { q: 'Can I close a job posting without deleting it?', a: 'Yes — change the status to Closed. The job will no longer appear on the public board but all applications are preserved.' },
+          { q: 'How do applicants receive their offer letter?', a: 'A secure tokenised link is emailed to the applicant. They can accept, reject, or negotiate salary directly from the link.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const [jobsRes, appsRes] = await Promise.allSettled([
+              api.get('/api/jobs').catch(() => ({ data: [] })),
+              api.get('/api/jobs/applications/all').catch(() => ({ data: [] })),
+            ]);
+            const jobs = jobsRes.status === 'fulfilled' ? (jobsRes.value.data || []) : [];
+            const apps = appsRes.status === 'fulfilled' ? (appsRes.value.data || []) : [];
+            const openJobs = jobs.filter(j => j.status === 'open');
+            const noApps = openJobs.filter(j => !apps.some(a => String(a.job_id) === String(j.id)));
+            if (noApps.length > 0) items.push({ level: 'info', message: `${noApps.length} open job${noApps.length > 1 ? 's have' : ' has'} no applicants yet`, detail: 'Share the job board link to attract candidates.' });
+            const stale = apps.filter(a => a.status === 'submitted' && new Date(a.created_at) < new Date(Date.now() - 7 * 86400000));
+            if (stale.length > 0) items.push({ level: 'warn', message: `${stale.length} application${stale.length > 1 ? 's have' : ' has'} not been reviewed in 7+ days`, detail: 'Go to Applicant Review Dashboard to process them.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'All open jobs have applicants and no stale reviews.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve recruitment status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
+    </div>
   );
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content;
 }

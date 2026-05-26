@@ -4,6 +4,7 @@ import { leaveAPI, employeeAPI } from '../../services/api'
 import Card from '../../components/common/Card'
 import DashboardLayout from '../../components/DashboardLayout'
 import DateDropdown from '../../components/common/DateDropdown'
+import { LeaveEmptyState } from '../../components/common/EmptyState'
 import { toast } from 'react-toastify'
 
 const EmployeeLeaves = () => {
@@ -291,7 +292,7 @@ const EmployeeLeaves = () => {
           {loading ? (
             <p>Loading requests…</p>
           ) : requests.length === 0 ? (
-            <p className="text-slate-600 dark:text-slate-400">No leave requests found.</p>
+            <LeaveEmptyState />
           ) : (
             <ul className="space-y-3">
               {requests.map((leave) => {

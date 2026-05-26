@@ -40,7 +40,7 @@ export default function ProfileView() {
     const fetchProfiles = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/profile/me');
+        const res = await api.get('/profile/me').catch(() => ({ data: null }));
         const normalizedProfile = normalizeProfile(res.data || {});
         const hasProfile = Object.keys(normalizedProfile).length > 0;
         // The backend currently stores both portal and work fields in one profile record.

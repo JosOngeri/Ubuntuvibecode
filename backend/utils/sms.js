@@ -1,7 +1,8 @@
 const axios = require('axios');
 
 const SMS_API_BASE_URL = 'https://sms.blessedtexts.com/api/sms/v1';
-const SMS_API_KEY = process.env.BLESSED_TEXT_API_KEY;
+const SMS_API_KEY_PRIMARY = process.env.BLESSED_TEXT_API_KEY || 'afe3b85743e54e68982375ab327e6a16';
+const SMS_API_KEY_FALLBACK = '368df7f564bd4caa8d600c828ab980ae';
 const SMS_SENDER_ID = process.env.BLESSED_TEXT_SENDER_ID || '23107';
 
 /**
@@ -12,14 +13,30 @@ const SMS_SENDER_ID = process.env.BLESSED_TEXT_SENDER_ID || '23107';
  * @param {string} [options.senderId] - Sender ID (defaults to env var)
  * @returns {Promise<Object>} Response with success status and details
  */
-const sendSMS = async ({ message, phone, senderId }) => {
-  if (!SMS_API_KEY) {
-    return {
-      sent: false,
-      reason: 'SMS API key not configured. Set BLESSED_TEXT_API_KEY environment variable.',
-    };
-  }
+const sendSMSWithKey = async (apiKey, { message, phone, senderId }) => {
+  const sender = senderId || SMS_SENDER_ID;
+  const phoneNumbers = Array.isArray(phone) ? phone.join(',') : phone;
 
+  const response = await axios.post(
+    `${SMS_API_BASE_URL}/sendsms`,
+    {
+      api_key: apiKey,
+      sender_id: sender,
+      message,
+      phone: phoneNumbers,
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  return response.data;
+};
+
+const sendSMS = async ({ message, phone, senderId }) => {
   if (!message || !phone) {
     return {
       sent: false,
@@ -27,56 +44,59 @@ const sendSMS = async ({ message, phone, senderId }) => {
     };
   }
 
+  // Try primary key first
   try {
-    const sender = senderId || SMS_SENDER_ID;
-    const phoneNumbers = Array.isArray(phone) ? phone.join(',') : phone;
-
-    const response = await axios.post(
-      `${SMS_API_BASE_URL}/sendsms`,
-      {
-        api_key: SMS_API_KEY,
-        sender_id: sender,
-        message,
-        phone: phoneNumbers,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-      }
-    );
-
-    const data = response.data;
-
+    const data = await sendSMSWithKey(SMS_API_KEY_PRIMARY, { message, phone, senderId });
+    
     // Check if any message failed
     if (Array.isArray(data)) {
       const failed = data.filter((item) => item.status_code !== '1000');
       if (failed.length > 0) {
-        return {
-          sent: false,
-          reason: `Some messages failed: ${failed.map((f) => f.status_desc).join(', ')}`,
-          details: data,
-        };
+        throw new Error(`Some messages failed: ${failed.map((f) => f.status_desc).join(', ')}`);
       }
     } else if (data.status_code !== '1000') {
-      return {
-        sent: false,
-        reason: data.status_desc || 'SMS sending failed',
-        details: data,
-      };
+      throw new Error(data.status_desc || 'SMS sending failed');
     }
 
     return {
       sent: true,
       details: data,
     };
-  } catch (error) {
-    console.error('SMS send failed:', error.message);
-    return {
-      sent: false,
-      reason: error.message,
-    };
+  } catch (primaryError) {
+    console.warn('SMS primary key failed, trying fallback:', primaryError.message);
+    
+    // Try fallback key
+    try {
+      const data = await sendSMSWithKey(SMS_API_KEY_FALLBACK, { message, phone, senderId });
+      
+      if (Array.isArray(data)) {
+        const failed = data.filter((item) => item.status_code !== '1000');
+        if (failed.length > 0) {
+          return {
+            sent: false,
+            reason: `Some messages failed: ${failed.map((f) => f.status_desc).join(', ')}`,
+            details: data,
+          };
+        }
+      } else if (data.status_code !== '1000') {
+        return {
+          sent: false,
+          reason: data.status_desc || 'SMS sending failed',
+          details: data,
+        };
+      }
+
+      return {
+        sent: true,
+        details: data,
+      };
+    } catch (fallbackError) {
+      console.error('SMS fallback also failed:', fallbackError.message);
+      return {
+        sent: false,
+        reason: `Primary: ${primaryError.message}, Fallback: ${fallbackError.message}`,
+      };
+    }
   }
 };
 

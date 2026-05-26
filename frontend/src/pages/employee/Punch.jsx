@@ -20,6 +20,7 @@ export default function Punch() {
   const [locating, setLocating] = useState(false)
   const [location, setLocation] = useState(null)
   const [lastResult, setLastResult] = useState(null)
+  const [matchedLocation, setMatchedLocation] = useState(null)
 
   const PUNCH_ACTIONS = getPunchActions()
 
@@ -89,6 +90,7 @@ export default function Punch() {
         geolocation: coords,
       })
       setLastResult(response.data)
+      setMatchedLocation(response.data?.location || null)
       toast.success(response.data?.msg || 'Punch recorded successfully')
     } catch (error) {
       const message =
@@ -209,6 +211,12 @@ export default function Punch() {
                   <p className="text-slate-500">Accuracy</p>
                   <p className="font-semibold">{Math.round(location.accuracy)} meters</p>
                 </div>
+                {matchedLocation && (
+                  <div className="mt-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">
+                    <p className="text-slate-500">Validated at</p>
+                    <p className="font-semibold text-blue-700 dark:text-blue-300">{matchedLocation}</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-sm text-slate-500">
@@ -225,6 +233,7 @@ export default function Punch() {
                 <div className="text-sm text-slate-700 dark:text-slate-300 space-y-1">
                   <div>{lastResult.msg || 'Punch recorded'}</div>
                   {lastResult.recordedTime && <div>Recorded: {new Date(lastResult.recordedTime).toLocaleString()}</div>}
+                  {lastResult.location && <div>Location: {lastResult.location}</div>}
                 </div>
               </div>
             )}

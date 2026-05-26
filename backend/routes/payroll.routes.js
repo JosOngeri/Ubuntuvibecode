@@ -7,6 +7,7 @@ router.post('/calculate', payrollController.calculatePayroll);
 router.get('/calculate/:period', payrollController.calculatePayroll);
 router.put('/approve/:id', payrollController.approvePayroll);
 router.post('/disburse', payrollController.disbursePayroll);
+router.get('/payslip/:id', payrollController.generatePayslipPdf);
 
 // ResultURL (success/failure callback)
 router.post('/mpesa-callback', payrollController.handleMpesaCallback);

@@ -6,6 +6,7 @@ import  Button  from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
 import api from '../../services/api';
+import { verificationAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../../components/DashboardLayout';
 import { downloadPdfReport } from '../../utils/reportExport';
@@ -42,6 +43,8 @@ export default function ApplicantReviewDashboard({ jobId }) {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortField, setSortField] = useState('applicantName');
+  const [sortDirection, setSortDirection] = useState('asc');
   const [scoring, setScoring] = useState(false)
   const [scores, setScores] = useState(null)
   const [scoreModal, setScoreModal] = useState(null)
@@ -53,6 +56,15 @@ export default function ApplicantReviewDashboard({ jobId }) {
   const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [activeFilters, setActiveFilters] = useState([])
   const [showDetailedView, setShowDetailedView] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [verificationResults, setVerificationResults] = useState(null)
+  const [showVerificationModal, setShowVerificationModal] = useState(false)
+  const [managerRanking, setManagerRanking] = useState('')
+  const [managerNotes, setManagerNotes] = useState('')
+  const [showManagerRankingModal, setShowManagerRankingModal] = useState(false)
+  const [ownerStatus, setOwnerStatus] = useState('')
+  const [ownerNotes, setOwnerNotes] = useState('')
+  const [showOwnerApprovalModal, setShowOwnerApprovalModal] = useState(false)
 
   const fetchApplications = async () => {
     setLoading(true);
@@ -60,7 +72,10 @@ export default function ApplicantReviewDashboard({ jobId }) {
       const res = await api.get(`/jobs/${jobId}/applications`);
       setApplications(Array.isArray(res.data) ? res.data.map(normalizeApplication) : []);
     } catch (err) {
-      toast.error('Failed to load applications');
+      console.error('Failed to load applications:', err);
+      const errorMsg = err.response?.data?.msg || err.response?.data?.error || 'Failed to load applications';
+      toast.error(errorMsg);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -183,7 +198,32 @@ export default function ApplicantReviewDashboard({ jobId }) {
     const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter;
 
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    let aVal, bVal;
+    if (sortField === 'applicantName') {
+      aVal = a.applicantName || '';
+      bVal = b.applicantName || '';
+    } else if (sortField === 'appliedAt') {
+      aVal = a.appliedAt || '';
+      bVal = b.appliedAt || '';
+      const comparison = new Date(aVal) - new Date(bVal);
+      return sortDirection === 'asc' ? comparison : -comparison;
+    } else {
+      aVal = a[sortField] || '';
+      bVal = b[sortField] || '';
+    }
+    const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+    return sortDirection === 'asc' ? comparison : -comparison;
   });
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
 
   const handleExportApplicationsReport = async () => {
     await downloadPdfReport({
@@ -201,6 +241,89 @@ export default function ApplicantReviewDashboard({ jobId }) {
         { label: 'Status Filter', value: statusFilter === 'all' ? 'All' : statusFilter },
       ],
     });
+  };
+
+  const handleVerifyApplication = async (appId) => {
+    setVerifying(true);
+    try {
+      const res = await verificationAPI.verifyApplication(jobId, appId);
+      setVerificationResults(res.data.verification);
+      toast.success('Verification completed');
+      setShowVerificationModal(true);
+      fetchApplications();
+    } catch (err) {
+      toast.error('Verification failed');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleVerifyAllApplications = async () => {
+    setVerifying(true);
+    try {
+      const res = await verificationAPI.verifyAllApplications(jobId);
+      toast.success(`Verified ${res.data.results.length} applications`);
+      fetchApplications();
+    } catch (err) {
+      toast.error('Batch verification failed');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const openVerificationModal = async (app) => {
+    setSelected(app);
+    if (app.verification_status === 'verified' || app.verification_status === 'flagged' || app.verification_status === 'failed') {
+      try {
+        const res = await verificationAPI.getVerificationResults(jobId, app.id);
+        setVerificationResults(res.data);
+        setShowVerificationModal(true);
+      } catch (err) {
+        toast.error('Failed to load verification results');
+      }
+    } else {
+      handleVerifyApplication(app.id);
+    }
+  };
+
+  const handleUpdateManagerRanking = async () => {
+    try {
+      await verificationAPI.updateManagerRanking(jobId, selected.id, managerRanking, managerNotes);
+      toast.success('Manager ranking updated');
+      setShowManagerRankingModal(false);
+      setManagerRanking('');
+      setManagerNotes('');
+      fetchApplications();
+    } catch (err) {
+      toast.error('Failed to update manager ranking');
+    }
+  };
+
+  const openManagerRankingModal = (app) => {
+    setSelected(app);
+    setManagerRanking(app.manager_ranking || '');
+    setManagerNotes(app.manager_notes || '');
+    setShowManagerRankingModal(true);
+  };
+
+  const handleUpdateOwnerApproval = async () => {
+    try {
+      await verificationAPI.updateOwnerApproval(jobId, selected.id, ownerStatus, ownerNotes);
+      toast.success(`Application ${ownerStatus}`);
+      setShowOwnerApprovalModal(false);
+      setOwnerStatus('');
+      setOwnerNotes('');
+      fetchApplications();
+    } catch (err) {
+      toast.error('Failed to update owner approval');
+    }
+  };
+
+  const openOwnerApprovalModal = (app) => {
+    setSelected(app);
+    setOwnerStatus(app.owner_status || 'pending');
+    setOwnerNotes(app.owner_notes || '');
+    setShowOwnerApprovalModal(true);
   };
 
   return (
@@ -229,6 +352,9 @@ export default function ApplicantReviewDashboard({ jobId }) {
           <Button type="button" variant="outline" onClick={handleExportApplicationsReport}>Export Report</Button>
           <Button type="button" variant="primary" onClick={handleScoreApplicants} disabled={scoring}>
             {scoring ? 'Scoring...' : 'Score Applicants'}
+          </Button>
+          <Button type="button" variant="outline" onClick={handleVerifyAllApplications} disabled={verifying}>
+            {verifying ? 'Verifying...' : 'Verify All'}
           </Button>
           <Button type="button" variant="outline" onClick={() => setShowFilterPanel(!showFilterPanel)}>
             {showFilterPanel ? 'Hide Filters' : 'Show Filters'}
@@ -517,6 +643,25 @@ export default function ApplicantReviewDashboard({ jobId }) {
               },
             },
             {
+              key: 'aiRanking',
+              label: 'AI Ranking',
+              render: (val, row) => {
+                const s = row.ai_ranking
+                if (s == null) return <span className="text-xs text-slate-400">—</span>
+                const color = s >= 70 ? 'text-green-600' : s >= 40 ? 'text-yellow-600' : 'text-red-600'
+                return <span className={`font-bold ${color}`}>{s}%</span>
+              },
+            },
+            {
+              key: 'managerRanking',
+              label: 'Manager Ranking',
+              render: (val, row) => {
+                const s = row.manager_ranking
+                if (s == null) return <span className="text-xs text-slate-400">—</span>
+                return <span className="font-bold text-blue-600">{s}%</span>
+              },
+            },
+            {
               key: 'milestone',
               label: 'Progress',
               render: (_, row) => {
@@ -557,6 +702,9 @@ export default function ApplicantReviewDashboard({ jobId }) {
                 <div className="flex gap-2">
                   <Button size="sm" variant="primary" onClick={() => navigate(`/recruitment/jobs/${jobId}/applicants/${row.id}`)}>View Details</Button>
                   <Button size="sm" onClick={() => openModal(row)}>Review</Button>
+                  <Button size="sm" variant="outline" onClick={() => openVerificationModal(row)}>Verify</Button>
+                  <Button size="sm" variant="outline" onClick={() => openManagerRankingModal(row)}>Rank</Button>
+                  <Button size="sm" variant="success" onClick={() => openOwnerApprovalModal(row)}>Owner</Button>
                   {row.status === 'pending' && <Button size="sm" variant="success" onClick={() => handleShortlist(row.id)}>Shortlist</Button>}
                   {row.status === 'shortlisted' && <Button size="sm" variant="outline" onClick={() => openInterviewModal(row)}>Interview Score</Button>}
                   {row.status === 'shortlisted' && <Button size="sm" variant="primary" onClick={() => openOfferModal(row)}>Send Offer</Button>}
@@ -566,6 +714,9 @@ export default function ApplicantReviewDashboard({ jobId }) {
           ]}
           data={filteredApplications}
           loading={loading}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
         />
           </>
         )}
@@ -676,6 +827,129 @@ export default function ApplicantReviewDashboard({ jobId }) {
             <div className="flex gap-2 justify-end">
               <Button variant="primary" onClick={handleSendOffer}>Send Offer</Button>
               <Button variant="outline" onClick={() => setShowOfferModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal isOpen={showVerificationModal} onClose={() => setShowVerificationModal(false)} title="AI Verification Results">
+        {verificationResults && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-lg font-bold">{selected?.applicantName}</h3>
+                <p className="text-sm text-slate-500">Verification Status: <span className={`font-semibold ${verificationResults.verification_status === 'verified' ? 'text-green-600' : verificationResults.verification_status === 'flagged' ? 'text-yellow-600' : 'text-red-600'}`}>{verificationResults.verification_status}</span></p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold">{verificationResults.verification_score}%</div>
+                <div className="text-sm text-slate-500">Overall Score</div>
+              </div>
+            </div>
+            <div className="bg-slate-50 p-3 rounded-lg">
+              <h4 className="font-bold mb-2">AI Recommendation</h4>
+              <p className="text-lg font-semibold text-blue-600">{verificationResults.recommendation}</p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-2">Reasoning</h4>
+              <p className="text-sm text-slate-600">{verificationResults.reasoning}</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <h5 className="font-semibold text-sm mb-1">Education</h5>
+                <div className="text-2xl font-bold text-blue-600">{verificationResults.ai_ranking_breakdown?.education || 0}%</div>
+                <p className="text-xs text-slate-500">{verificationResults.verification_results?.education?.reasoning || ''}</p>
+              </div>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <h5 className="font-semibold text-sm mb-1">Experience</h5>
+                <div className="text-2xl font-bold text-green-600">{verificationResults.ai_ranking_breakdown?.experience || 0}%</div>
+                <p className="text-xs text-slate-500">{verificationResults.verification_results?.experience?.reasoning || ''}</p>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg">
+                <h5 className="font-semibold text-sm mb-1">Skills</h5>
+                <div className="text-2xl font-bold text-purple-600">{verificationResults.ai_ranking_breakdown?.skills || 0}%</div>
+                <p className="text-xs text-slate-500">{verificationResults.verification_results?.skills?.reasoning || ''}</p>
+              </div>
+            </div>
+            {verificationResults.verification_flags && verificationResults.verification_flags.length > 0 && (
+              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <h4 className="font-bold mb-2 text-yellow-800">Flags ({verificationResults.verification_flags.length})</h4>
+                <ul className="text-sm space-y-1">
+                  {verificationResults.verification_flags.map((flag, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className={`w-2 h-2 rounded-full mt-1.5 ${flag.severity === 'high' ? 'bg-red-500' : 'bg-yellow-500'}`}></span>
+                      <div>
+                        <span className="font-semibold">{flag.type}:</span> {flag.description}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowVerificationModal(false)}>Close</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal isOpen={showManagerRankingModal} onClose={() => setShowManagerRankingModal(false)} title="Manager Ranking">
+        {selected && (
+          <div className="space-y-4">
+            <div><strong>Applicant:</strong> {selected.applicantName}</div>
+            <div><strong>AI Ranking:</strong> {selected.ai_ranking || 'Not verified'}%</div>
+            <div className="form-group">
+              <label>Manager Ranking (0-100)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={managerRanking}
+                onChange={(e) => setManagerRanking(e.target.value)}
+                min="0"
+                max="100"
+              />
+            </div>
+            <div className="form-group">
+              <label>Manager Notes</label>
+              <textarea
+                className="form-input"
+                rows={4}
+                value={managerNotes}
+                onChange={(e) => setManagerNotes(e.target.value)}
+                placeholder="Add your assessment notes..."
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="primary" onClick={handleUpdateManagerRanking}>Save Ranking</Button>
+              <Button variant="outline" onClick={() => setShowManagerRankingModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal isOpen={showOwnerApprovalModal} onClose={() => setShowOwnerApprovalModal(false)} title="Owner Approval">
+        {selected && (
+          <div className="space-y-4">
+            <div><strong>Applicant:</strong> {selected.applicantName}</div>
+            <div><strong>AI Ranking:</strong> {selected.ai_ranking || 'Not verified'}%</div>
+            <div><strong>Manager Ranking:</strong> {selected.manager_ranking || 'Not ranked'}%</div>
+            <div className="form-group">
+              <label>Owner Decision</label>
+              <select className="form-input" value={ownerStatus} onChange={(e) => setOwnerStatus(e.target.value)}>
+                <option value="pending">Pending</option>
+                <option value="approved">Approve</option>
+                <option value="rejected">Reject</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Owner Notes</label>
+              <textarea
+                className="form-input"
+                rows={4}
+                value={ownerNotes}
+                onChange={(e) => setOwnerNotes(e.target.value)}
+                placeholder="Add approval notes..."
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="primary" onClick={handleUpdateOwnerApproval}>Submit Decision</Button>
+              <Button variant="outline" onClick={() => setShowOwnerApprovalModal(false)}>Cancel</Button>
             </div>
           </div>
         )}

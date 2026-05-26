@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Table from '../../components/common/Table';
+import { AttendanceEmptyState, PayrollEmptyState, KpiEmptyState, LeaveEmptyState } from '../../components/common/EmptyState';
 import { employeeAPI, attendanceAPI, payrollAPI, leaveAPI, kpiAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { BsPerson, BsEnvelope, BsPhone, BsBriefcase, BsGeoAlt, BsClock, BsChevronDown, BsChevronUp, BsClipboardCheck, BsFileText, BsGraphUp, BsCalendarCheck, BsArrowLeft } from 'react-icons/bs';
@@ -31,6 +32,12 @@ export default function ManagerEmployeeProfile() {
   const [kpis, setKpis] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [sectionLoading, setSectionLoading] = useState({});
+  
+  // Sorting states
+  const [attendanceSort, setAttendanceSort] = useState({ field: 'date', direction: 'desc' });
+  const [payslipSort, setPayslipSort] = useState({ field: 'period', direction: 'desc' });
+  const [kpiSort, setKpiSort] = useState({ field: 'title', direction: 'asc' });
+  const [leaveSort, setLeaveSort] = useState({ field: 'startDate', direction: 'desc' });
 
   useEffect(() => {
     fetchEmployee();
@@ -117,6 +124,48 @@ export default function ManagerEmployeeProfile() {
     } finally {
       setSectionLoading(prev => ({ ...prev, leave: false }));
     }
+  };
+
+  const handleSort = (section, field) => {
+    const sortState = section === 'attendance' ? attendanceSort :
+                      section === 'payslip' ? payslipSort :
+                      section === 'kpi' ? kpiSort : leaveSort;
+    
+    const setSort = section === 'attendance' ? setAttendanceSort :
+                    section === 'payslip' ? setPayslipSort :
+                    section === 'kpi' ? setKpiSort : setLeaveSort;
+    
+    if (sortState.field === field) {
+      setSort({ field, direction: sortState.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setSort({ field, direction: 'asc' });
+    }
+  };
+
+  const getSortedData = (section, data) => {
+    const sortState = section === 'attendance' ? attendanceSort :
+                      section === 'payslip' ? payslipSort :
+                      section === 'kpi' ? kpiSort : leaveSort;
+    
+    return [...data].sort((a, b) => {
+      let aVal, bVal;
+      if (section === 'attendance' && sortState.field === 'date') {
+        aVal = a.attendanceDate || a.date || '';
+        bVal = b.attendanceDate || b.date || '';
+        const comparison = new Date(aVal) - new Date(bVal);
+        return sortState.direction === 'asc' ? comparison : -comparison;
+      } else if (section === 'leave' && (sortState.field === 'startDate' || sortState.field === 'endDate')) {
+        aVal = a[sortState.field] || a.start_date || a.end_date || '';
+        bVal = b[sortState.field] || b.start_date || b.end_date || '';
+        const comparison = new Date(aVal) - new Date(bVal);
+        return sortState.direction === 'asc' ? comparison : -comparison;
+      } else {
+        aVal = a[sortState.field] || '';
+        bVal = b[sortState.field] || '';
+      }
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+      return sortState.direction === 'asc' ? comparison : -comparison;
+    });
   };
 
   const attendanceColumns = [
@@ -274,9 +323,9 @@ export default function ManagerEmployeeProfile() {
               {sectionLoading.attendance ? (
                 <div className="text-center py-8">Loading attendance...</div>
               ) : attendance.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">No attendance records found</div>
+                <AttendanceEmptyState />
               ) : (
-                <Table columns={attendanceColumns} data={attendance} />
+                <Table columns={attendanceColumns} data={getSortedData('attendance', attendance)} sortField={attendanceSort.field} sortDirection={attendanceSort.direction} onSort={(field) => handleSort('attendance', field)} />
               )}
             </div>
           )}
@@ -290,9 +339,9 @@ export default function ManagerEmployeeProfile() {
               {sectionLoading.payslips ? (
                 <div className="text-center py-8">Loading payslips...</div>
               ) : payslips.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">No payslips found</div>
+                <PayrollEmptyState />
               ) : (
-                <Table columns={payslipColumns} data={payslips} />
+                <Table columns={payslipColumns} data={getSortedData('payslip', payslips)} sortField={payslipSort.field} sortDirection={payslipSort.direction} onSort={(field) => handleSort('payslip', field)} />
               )}
             </div>
           )}
@@ -306,9 +355,9 @@ export default function ManagerEmployeeProfile() {
               {sectionLoading.kpi ? (
                 <div className="text-center py-8">Loading KPIs...</div>
               ) : kpis.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">No KPI records found</div>
+                <KpiEmptyState />
               ) : (
-                <Table columns={kpiColumns} data={kpis} />
+                <Table columns={kpiColumns} data={getSortedData('kpi', kpis)} sortField={kpiSort.field} sortDirection={kpiSort.direction} onSort={(field) => handleSort('kpi', field)} />
               )}
             </div>
           )}
@@ -322,9 +371,9 @@ export default function ManagerEmployeeProfile() {
               {sectionLoading.leave ? (
                 <div className="text-center py-8">Loading leaves...</div>
               ) : leaves.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">No leave records found</div>
+                <LeaveEmptyState />
               ) : (
-                <Table columns={leaveColumns} data={leaves} />
+                <Table columns={leaveColumns} data={getSortedData('leave', leaves)} sortField={leaveSort.field} sortDirection={leaveSort.direction} onSort={(field) => handleSort('leave', field)} />
               )}
             </div>
           )}

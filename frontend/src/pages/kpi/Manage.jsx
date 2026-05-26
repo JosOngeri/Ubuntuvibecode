@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-toastify'
 import DashboardLayout from '../../components/DashboardLayout'
 import { employeeAPI, kpiAPI } from '../../services/api'
+import { KpiEmptyState } from '../../components/common/EmptyState'
 import { useAuth } from '../../contexts/AuthContext'
 
 const currentQuarter = () => {
@@ -332,7 +333,7 @@ export default function KpiManage() {
             <div className="space-y-4">
               {kpis.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                  No KPI assignments found for this employee.
+                  <KpiEmptyState />
                 </div>
               ) : (
                 kpis.map((kpi) => {

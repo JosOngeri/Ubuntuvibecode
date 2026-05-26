@@ -1,19 +1,11 @@
-const Onboarding = require('../models/Onboarding.model');
-const Employee = require('../models/Employee.model');
-const Asset = require('../models/Asset.model');
-const User = require('../models/User.model');
+const { query } = require('../config/db');
 const bcrypt = require('bcrypt');
 const { sendEmail } = require('../utils/email');
+const { sendSMS, normalizePhoneNumber } = require('../utils/sms');
 const crypto = require('crypto');
-
-const populateEmployee = async (onboarding) => {
-  if (!onboarding.employeeId) return onboarding;
-  const employee = await Employee.findById(onboarding.employeeId);
-  if (employee) {
-    onboarding.employeeId = employee.toJSON();
-  }
-  return onboarding;
-};
+const OrientationChecklist = require('../models/OrientationChecklist.model');
+const Onboarding = require('../models/Onboarding.model');
+const logger = require('../utils/logger');
 
 const DEFAULT_STEPS = [
   { name: 'offer_letter', label: 'Generate Offer Letter' },
@@ -27,49 +19,95 @@ const DEFAULT_STEPS = [
 ];
 
 exports.getAll = async (req, res) => {
+  logger.info('onboarding.getAll', 'Entry', { status: req.query.status });
   try {
     const { status } = req.query;
-    const filter = {};
-    if (status) filter.status = status;
-    const onboardings = await Onboarding.find(filter).sort({ createdAt: -1 });
-    const populated = await Promise.all(onboardings.map(populateEmployee));
-    res.json(populated);
+    let queryText = 'SELECT * FROM onboarding';
+    const params = [];
+    
+    if (status) {
+      queryText += ' WHERE status = $1';
+      params.push(status);
+    }
+    
+    queryText += ' ORDER BY created_at DESC';
+    const result = await query(queryText, params);
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.getById = async (req, res) => {
+  logger.info('onboarding.getById', 'Entry', { id: req.params.id });
   try {
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
-    await populateEmployee(onboarding);
-    res.json(onboarding);
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.initiate = async (req, res) => {
+  logger.info('onboarding.initiate', 'Entry', { employeeId: req.body.employeeId, by: req.user?.id });
   try {
     const { employeeId, applicationId, department, position, supervisorId, probationMonths } = req.body;
-    const employee = await Employee.findById(employeeId);
-    if (!employee) return res.status(404).json({ msg: 'Employee not found' });
-    const existing = await Onboarding.findOne({ employeeId });
-    if (existing) return res.status(400).json({ msg: 'Onboarding already exists for this employee' });
+
+    // Check if employee exists
+    const empResult = await query('SELECT * FROM employees WHERE id = $1', [employeeId]);
+    if (empResult.rows.length === 0) return res.status(404).json({ msg: 'Employee not found' });
+    const employee = empResult.rows[0];
+
+    // Check if onboarding already exists
+    const existingResult = await query('SELECT * FROM onboarding WHERE employee_id = $1', [employeeId]);
+    if (existingResult.rows.length > 0) return res.status(400).json({ msg: 'Onboarding already exists for this employee' });
+
+    // If applicationId is provided, copy disclosure data to employee
+    if (applicationId) {
+      const appResult = await query('SELECT * FROM job_applications WHERE id = $1', [applicationId]);
+      if (appResult.rows.length > 0) {
+        const application = appResult.rows[0];
+        const disclosures = application.disclosures;
+
+        if (disclosures) {
+          await query(
+            `UPDATE employees
+             SET experience_years = $1,
+                 availability_weeks = $2,
+                 right_to_work = $3,
+                 salary_expectation = $4
+             WHERE id = $5`,
+            [
+              disclosures.experienceYears || null,
+              disclosures.availabilityWeeks || null,
+              disclosures.rightToWork || null,
+              disclosures.salaryExpectation || null,
+              employeeId
+            ]
+          );
+        }
+      }
+    }
+
+    // Load role-based orientation checklist
+    const role = position || employee.position || 'default';
+    let orientationChecklist = await OrientationChecklist.findByRole(role);
+    if (!orientationChecklist || orientationChecklist.length === 0) {
+      const defaultChecklist = await OrientationChecklist.getDefault();
+      orientationChecklist = defaultChecklist ? [defaultChecklist] : [];
+    }
+
     const probationEnd = new Date();
     probationEnd.setMonth(probationEnd.getMonth() + (probationMonths || 3));
-    const onboarding = await Onboarding.create({
-      employeeId,
-      applicationId,
-      department: department || employee.department,
-      position: position || employee.position,
-      supervisorId,
-      probationEndDate: probationEnd,
-      steps: DEFAULT_STEPS.map(s => ({ ...s })),
-      status: 'in_progress',
-    });
-    res.status(201).json(onboarding);
+
+    const result = await query(
+      `INSERT INTO onboarding (employee_id, application_id, department, position, supervisor_id, probation_end_date, steps, status, orientation_checklist, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       RETURNING *`,
+      [employeeId, applicationId, department || employee.department, position || employee.position, supervisorId, probationEnd, JSON.stringify(DEFAULT_STEPS.map(s => ({ ...s, completed: false }))), 'in_progress', JSON.stringify(orientationChecklist[0]?.checklist || [])]
+    );
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
@@ -78,64 +116,92 @@ exports.initiate = async (req, res) => {
 exports.completeStep = async (req, res) => {
   try {
     const { stepName, notes } = req.body;
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
-    const step = onboarding.steps.find(s => s.name === stepName);
+    
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    const onboarding = result.rows[0];
+    
+    const steps = onboarding.steps || [];
+    const step = steps.find(s => s.name === stepName);
     if (!step) return res.status(404).json({ msg: 'Step not found' });
+    
     step.completed = true;
     step.completedAt = new Date();
     step.completedBy = req.user.id;
     if (notes) step.notes = notes;
+    
+    let status = onboarding.status;
     if (stepName === 'confirmation') {
-      onboarding.status = 'completed';
-      onboarding.confirmedAt = new Date();
-      onboarding.confirmedBy = req.user.id;
-      await Employee.findByIdAndUpdate(onboarding.employeeId, { status: 'Active', employmentType: 'Permanent' });
-
-      // Create user account
-      const employee = await Employee.findById(onboarding.employeeId);
-      if (employee && !employee.userId) {
-        const username = `${employee.firstName.toLowerCase()}.${employee.lastName.toLowerCase()}`;
+      status = 'completed';
+      // Update employee status
+      await query('UPDATE employees SET status = $1, employment_type = $2 WHERE id = $3', ['active', 'Permanent', onboarding.employee_id]);
+      
+      // Create user account if not exists
+      const empResult = await query('SELECT * FROM employees WHERE id = $1', [onboarding.employee_id]);
+      const employee = empResult.rows[0];
+      
+      if (employee && !employee.user_id) {
+        const username = `${employee.first_name.toLowerCase()}.${employee.last_name.toLowerCase()}`;
         const tempPassword = crypto.randomBytes(12).toString('hex');
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
-
-        let user = await User.findOne({ username });
-        if (user) {
-          // Add number to make username unique
+        
+        // Check if username exists
+        const userCheck = await query('SELECT * FROM users WHERE username = $1', [username]);
+        let finalUsername = username;
+        if (userCheck.rows.length > 0) {
           let counter = 1;
-          while (await User.findOne({ username: `${username}${counter}` })) {
+          while (true) {
+            const checkResult = await query('SELECT * FROM users WHERE username = $1', [`${username}${counter}`]);
+            if (checkResult.rows.length === 0) {
+              finalUsername = `${username}${counter}`;
+              break;
+            }
             counter++;
           }
-          user = await User.create({
-            username: `${username}${counter}`,
-            password: hashedPassword,
-            email: employee.email,
-            role: 'employee',
+        }
+        
+        const userResult = await query(
+          'INSERT INTO users (username, password, email, role, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id',
+          [finalUsername, hashedPassword, employee.email, 'employee', 'active']
+        );
+        
+        // Update employee with user ID
+        await query('UPDATE employees SET user_id = $1 WHERE id = $2', [userResult.rows[0].id, onboarding.employee_id]);
+        
+        // Send email with login credentials
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        try {
+          await sendEmail({
+            to: employee.email,
+            subject: 'Welcome to Ubuntu HRMS - Your Account Credentials',
+            text: `Dear ${employee.first_name} ${employee.last_name},\n\nWelcome to Ubuntu HRMS! Your onboarding has been completed successfully.\n\nYour login credentials:\nUsername: ${finalUsername}\nPassword: ${tempPassword}\n\nPlease log in at ${frontendUrl} and change your password immediately.\n\nBest regards,\nUbuntu HRMS Team`,
+            html: `<p>Dear ${employee.first_name} ${employee.last_name},</p><p>Welcome to Ubuntu HRMS! Your onboarding has been completed successfully.</p><p><strong>Your login credentials:</strong></p><p>Username: ${finalUsername}<br>Password: ${tempPassword}</p><p>Please log in at <a href="${frontendUrl}">${frontendUrl}</a> and change your password immediately.</p><p>Best regards,<br>Ubuntu HRMS Team</p>`,
           });
-        } else {
-          user = await User.create({
-            username,
-            password: hashedPassword,
-            email: employee.email,
-            role: 'employee',
-          });
+        } catch (emailErr) {
+          logger.error('onboarding.completeStep', 'Failed to send email', emailErr);
         }
 
-        // Update employee with user ID
-        await Employee.findByIdAndUpdate(onboarding.employeeId, { userId: user._id });
-
-        // Send email with login credentials
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5177';
-        await sendEmail({
-          to: employee.email,
-          subject: 'Welcome to Ubuntu HRMS - Your Account Credentials',
-          text: `Dear ${employee.firstName} ${employee.lastName},\n\nWelcome to Ubuntu HRMS! Your onboarding has been completed successfully.\n\nYour login credentials:\nUsername: ${user.username}\nPassword: ${tempPassword}\n\nPlease log in at ${frontendUrl} and change your password immediately.\n\nBest regards,\nUbuntu HRMS Team`,
-          html: `<p>Dear ${employee.firstName} ${employee.lastName},</p><p>Welcome to Ubuntu HRMS! Your onboarding has been completed successfully.</p><p><strong>Your login credentials:</strong></p><p>Username: ${user.username}<br>Password: ${tempPassword}</p><p>Please log in at <a href="${frontendUrl}">${frontendUrl}</a> and change your password immediately.</p><p>Best regards,<br>Ubuntu HRMS Team</p>`,
-        });
+        // Send SMS with login credentials
+        const normalizedPhone = normalizePhoneNumber(employee.phone);
+        if (normalizedPhone) {
+          try {
+            await sendSMS({
+              phone: normalizedPhone,
+              message: `Welcome to Ubuntu HRMS, ${employee.first_name}! Your onboarding is complete. Username: ${finalUsername}, Password: ${tempPassword}. Login at ${frontendUrl}`,
+            });
+          } catch (smsErr) {
+            logger.error('onboarding.completeStep', 'Failed to send SMS', smsErr);
+          }
+        }
       }
     }
-    await onboarding.save();
-    res.json(onboarding);
+    
+    const updateResult = await query(
+      'UPDATE onboarding SET steps = $1, status = $2, confirmed_at = $3, confirmed_by = $4, updated_at = NOW() WHERE id = $5 RETURNING *',
+      [JSON.stringify(steps), status, stepName === 'confirmation' ? new Date() : onboarding.confirmed_at, stepName === 'confirmation' ? req.user.id : onboarding.confirmed_by, req.params.id]
+    );
+    
+    res.json(updateResult.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
@@ -143,12 +209,16 @@ exports.completeStep = async (req, res) => {
 
 exports.uploadDocument = async (req, res) => {
   try {
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    const onboarding = result.rows[0];
+    
     const { name, type, url } = req.body;
-    onboarding.documents.push({ name, type, url, uploadedAt: new Date() });
-    await onboarding.save();
-    res.json(onboarding);
+    const documents = onboarding.documents || [];
+    documents.push({ name, type, url, uploadedAt: new Date() });
+    
+    const updateResult = await query('UPDATE onboarding SET documents = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [JSON.stringify(documents), req.params.id]);
+    res.json(updateResult.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
@@ -156,19 +226,16 @@ exports.uploadDocument = async (req, res) => {
 
 exports.assignAsset = async (req, res) => {
   try {
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    const onboarding = result.rows[0];
+    
     const { assetId, condition } = req.body;
-    const asset = await Asset.findById(assetId);
-    if (!asset) return res.status(404).json({ msg: 'Asset not found' });
-    asset.status = 'assigned';
-    asset.assignedTo = onboarding.employeeId;
-    asset.assignedDate = new Date();
-    asset.condition = condition || asset.condition;
-    await asset.save();
-    onboarding.assetsAssigned.push({ assetId, assignedAt: new Date(), condition });
-    await onboarding.save();
-    res.json(onboarding);
+    const assetsAssigned = onboarding.assets_assigned || [];
+    assetsAssigned.push({ assetId, assignedAt: new Date(), condition });
+    
+    const updateResult = await query('UPDATE onboarding SET assets_assigned = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [JSON.stringify(assetsAssigned), req.params.id]);
+    res.json(updateResult.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
@@ -176,18 +243,22 @@ exports.assignAsset = async (req, res) => {
 
 exports.addProbationReview = async (req, res) => {
   try {
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    const onboarding = result.rows[0];
+    
     const { score, comments, recommendation } = req.body;
-    onboarding.probationReviews.push({
+    const probationReviews = onboarding.probation_reviews || [];
+    probationReviews.push({
       reviewDate: new Date(),
       reviewerId: req.user.id,
       score,
       comments,
       recommendation,
     });
-    await onboarding.save();
-    res.json(onboarding);
+    
+    const updateResult = await query('UPDATE onboarding SET probation_reviews = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [JSON.stringify(probationReviews), req.params.id]);
+    res.json(updateResult.rows[0]);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
@@ -195,23 +266,30 @@ exports.addProbationReview = async (req, res) => {
 
 exports.generateOfferLetter = async (req, res) => {
   try {
-    const onboarding = await Onboarding.findById(req.params.id);
-    if (!onboarding) return res.status(404).json({ msg: 'Onboarding not found' });
-    await populateEmployee(onboarding);
-    const emp = onboarding.employeeId;
+    const result = await query('SELECT * FROM onboarding WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) return res.status(404).json({ msg: 'Onboarding not found' });
+    const onboarding = result.rows[0];
+    
+    const empResult = await query('SELECT * FROM employees WHERE id = $1', [onboarding.employee_id]);
+    if (empResult.rows.length === 0) return res.status(404).json({ msg: 'Employee not found' });
+    const employee = empResult.rows[0];
+    
     const letter = {
       date: new Date().toLocaleDateString(),
-      employeeName: `${emp.firstName} ${emp.lastName}`,
-      position: onboarding.position || emp.position,
-      department: onboarding.department || emp.department,
+      employeeName: `${employee.first_name} ${employee.last_name}`,
+      position: onboarding.position || employee.department,
+      department: onboarding.department || employee.department,
       startDate: new Date().toLocaleDateString(),
       probationMonths: 3,
-      salary: emp.basicSalary || 'To be discussed',
+      salary: employee.wage_rate || 'To be discussed',
     };
-    onboarding.offerLetterGenerated = true;
-    onboarding.offerLetterUrl = `/api/onboarding/${onboarding._id}/offer-letter`;
-    await onboarding.save();
-    res.json({ letter, onboarding });
+    
+    const updateResult = await query(
+      'UPDATE onboarding SET offer_letter_generated = true, offer_letter_url = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+      [`/api/onboarding/${onboarding.id}/offer-letter`, req.params.id]
+    );
+    
+    res.json({ letter, onboarding: updateResult.rows[0] });
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
   }

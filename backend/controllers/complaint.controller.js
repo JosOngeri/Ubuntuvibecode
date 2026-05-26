@@ -1,10 +1,13 @@
 const Complaint = require('../models/Complaint.model');
 const User = require('../models/User.model');
 const Employee = require('../models/Employee.model');
+const { query } = require('../config/db');
+const logger = require('../utils/logger');
 
 const SLA_TIMES = { critical: 1, high: 4, medium: 24, low: 48 };
 
 exports.getAll = async (req, res) => {
+  logger.info('complaint.getAll', 'Entry', { filter: req.query });
   try {
     const { type, status, urgency, department, assignedTo } = req.query;
     const filter = {};
@@ -13,37 +16,37 @@ exports.getAll = async (req, res) => {
     if (urgency) filter.urgency = urgency;
     if (department) filter.department = department;
     if (assignedTo) filter.assignedTo = assignedTo;
-    const complaints = await Complaint.find(filter)
-      .populate('submittedBy', 'firstName lastName email')
-      .populate('assignedTo', 'firstName lastName')
-      .populate('respondentId', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    const complaints = await Complaint.find(filter);
+    logger.info('complaint.getAll', `Returning ${complaints.length} complaints`);
     res.json(complaints);
   } catch (err) {
+    logger.error('complaint.getAll', 'Unhandled error', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.getById = async (req, res) => {
+  logger.info('complaint.getById', 'Entry', { id: req.params.id });
   try {
-    const complaint = await Complaint.findById(req.params.id)
-      .populate('submittedBy', 'firstName lastName email')
-      .populate('assignedTo', 'firstName lastName')
-      .populate('respondentId', 'firstName lastName')
-      .populate('timeline.performedBy', 'firstName lastName');
-    if (!complaint) return res.status(404).json({ msg: 'Complaint not found' });
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) {
+      logger.warn('complaint.getById', 'Not found', { id: req.params.id });
+      return res.status(404).json({ msg: 'Complaint not found' });
+    }
     res.json(complaint);
   } catch (err) {
+    logger.error('complaint.getById', 'Unhandled error', err, { id: req.params.id });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.create = async (req, res) => {
+  logger.info('complaint.create', 'Entry', { userId: req.user?.id, urgency: req.body.urgency });
   try {
     const { type, category, description, urgency, guestName, guestContact, guestRoom, respondentId, department } = req.body;
     const slaHours = SLA_TIMES[urgency] || 24;
     const slaDeadline = new Date(Date.now() + slaHours * 3600000);
-    const complaint = await Complaint.create({
+    const complaint = new Complaint({
       type,
       category,
       description,
@@ -57,17 +60,24 @@ exports.create = async (req, res) => {
       slaDeadline,
       timeline: [{ action: 'Complaint filed', notes: description, performedBy: req.user.id }],
     });
+    await complaint.save();
+    logger.info('complaint.create', 'Created', { id: complaint.id, urgency: complaint.urgency });
     res.status(201).json(complaint);
   } catch (err) {
+    logger.error('complaint.create', 'Unhandled error', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.updateStatus = async (req, res) => {
+  logger.info('complaint.updateStatus', 'Entry', { id: req.params.id, status: req.body.status });
   try {
     const { status, notes, assignedTo } = req.body;
     const complaint = await Complaint.findById(req.params.id);
-    if (!complaint) return res.status(404).json({ msg: 'Complaint not found' });
+    if (!complaint) {
+      logger.warn('complaint.updateStatus', 'Not found', { id: req.params.id });
+      return res.status(404).json({ msg: 'Complaint not found' });
+    }
     if (assignedTo) complaint.assignedTo = assignedTo;
     if (status) complaint.status = status;
     complaint.timeline.push({
@@ -77,17 +87,23 @@ exports.updateStatus = async (req, res) => {
     });
     if (status === 'resolved') complaint.resolutionDate = new Date();
     await complaint.save();
+    logger.info('complaint.updateStatus', 'Updated', { id: req.params.id, status });
     res.json(complaint);
   } catch (err) {
+    logger.error('complaint.updateStatus', 'Unhandled error', err, { id: req.params.id });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.resolve = async (req, res) => {
+  logger.info('complaint.resolve', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     const { resolution } = req.body;
     const complaint = await Complaint.findById(req.params.id);
-    if (!complaint) return res.status(404).json({ msg: 'Complaint not found' });
+    if (!complaint) {
+      logger.warn('complaint.resolve', 'Not found', { id: req.params.id });
+      return res.status(404).json({ msg: 'Complaint not found' });
+    }
     complaint.status = 'resolved';
     complaint.resolution = resolution;
     complaint.resolutionDate = new Date();
@@ -97,16 +113,22 @@ exports.resolve = async (req, res) => {
       performedBy: req.user.id,
     });
     await complaint.save();
+    logger.info('complaint.resolve', 'Resolved', { id: req.params.id });
     res.json(complaint);
   } catch (err) {
+    logger.error('complaint.resolve', 'Unhandled error', err, { id: req.params.id });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.close = async (req, res) => {
+  logger.info('complaint.close', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     const complaint = await Complaint.findById(req.params.id);
-    if (!complaint) return res.status(404).json({ msg: 'Complaint not found' });
+    if (!complaint) {
+      logger.warn('complaint.close', 'Not found', { id: req.params.id });
+      return res.status(404).json({ msg: 'Complaint not found' });
+    }
     complaint.status = 'closed';
     complaint.complainantConfirmed = true;
     complaint.timeline.push({
@@ -115,32 +137,42 @@ exports.close = async (req, res) => {
       performedBy: req.user.id,
     });
     await complaint.save();
+    logger.info('complaint.close', 'Closed', { id: req.params.id });
     res.json(complaint);
   } catch (err) {
+    logger.error('complaint.close', 'Unhandled error', err, { id: req.params.id });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.getStats = async (req, res) => {
+  logger.info('complaint.getStats', 'Entry');
   try {
     const [total, open, resolved, byType, byUrgency] = await Promise.all([
-      Complaint.countDocuments(),
-      Complaint.countDocuments({ status: { $in: ['open', 'acknowledged', 'investigating'] } }),
-      Complaint.countDocuments({ status: 'resolved' }),
-      Complaint.aggregate([{ $group: { _id: '$type', count: { $sum: 1 } } }]),
-      Complaint.aggregate([{ $group: { _id: '$urgency', count: { $sum: 1 } } }]),
+      query('SELECT COUNT(*) FROM complaints'),
+      query("SELECT COUNT(*) FROM complaints WHERE status IN ('open', 'acknowledged', 'investigating')"),
+      query("SELECT COUNT(*) FROM complaints WHERE status = 'resolved'"),
+      query("SELECT type, COUNT(*) FROM complaints GROUP BY type"),
+      query("SELECT urgency, COUNT(*) FROM complaints GROUP BY urgency"),
     ]);
-    res.json({ total, open, resolved, byType, byUrgency });
+    res.json({ 
+      total: parseInt(total.rows[0].count),
+      open: parseInt(open.rows[0].count),
+      resolved: parseInt(resolved.rows[0].count),
+      byType: byType.rows.map(r => ({ _id: r.type, count: parseInt(r.count) })),
+      byUrgency: byUrgency.rows.map(r => ({ _id: r.urgency, count: parseInt(r.count) }))
+    });
   } catch (err) {
+    logger.error('complaint.getStats', 'Unhandled error', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
 
 exports.getByEmployee = async (req, res) => {
+  logger.info('complaint.getByEmployee', 'Entry', { employeeId: req.params.employeeId });
   try {
     const { employeeId } = req.params;
     
-    // Find the user associated with this employee
     const employee = await Employee.findById(employeeId);
     if (!employee) {
       return res.status(404).json({ msg: 'Employee not found' });
@@ -148,28 +180,18 @@ exports.getByEmployee = async (req, res) => {
     
     let userId = employee.userId;
     
-    // If no direct user link, try to find by email
     if (!userId && employee.email) {
       const user = await User.findOne({ email: employee.email.toLowerCase() });
       if (user) {
-        userId = user._id;
+        userId = user.id;
       }
     }
     
-    // Get complaints where employee is respondent (complained about)
-    const complaintsAsRespondent = await Complaint.find({ respondentId: employeeId })
-      .populate('submittedBy', 'firstName lastName email')
-      .populate('assignedTo', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    const complaintsAsRespondent = await Complaint.find({ respondentId: employeeId });
     
-    // Get complaints submitted by this employee (if user found)
     let complaintsAsComplainant = [];
     if (userId) {
-      complaintsAsComplainant = await Complaint.find({ submittedBy: userId })
-        .populate('submittedBy', 'firstName lastName email')
-        .populate('assignedTo', 'firstName lastName')
-        .populate('respondentId', 'firstName lastName')
-        .sort({ createdAt: -1 });
+      complaintsAsComplainant = await Complaint.find({ submittedBy: userId });
     }
     
     res.json({

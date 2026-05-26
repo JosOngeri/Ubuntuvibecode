@@ -1,16 +1,5 @@
-// Users (Admin/HR)
-export const userAPI = {
-  getAll: () => api.get('/api/users'),
-  getById: (id) => api.get(`/api/users/${id}`),
-  register: (data) => api.post('/api/auth/register', data),
-  approve: (id, details) => api.post(`/api/users/${id}/approve`, details),
-  update: (id, data) => api.put(`/api/users/${id}`, data),
-  delete: (id) => api.delete(`/api/users/${id}`),
-  assignRole: (id, role) => api.post(`/api/users/${id}/role`, { role }),
-  getPreferences: () => api.get('/api/users/me/preferences'),
-  updatePreferences: (data) => api.put('/api/users/me/preferences', data),
-};
 import axios from 'axios'
+import logger from '../utils/logger'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
@@ -29,21 +18,65 @@ api.interceptors.request.use(
     if (token) {
       config.headers['x-auth-token'] = token
     }
+    logger.info('api.request', `${config.method?.toUpperCase()} ${config.url}`);
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    logger.error('api.request', 'Request setup error', error);
+    return Promise.reject(error);
+  }
 )
 
 // Auto-clear invalid sessions so the app can redirect to login cleanly.
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('authToken')
+  (response) => {
+    logger.info('api.response', `${response.status} ${response.config?.method?.toUpperCase()} ${response.config?.url}`);
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Retry on network errors (max 3 retries)
+    if (!error.response && !originalRequest._retry) {
+      originalRequest._retry = true;
+      originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
+      
+      if (originalRequest._retryCount <= 3) {
+        logger.warn('api.response', `Network error — retry ${originalRequest._retryCount}/3`, { url: originalRequest.url });
+        const delay = 1000 * originalRequest._retryCount;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return api(originalRequest);
+      }
     }
+
+    const status = error.response?.status;
+    const url = error.config?.url;
+    logger.error('api.response', `HTTP ${status ?? 'network'} error`, error, { url, method: error.config?.method?.toUpperCase() });
+    
+    // Handle HTTP errors
+    if (status === 401) {
+      localStorage.removeItem('authToken')
+      window.location.href = '/login'
+    }
+    
     return Promise.reject(error)
   }
 )
+
+// Users (Admin/HR)
+export const userAPI = {
+  getAll: () => api.get('/api/users'),
+  getById: (id) => api.get(`/api/users/${id}`),
+  register: (data) => api.post('/api/auth/register', data),
+  approve: (id, details) => api.post(`/api/users/${id}/approve`, details),
+  update: (id, data) => api.put(`/api/users/${id}`, data),
+  delete: (id) => api.delete(`/api/users/${id}`),
+  assignRole: (id, role) => api.post(`/api/users/${id}/role`, { role }),
+  getPreferences: () => api.get('/api/users/me/preferences'),
+  updatePreferences: (data) => api.put('/api/users/me/preferences', data),
+  getNotifications: (userId) => api.get(`/api/notifications/${userId}`),
+  markNotificationAsRead: (id) => api.put(`/api/notifications/${id}/read`),
+}
 
 // Employees
 export const employeeAPI = {
@@ -58,6 +91,7 @@ export const employeeAPI = {
 // Attendance
 export const attendanceAPI = {
   getByEmployeeId: (employeeId) => api.get(`/api/attendance/${employeeId}`),
+  getMyAttendance: () => api.get('/api/attendance/me'),
   biometricPush: (data) => api.post('/api/attendance/biometrics/push', data),
   manualSelfPunch: (data) => api.post('/api/attendance/manual/self', data),
   managerManualPunch: (data) => api.post('/api/attendance/manual/manager', data),
@@ -154,13 +188,22 @@ export const contractorAPI = {
 
 // Job Applications
 export const jobApplicationAPI = {
-  getByEmployeeId: (employeeId) => api.get(`/api/job-applications/employee/${employeeId}`),
-  getByApplicantEmail: (email) => api.get(`/api/job-applications/applicant/${email}`),
+  getByEmployeeId: (employeeId) => api.get(`/api/jobs/applications/employee/${employeeId}`),
+  getByApplicantEmail: (email) => api.get(`/api/jobs/applications/applicant/${email}`),
 }
 
 // Complaints
 export const complaintAPI = {
   getByEmployee: (employeeId) => api.get(`/api/complaints/employee/${employeeId}`),
+}
+
+// Verification
+export const verificationAPI = {
+  verifyApplication: (jobId, appId) => api.post(`/api/jobs/${jobId}/applications/${appId}/verify`),
+  getVerificationResults: (jobId, appId) => api.get(`/api/jobs/${jobId}/applications/${appId}/verification`),
+  verifyAllApplications: (jobId) => api.post(`/api/jobs/${jobId}/applications/verify-batch`),
+  updateManagerRanking: (jobId, appId, ranking, notes) => api.put(`/api/jobs/${jobId}/applications/${appId}/manager-ranking`, { ranking, notes }),
+  updateOwnerApproval: (jobId, appId, status, notes) => api.put(`/api/jobs/${jobId}/applications/${appId}/owner-approval`, { status, notes }),
 }
 
 export default api

@@ -15,7 +15,7 @@ const CATS = {
 const UC = { critical:'bg-red-100 text-red-700', high:'bg-orange-100 text-orange-700', medium:'bg-yellow-100 text-yellow-700', low:'bg-slate-100 text-slate-600' }
 const SC = { open:'bg-red-100 text-red-700', acknowledged:'bg-blue-100 text-blue-700', investigating:'bg-purple-100 text-purple-700', resolved:'bg-green-100 text-green-700', closed:'bg-slate-100 text-slate-600' }
 
-export default function ComplaintsPage() {
+export default function ComplaintsPage({ standalone = true }) {
   const [complaints, setComplaints] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -28,7 +28,7 @@ export default function ComplaintsPage() {
 
   const fetchAll = async () => {
     setLoading(true)
-    try { const r = await api.get('/complaints'); setComplaints(r.data||[]) }
+    try { const r = await api.get('/complaints').catch(() => ({ data: [] })); setComplaints(r.data||[]) }
     catch { toast.error('Failed') }
     finally { setLoading(false) }
   }
@@ -65,8 +65,8 @@ export default function ComplaintsPage() {
   const filtered = filter==='all' ? complaints : complaints.filter(c=>c.status===filter)
   const openCount = complaints.filter(c=>['open','acknowledged','investigating'].includes(c.status)).length
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Complaints & Conflicts</h1>
         <p className="page-subtitle">Manage guest complaints and employee grievances with SLA tracking.</p>
@@ -165,6 +165,8 @@ export default function ComplaintsPage() {
           </div>
         </div>
       </Modal>
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

@@ -4,6 +4,7 @@ const User = require('../models/User.model');
 const Employee = require('../models/Employee.model');
 const path = require('path');
 const { query } = require('../config/db');
+const logger = require('../utils/logger');
 
 const parseJsonField = (value, fallback = null) => {
   if (value === undefined || value === null || value === '') return fallback;
@@ -15,10 +16,22 @@ const parseJsonField = (value, fallback = null) => {
   }
 };
 
+const toJsonb = (value, fallback = null) => JSON.stringify(value ?? fallback);
+
 const jobController = {
   // 3.4.1 Job Posting CRUD
   async createJob(req, res) {
     try {
+      // Validate application deadline is not before today
+      if (req.body.applicationDeadline) {
+        const deadline = new Date(req.body.applicationDeadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (deadline < today) {
+          return res.status(400).json({ msg: 'Application deadline cannot be before today' });
+        }
+      }
+
       const job = await Job.create({ ...req.body, postedBy: req.user?.id });
       res.status(201).json(job);
     } catch (err) {
@@ -36,9 +49,6 @@ const jobController = {
   },
   async getJob(req, res) {
     try {
-      if (!/^\d+$/.test(String(req.params.id))) {
-        return res.status(404).json({ msg: 'Job not found' });
-      }
       const job = await Job.findById(req.params.id);
       if (!job) return res.status(404).json({ msg: 'Job not found' });
       res.json(job);
@@ -48,6 +58,16 @@ const jobController = {
   },
   async updateJob(req, res) {
     try {
+      // Validate application deadline is not before today
+      if (req.body.applicationDeadline) {
+        const deadline = new Date(req.body.applicationDeadline);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (deadline < today) {
+          return res.status(400).json({ msg: 'Application deadline cannot be before today' });
+        }
+      }
+
       const job = await Job.update(req.params.id, req.body);
       res.json(job);
     } catch (err) {
@@ -73,9 +93,22 @@ const jobController = {
     }
   },
 
+  // Public job detail endpoint
+  async getPublicJob(req, res) {
+    try {
+      const job = await Job.findById(req.params.id);
+      if (!job) return res.status(404).json({ msg: 'Job not found' });
+      res.json(job);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to fetch job', error: err.message });
+    }
+  },
+
   // 3.4.5 Application Submission
   async applyToJob(req, res) {
     try {
+      logger.info('job.applyToJob', 'Entry', { jobId: req.params.id, applicantEmail: req.body.applicantEmail });
+
       const userId = req.user?.id || null;
       const {
         applicantName,
@@ -93,11 +126,17 @@ const jobController = {
         employment_history,
         skills,
         declaration,
+        disclosures,
       } = req.body;
       const jobId = req.params.id;
-      const cvPath = req.file
-        ? path.relative(path.join(__dirname, '../'), req.file.path).split(path.sep).join('/')
+      const cvPath = req.files && req.files.cv && req.files.cv[0]
+        ? path.relative(path.join(__dirname, '../'), req.files.cv[0].path).split(path.sep).join('/')
         : null;
+      const coverLetterPath = req.files && req.files.coverLetter && req.files.coverLetter[0]
+        ? path.relative(path.join(__dirname, '../'), req.files.coverLetter[0].path).split(path.sep).join('/')
+        : null;
+
+      logger.info('job.applyToJob', 'Parsed data', { jobId, applicantName, applicantEmail, cvPath: !!cvPath, coverLetterPath: !!coverLetterPath });
 
       // Validation
       const job = await Job.findById(jobId);
@@ -105,16 +144,19 @@ const jobController = {
 
       // Check if job is still open
       const now = new Date();
-      if (job.applicationClosingDate && new Date(job.applicationClosingDate) < now) {
+      if (job.applicationDeadline && new Date(job.applicationDeadline) < now) {
+        logger.warn('job.applyToJob', 'Application deadline passed', { jobId });
         return res.status(400).json({ msg: 'Application deadline has passed' });
       }
 
       // Validate date of birth (must be at least 18 years ago)
-      if (personal_info && personal_info.dateOfBirth) {
-        const dob = new Date(personal_info.dateOfBirth);
+      const personalInfoForValidation = parseJsonField(personal_info, {});
+      if (personalInfoForValidation.dateOfBirth) {
+        const dob = new Date(personalInfoForValidation.dateOfBirth);
         const minAgeDate = new Date();
         minAgeDate.setFullYear(minAgeDate.getFullYear() - 18);
         if (dob > minAgeDate) {
+          logger.warn('job.applyToJob', 'Applicant under 18', { jobId });
           return res.status(400).json({ msg: 'Applicant must be at least 18 years old' });
         }
       }
@@ -122,7 +164,14 @@ const jobController = {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (applicantEmail && !emailRegex.test(applicantEmail)) {
+        logger.warn('job.applyToJob', 'Invalid email format', { email: applicantEmail });
         return res.status(400).json({ msg: 'Invalid email format' });
+      }
+
+      // Validate required fields
+      if (!applicantName || !applicantEmail) {
+        logger.warn('job.applyToJob', 'Missing required fields');
+        return res.status(400).json({ msg: 'Applicant name and email are required' });
       }
 
       const applicationData = {
@@ -133,21 +182,82 @@ const jobController = {
         additionalInfo: additionalInfo || '',
       };
 
-      const { rows } = await query(
-        `INSERT INTO job_applications 
-         (jobId, applicantName, applicantEmail, applicantPhone, cvPath, coverLetter, applicationData, user_id, status, appliedAt, personal_info, address_info, position_details, education, employment_history, skills, declaration) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
-        [jobId, applicantName, applicantEmail, applicantPhone, cvPath, coverLetter || null, applicationData, userId, 'pending',
-         toJsonb(personal_info, null),
-         toJsonb(address_info, null),
-         toJsonb(position_details, null),
-         toJsonb(education, null),
-         toJsonb(employment_history, null),
-         toJsonb(skills, null),
-         toJsonb(declaration, null)]
-      );
-      res.status(201).json(rows[0]);
+      logger.info('job.applyToJob', 'Inserting application', { jobId });
+      // Parse structured fields
+      const personalInfoParsed = parseJsonField(personal_info, {});
+      const educationParsed = parseJsonField(education, {});
+      const disclosuresParsed = parseJsonField(disclosures, {});
+
+      // Extract flat fields from personal_info for dedicated columns
+      const firstName = personalInfoParsed.firstName || applicantName?.split(' ')[0] || '';
+      const lastName = personalInfoParsed.surname || applicantName?.split(' ').slice(1).join(' ') || '';
+      const emailValue = personalInfoParsed.email || applicantEmail || '';
+      const phoneValue = personalInfoParsed.phone || applicantPhone || '';
+      const dobValue = personalInfoParsed.dateOfBirth || null;
+      const genderValue = personalInfoParsed.gender || null;
+      const maritalStatusValue = personalInfoParsed.maritalStatus || null;
+      const nationalityValue = personalInfoParsed.nationality || null;
+      const nationalIdValue = personalInfoParsed.nationalId || null;
+
+      // Build full application data JSONB to match the model's expected schema
+      const fullApplicationData = {
+        ...applicationData,
+        personalInfo: personalInfoParsed,
+        education: educationParsed,
+        employmentHistory: parseJsonField(employment_history, []),
+        references: parseJsonField(references, []),
+        skills: parseJsonField(skills, []),
+        declaration: parseJsonField(declaration, {}),
+        disclosures: disclosuresParsed,
+        certifications: educationParsed.certifications || []
+      };
+
+      // Extract address fields from personal_info
+      const residentialAddress = personalInfoParsed.address ? JSON.stringify(personalInfoParsed.address) : null;
+
+      try {
+        const { rows } = await query(
+          `INSERT INTO job_applications
+           (job_id, first_name, last_name, email, phone, resume_url, cover_letter,
+            date_of_birth, gender, marital_status, nationality, national_id, residential_address,
+            education_history, employment_history, skills, certifications,
+            experience_years, availability_weeks, right_to_work, salary_expectation,
+            status, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW())
+           RETURNING *`,
+          [
+            jobId,
+            firstName,
+            lastName,
+            applicantEmail || emailValue,
+            applicantPhone || phoneValue,
+            cvPath || null,
+            coverLetter || null,
+            dobValue,
+            genderValue,
+            maritalStatusValue,
+            nationalityValue,
+            nationalIdValue,
+            residentialAddress,
+            toJsonb(educationParsed, null),
+            toJsonb(parseJsonField(employment_history, []), null),
+            toJsonb(parseJsonField(skills, []), null),
+            toJsonb(educationParsed.certifications || [], null),
+            disclosuresParsed.experienceYears ? parseInt(disclosuresParsed.experienceYears) : null,
+            disclosuresParsed.availabilityWeeks ? parseInt(disclosuresParsed.availabilityWeeks) : null,
+            disclosuresParsed.rightToWork || null,
+            disclosuresParsed.salaryExpectation ? parseFloat(disclosuresParsed.salaryExpectation) : null,
+            'pending'
+          ]
+        );
+        logger.info('job.applyToJob', 'Application inserted', { id: rows[0]?.id });
+        res.status(201).json(rows[0]);
+      } catch (dbErr) {
+        logger.error('job.applyToJob', 'Database error', dbErr, { jobId });
+        throw dbErr;
+      }
     } catch (err) {
+      logger.error('job.applyToJob', 'Submission error', err, { jobId: req.params.id });
       res.status(400).json({ msg: 'Failed to apply', error: err.message });
     }
   },
@@ -168,37 +278,26 @@ const jobController = {
       const userId = req.user?.id;
       if (!userId) return res.status(401).json({ msg: 'Unauthorized' });
 
-      // Fallback: check if the user is an employee and has an email there
+      // Get user's email from users or employees table
       const { rows: userRows } = await query(
-        `SELECT u.email as user_email, e.email as employee_email 
-         FROM users u 
-         LEFT JOIN employees e ON e.user_id = u.id 
+        `SELECT u.email as user_email, e.email as employee_email
+         FROM users u
+         LEFT JOIN employees e ON e.user_id = u.id
          WHERE u.id = $1`,
         [userId]
       );
       const email = userRows[0]?.user_email || userRows[0]?.employee_email;
 
-      // Fetch applications matching user_id OR their registered email
+      // Fetch applications by registered email (job_applications schema uses 'email', not 'applicantEmail')
       const queryText = email
-        ? `SELECT * FROM job_applications WHERE user_id = $1 OR LOWER(applicantEmail) = LOWER($2) ORDER BY appliedAt DESC`
-        : `SELECT * FROM job_applications WHERE user_id = $1 ORDER BY appliedAt DESC`;
-      
-      const params = email ? [userId, email] : [userId];
-      const { rows } = await query(queryText, params);
+        ? `SELECT * FROM job_applications WHERE LOWER(email) = LOWER($1) ORDER BY created_at DESC`
+        : `SELECT * FROM job_applications WHERE 1=0`; // return empty if no email
 
-      // Automatically link unlinked applications found by email
-      if (email) {
-        const unlinkedIds = rows.filter(r => !r.user_id).map(r => r.id);
-        if (unlinkedIds.length > 0) {
-          await query(
-            `UPDATE job_applications SET user_id = $1, linked_via = 'login_fetch', linked_at = NOW() WHERE id = ANY($2::int[])`,
-            [userId, unlinkedIds]
-          ).catch(err => console.warn('Failed to backfill application links:', err));
-        }
-      }
+      const { rows } = await query(queryText, email ? [email] : []);
 
       res.json(rows);
     } catch (err) {
+      logger.error('job.getMyApplications', err.message);
       res.status(500).json({ msg: 'Failed to fetch your applications', error: err.message });
     }
   },
@@ -267,9 +366,35 @@ const jobController = {
 
       const updated = await JobApplication.update(applicationId, {
         status: 'shortlisted',
-        interview_status: 'scheduled',
-        interview_date: new Date(),
+        notes: 'Shortlisted for interview - ' + new Date().toISOString()
       });
+
+      // Send email notification
+      const { sendEmail } = require('../utils/email');
+      await sendEmail({
+        to: application.applicantEmail,
+        subject: 'Application Shortlisted - Ubuntu HRMS',
+        text: `Dear ${application.applicantName},\n\nCongratulations! Your application has been shortlisted. We will contact you soon to schedule an interview.`,
+        html: `<p>Dear ${application.applicantName},</p><p>Congratulations! Your application has been shortlisted.</p><p>We will contact you soon to schedule an interview.</p>`,
+      });
+
+      // Send SMS notification
+      const { sendSMS, normalizePhoneNumber } = require('../utils/sms');
+      const normalizedPhone = normalizePhoneNumber(application.applicantPhone);
+      logger.info('job.shortlistApplication', 'SMS attempt', { phone: normalizedPhone, original: application.applicantPhone });
+      if (normalizedPhone) {
+        try {
+          await sendSMS({
+            phone: normalizedPhone,
+            message: `Dear ${application.applicantName}, your application has been shortlisted. We will contact you soon for an interview. Ubuntu HRMS`,
+          });
+          logger.info('job.shortlistApplication', 'SMS sent successfully', { phone: normalizedPhone });
+        } catch (smsErr) {
+          logger.error('job.shortlistApplication', 'SMS send failed', smsErr, { phone: normalizedPhone, response: smsErr.response?.data });
+        }
+      } else {
+        logger.warn('job.shortlistApplication', 'No valid phone number for SMS', { applicantPhone: application.applicantPhone });
+      }
 
       res.json(updated);
     } catch (err) {
@@ -309,6 +434,11 @@ const jobController = {
         return res.status(400).json({ msg: 'Offer has already been accepted' });
       }
 
+      // Check if offer has expired
+      if (application.offerTokenExpiresAt && new Date(application.offerTokenExpiresAt) < new Date()) {
+        return res.status(400).json({ msg: 'Offer has expired' });
+      }
+
       res.json(application);
     } catch (err) {
       res.status(500).json({ msg: 'Failed to validate offer', error: err.message });
@@ -344,11 +474,16 @@ const jobController = {
 
   async acceptOfferWithVerification(req, res) {
     try {
-      const { offerToken, verificationToken } = req.body;
+      const { offerToken, verificationToken, availabilityDate } = req.body;
       const application = await JobApplication.findByOfferToken(offerToken);
 
       if (!application) {
         return res.status(404).json({ msg: 'Invalid or expired offer link' });
+      }
+
+      // Check if offer has expired
+      if (application.offerTokenExpiresAt && new Date(application.offerTokenExpiresAt) < new Date()) {
+        return res.status(400).json({ msg: 'Offer has expired' });
       }
 
       const applicantPhone = application.applicantPhone;
@@ -364,6 +499,7 @@ const jobController = {
       const updated = await JobApplication.update(application.id, {
         status: 'offer_accepted',
         offer_status: 'accepted',
+        availability_date: availabilityDate || null,
       });
 
       res.json(updated);
@@ -400,6 +536,11 @@ const jobController = {
 
       if (!application) {
         return res.status(404).json({ msg: 'Invalid or expired offer link' });
+      }
+
+      // Check if offer has expired
+      if (application.offerTokenExpiresAt && new Date(application.offerTokenExpiresAt) < new Date()) {
+        return res.status(400).json({ msg: 'Offer has expired' });
       }
 
       const applicantPhone = application.applicantPhone;
@@ -451,13 +592,12 @@ const jobController = {
 
       const crypto = require('crypto');
       const offerToken = crypto.randomBytes(32).toString('hex');
+      const offerExpiresAt = new Date();
+      offerExpiresAt.setDate(offerExpiresAt.getDate() + 7); // 7 days expiration
 
       const updated = await JobApplication.update(applicationId, {
         status: 'offer_sent',
-        offered_salary: offerAmount,
-        offer_token: offerToken,
-        offer_sent_at: new Date(),
-        offer_status: 'pending',
+        notes: `Offer sent: ${offerAmount}. Token: ${offerToken}. Expires: ${offerExpiresAt.toISOString()}`
       });
 
       // Send email to applicant
@@ -466,9 +606,19 @@ const jobController = {
       await sendEmail({
         to: application.applicantEmail,
         subject: 'Job Offer - Ubuntu HRMS',
-        text: `Dear ${application.applicantName},\n\nWe are pleased to offer you the position. Please review the offer details at: ${offerLink}\n\nSalary Offer: ${offerAmount}\n\nYou can accept the offer or negotiate the salary through the link above.`,
-        html: `<p>Dear ${application.applicantName},</p><p>We are pleased to offer you the position.</p><p><strong>Salary Offer:</strong> ${offerAmount}</p><p>Please review the offer details at: <a href="${offerLink}">${offerLink}</a></p><p>You can accept the offer or negotiate the salary through the link above.</p>`,
+        text: `Dear ${application.applicantName},\n\nWe are pleased to offer you the position. Please review the offer details at: ${offerLink}\n\nSalary Offer: ${offerAmount}\n\nOffer expires on: ${offerExpiresAt.toLocaleDateString()}\n\nYou can accept the offer or negotiate the salary through the link above.`,
+        html: `<p>Dear ${application.applicantName},</p><p>We are pleased to offer you the position.</p><p><strong>Salary Offer:</strong> ${offerAmount}</p><p><strong>Offer expires on:</strong> ${offerExpiresAt.toLocaleDateString()}</p><p>Please review the offer details at: <a href="${offerLink}">${offerLink}</a></p><p>You can accept the offer or negotiate the salary through the link above.</p>`,
       });
+
+      // Send SMS to applicant
+      const { sendSMS, normalizePhoneNumber } = require('../utils/sms');
+      const normalizedPhone = normalizePhoneNumber(application.applicantPhone);
+      if (normalizedPhone) {
+        await sendSMS({
+          phone: normalizedPhone,
+          message: `Dear ${application.applicantName}, Ubuntu HRMS is pleased to offer you a position. Salary: ${offerAmount}. Offer expires: ${offerExpiresAt.toLocaleDateString()}. Review at: ${offerLink}`,
+        });
+      }
 
       res.json(updated);
     } catch (err) {
@@ -563,9 +713,30 @@ const jobController = {
 
               case 'language':
                 const languages = skills.languages || [];
-                return languages.some(lang => 
+                return languages.some(lang =>
                   lang.language?.toLowerCase().includes(value.toLowerCase())
                 );
+
+              case 'experienceYears':
+                const expYears = disclosures?.experienceYears || 0;
+                if (operator === 'gte') return expYears >= value;
+                if (operator === 'lte') return expYears <= value;
+                return false;
+
+              case 'availabilityWeeks':
+                const availWeeks = disclosures?.availabilityWeeks || 0;
+                if (operator === 'lte') return availWeeks <= value;
+                return false;
+
+              case 'rightToWork':
+                return disclosures?.rightToWork === value;
+
+              case 'salaryExpectation':
+                const disclosureSalary = disclosures?.salaryExpectation || 0;
+                const disclosureFilterSalary = parseFloat(value) || 0;
+                if (operator === 'lte') return disclosureSalary <= disclosureFilterSalary;
+                if (operator === 'gte') return disclosureSalary >= disclosureFilterSalary;
+                return false;
 
               default:
                 return true;
@@ -666,11 +837,11 @@ const jobController = {
 
       scored.sort((a, b) => b.matchScore - a.matchScore);
 
-      // Save scores to DB
+      // Save scores to DB using existing ai_ranking and ai_ranking_breakdown columns
       for (const scoredApp of scored) {
         await query(
           `UPDATE job_applications 
-           SET match_score = $1, ranking_breakdown = $2 
+           SET ai_ranking = $1, ai_ranking_breakdown = $2 
            WHERE id = $3`,
           [scoredApp.matchScore, JSON.stringify(scoredApp.rankingBreakdown), scoredApp.applicationId]
         );
@@ -694,12 +865,12 @@ const jobController = {
         return res.status(400).json({ msg: 'newScore must be between 0 and 100' });
       }
 
-      // Update the score
+      // Update the score using existing columns
       await query(
         `UPDATE job_applications 
-         SET match_score = $1, 
-             ranking_breakdown = jsonb_set(
-               COALESCE(ranking_breakdown, '{}'::jsonb),
+         SET ai_ranking = $1, 
+             ai_ranking_breakdown = jsonb_set(
+               COALESCE(ai_ranking_breakdown, '{}'::jsonb),
                '{manual_override}',
                $2::jsonb
              )
@@ -719,7 +890,7 @@ const jobController = {
       
       // Remove manual override and recalculate
       const { rows } = await query(
-        `SELECT ranking_breakdown FROM job_applications WHERE id = $1`,
+        `SELECT ai_ranking_breakdown FROM job_applications WHERE id = $1`,
         [applicationId]
       );
 
@@ -727,13 +898,13 @@ const jobController = {
         return res.status(404).json({ msg: 'Application not found' });
       }
 
-      const breakdown = rows[0].ranking_breakdown;
+      const breakdown = rows[0].ai_ranking_breakdown;
       if (breakdown && breakdown.manual_override) {
         delete breakdown.manual_override;
         
         await query(
           `UPDATE job_applications 
-           SET ranking_breakdown = $1 
+           SET ai_ranking_breakdown = $1 
            WHERE id = $2`,
           [JSON.stringify(breakdown), applicationId]
         );
@@ -788,6 +959,13 @@ const jobController = {
         updateData.skills = application.skills;
       }
 
+      if (application.disclosures) {
+        updateData.experienceYears = application.disclosures.experienceYears;
+        updateData.availabilityWeeks = application.disclosures.availabilityWeeks;
+        updateData.rightToWork = application.disclosures.rightToWork;
+        updateData.salaryExpectation = application.disclosures.salaryExpectation;
+      }
+
       // Also update the employee_id on the job application
       await JobApplication.update(appId, { employeeId: parseInt(employeeId) });
 
@@ -830,6 +1008,209 @@ const jobController = {
       res.json(applications || []);
     } catch (err) {
       res.status(500).json({ msg: 'Failed to fetch applications', error: err.message });
+    }
+  },
+
+  async createInterviewInvite(req, res) {
+    try {
+      const applicationId = req.params.appId;
+      const { interviewerEmails, customMetrics } = req.body;
+      const application = await JobApplication.findById(applicationId);
+      if (!application) return res.status(404).json({ msg: 'Application not found' });
+
+      const job = await Job.findById(application.jobId);
+      if (!job) return res.status(404).json({ msg: 'Job not found' });
+
+      const crypto = require('crypto');
+      const interviewToken = crypto.randomBytes(32).toString('hex');
+
+      const invitations = [];
+      if (interviewerEmails && Array.isArray(interviewerEmails)) {
+        interviewerEmails.forEach(email => {
+          invitations.push({
+            email,
+            token: crypto.randomBytes(16).toString('hex'),
+            sentAt: new Date(),
+            responded: false,
+          });
+        });
+      }
+
+      const interviewInvitations = application.interviewInvitations || [];
+      interviewInvitations.push({
+        mainToken: interviewToken,
+        invitations,
+        customMetrics: customMetrics || [],
+        createdAt: new Date(),
+      });
+
+      const updated = await JobApplication.update(applicationId, {
+        interview_invitations: interviewInvitations,
+      });
+
+      // Send invitation emails
+      const { sendEmail } = require('../utils/email');
+      const interviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5177'}/interview-feedback/${interviewToken}`;
+
+      if (interviewerEmails && Array.isArray(interviewerEmails)) {
+        for (const email of interviewerEmails) {
+          await sendEmail({
+            to: email,
+            subject: `Interview Feedback Request - ${application.applicantName}`,
+            text: `You have been invited to provide interview feedback for ${application.applicantName} applying for ${job.title}.\n\nPlease provide your feedback at: ${interviewLink}`,
+            html: `<p>You have been invited to provide interview feedback for <strong>${application.applicantName}</strong> applying for <strong>${job.title}</strong>.</p><p>Please provide your feedback at: <a href="${interviewLink}">${interviewLink}</a></p>`,
+          });
+        }
+      }
+
+      res.json({ interviewToken, interviewLink, updated });
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to create interview invite', error: err.message });
+    }
+  },
+
+  async submitInterviewFeedback(req, res) {
+    try {
+      const { appId, token } = req.params;
+      const { interviewerName, interviewerEmail, metrics, comments } = req.body;
+
+      const application = await JobApplication.findById(appId);
+      if (!application) return res.status(404).json({ msg: 'Application not found' });
+
+      const interviewInvitations = application.interviewInvitations || [];
+      const invite = interviewInvitations.find(inv => inv.mainToken === token);
+
+      if (!invite) {
+        return res.status(404).json({ msg: 'Invalid interview token' });
+      }
+
+      // Calculate overall grade (average of all metric scores)
+      const metricScores = metrics.map(m => m.score || 0);
+      const overallGrade = metricScores.length > 0
+        ? metricScores.reduce((a, b) => a + b, 0) / metricScores.length
+        : 0;
+
+      const feedback = {
+        interviewerName,
+        interviewerEmail,
+        metrics,
+        comments,
+        overallGrade,
+        submittedAt: new Date(),
+      };
+
+      const interviewFeedbacks = application.interviewFeedbacks || [];
+      interviewFeedbacks.push(feedback);
+
+      const updated = await JobApplication.update(appId, {
+        interview_feedbacks: interviewFeedbacks,
+      });
+
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to submit interview feedback', error: err.message });
+    }
+  },
+
+  async getInterviewSummary(req, res) {
+    try {
+      const { appId } = req.params;
+      const application = await JobApplication.findById(appId);
+      if (!application) return res.status(404).json({ msg: 'Application not found' });
+
+      const feedbacks = application.interviewFeedbacks || [];
+
+      // Calculate average scores across all interviewers
+      const summary = {
+        totalInterviewers: feedbacks.length,
+        averageOverallGrade: 0,
+        metricAverages: {},
+        feedbacks: feedbacks,
+      };
+
+      if (feedbacks.length > 0) {
+        const totalGrade = feedbacks.reduce((sum, f) => sum + (f.overallGrade || 0), 0);
+        summary.averageOverallGrade = totalGrade / feedbacks.length;
+
+        // Calculate averages for each metric
+        const allMetrics = feedbacks.flatMap(f => f.metrics || []);
+        const metricMap = {};
+        allMetrics.forEach(m => {
+          if (!metricMap[m.name]) {
+            metricMap[m.name] = { total: 0, count: 0 };
+          }
+          metricMap[m.name].total += m.score || 0;
+          metricMap[m.name].count += 1;
+        });
+
+        Object.keys(metricMap).forEach(name => {
+          summary.metricAverages[name] = metricMap[name].total / metricMap[name].count;
+        });
+      }
+
+      res.json(summary);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to get interview summary', error: err.message });
+    }
+  },
+
+  async getShortlisted(req, res) {
+    try {
+      const applications = await JobApplication.findShortlisted();
+      res.json(applications);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to get shortlisted applications', error: err.message });
+    }
+  },
+
+  async getInterviewDetail(req, res) {
+    try {
+      const { appId } = req.params;
+      const application = await JobApplication.findById(appId);
+      if (!application) return res.status(404).json({ msg: 'Application not found' });
+
+      const feedbacks = application.interviewFeedbacks || [];
+      let averageOverallGrade = 0;
+      const metricAverages = {};
+
+      if (feedbacks.length > 0) {
+        const totalGrade = feedbacks.reduce((sum, f) => sum + (f.overallGrade || 0), 0);
+        averageOverallGrade = totalGrade / feedbacks.length;
+
+        feedbacks.forEach(fb => {
+          (fb.metrics || []).forEach(m => {
+            if (!metricAverages[m.name]) metricAverages[m.name] = { total: 0, count: 0 };
+            metricAverages[m.name].total += m.score || 0;
+            metricAverages[m.name].count += 1;
+          });
+        });
+
+        Object.keys(metricAverages).forEach(name => {
+          metricAverages[name] = metricAverages[name].total / metricAverages[name].count;
+        });
+      }
+
+      res.json({
+        ...application,
+        interviewSummary: {
+          totalInterviewers: feedbacks.length,
+          averageOverallGrade,
+          metricAverages,
+          feedbacks,
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to get interview detail', error: err.message });
+    }
+  },
+
+  async getAllApplications(req, res) {
+    try {
+      const applications = await JobApplication.findAllWithJobs();
+      res.json(applications);
+    } catch (err) {
+      logger.error('job.getAllApplications', 'Failed to get all applications', err);
+      res.status(500).json({ msg: 'Failed to get all applications', error: err.message });
     }
   },
 };

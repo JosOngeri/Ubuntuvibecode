@@ -18,6 +18,11 @@ const {
   createShiftSetting,
   updateShiftSetting,
   deleteShiftSetting,
+  getComponentSettings,
+  updateComponentSettings,
+  getUserPreferences,
+  updateUserPreferences,
+  resetComponentSettings,
 } = require('../controllers/settings.controller');
 const auth = require('../middleware/auth');
 const roleMiddleware = require('../middleware/role');
@@ -31,16 +36,18 @@ router.use(auth);
 router.get('/', getSettings);
 router.get('/categories', getCategories);
 router.get('/category/:category', getSettingsByCategory);
+router.get('/components', roleMiddleware(['admin', 'owner']), getComponentSettings);
+router.get('/components/:component', roleMiddleware(['admin', 'owner']), getComponentSettings);
 router.get('/:key', getSettingByKey);
 router.put('/:key', roleMiddleware(['owner', 'manager']), updateSetting);
 router.post('/', roleMiddleware(['owner', 'manager']), createSetting);
 router.delete('/:key', roleMiddleware(['owner', 'manager']), deleteSetting);
 
 /**
- * Audit log endpoints (owner/manager only)
+ * Audit log endpoints (owner/manager/admin only)
  */
-router.get('/audit/:key', roleMiddleware(['owner', 'manager']), getAuditLog);
-router.get('/audit/all', roleMiddleware(['owner', 'manager']), getAllAuditLogs);
+router.get('/audit/:key', roleMiddleware(['owner', 'manager', 'admin']), getAuditLog);
+router.get('/audit/all', roleMiddleware(['owner', 'manager', 'admin']), getAllAuditLogs);
 
 /**
  * Office Location endpoints (admin only)
@@ -61,5 +68,17 @@ router.get('/shifts', roleMiddleware(['admin']), getShiftSettings);
 router.post('/shifts', roleMiddleware(['admin']), createShiftSetting);
 router.put('/shifts/:id', roleMiddleware(['admin']), updateShiftSetting);
 router.delete('/shifts/:id', roleMiddleware(['admin']), deleteShiftSetting);
+
+/**
+ * Component Settings endpoints (admin/owner only)
+ */
+router.put('/components/:component', roleMiddleware(['admin', 'owner']), updateComponentSettings);
+router.post('/components/:component/reset', roleMiddleware(['admin', 'owner']), resetComponentSettings);
+
+/**
+ * User Preferences endpoints
+ */
+router.get('/user/:userId', getUserPreferences);
+router.put('/user/:userId', updateUserPreferences);
 
 module.exports = router;

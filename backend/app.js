@@ -1,14 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+const systemLogger = require('./middleware/systemLogger');
 
 const app = express();
 
 
 const allowedOrigins = [
-  'http://localhost:5177',
+  'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5177',
+  'https://ubuntu-hrms.vercel.app',
   process.env.FRONTEND_ORIGIN,
 ].filter(Boolean);
 
@@ -36,6 +40,8 @@ app.use(
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(requestLogger);
+app.use(systemLogger());
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -72,15 +78,47 @@ app.use('/api/settings', require('./routes/settings.routes'));
 // Notifications
 app.use('/api/notifications', require('./routes/notification.routes'));
 
+// Role and permission management
+app.use('/api/roles', require('./routes/role.routes'));
+
+// Verification
+app.use('/api', require('./routes/verification.routes'));
+
 // Job advertisements
 app.use('/api/advertisements', require('./routes/advertisement.routes'));
+
+// Training & Development
+app.use('/api/training', require('./routes/training.routes'));
+
+// Document Vault
+app.use('/api/documents', require('./routes/document.routes'));
+
+// Orientation Checklists
+app.use('/api/orientation-checklists', require('./routes/orientationChecklist.routes'));
+
+// Favicon management
+app.use('/api/favicons', require('./routes/favicon.routes'));
+
+// System Logs
+app.use('/api/system-logs', require('./routes/systemLog.routes'));
+
+// RBAC - Permissions and role management
+app.use('/api/permissions', require('./routes/permissions.routes'));
+app.use('/api/supervisor-allocations', require('./routes/supervisor.routes'));
+app.use('/api/department-heads', require('./routes/departmentHead.routes'));
+app.use('/api/audit', require('./routes/audit.routes'));
+app.use('/api/messages', require('./routes/message.routes'));
 
 app.use((req, res) => {
   res.status(404).json({ msg: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  logger.error('app.globalErrorHandler', err.message || 'Unhandled error', err, {
+    method: req.method,
+    url: req.originalUrl,
+    userId: req.user?.id,
+  });
   res.status(500).json({ msg: 'Server error' });
 });
 

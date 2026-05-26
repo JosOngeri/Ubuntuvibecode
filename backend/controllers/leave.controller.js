@@ -1,5 +1,6 @@
 const { query, pool } = require('../config/db');
 const { normalizeId, toOptionalText, formatDateOnly, toDate } = require('../utils/postgres');
+const logger = require('../utils/logger');
 
 const LEAVE_TYPES = {
   annual: 'annual',
@@ -255,10 +256,12 @@ const getDepartmentSize = async (department) => {
 };
 
 const requestLeave = async (req, res) => {
+  logger.info('leave.request', 'Entry', { userId: req.user?.id, type: req.body.type, startDate: req.body.startDate, endDate: req.body.endDate });
   try {
     const userId = normalizeId(req.user?.id);
     const employee = await getEmployeeByUserId(userId);
     if (!employee) {
+      logger.warn('leave.request', 'Employee not found', { userId });
       return res.status(404).json({ error: 'Employee profile not found for authenticated user.' });
     }
 
@@ -433,8 +436,10 @@ const requestLeave = async (req, res) => {
       ]
     );
 
+    logger.info('leave.request', 'Created', { id: rows[0]?.id, type, days: chargeableDays });
     return res.status(201).json(rows[0]);
   } catch (err) {
+    logger.error('leave.request', 'Unhandled error', err, { userId: req.user?.id });
     return res.status(500).json({ error: err.message });
   }
 };
@@ -479,6 +484,7 @@ const uploadLeaveDocument = async (req, res) => {
 };
 
 const updateLeaveStatus = async (req, res) => {
+  logger.info('leave.updateStatus', 'Entry', { id: req.params.id, status: req.body.status, approverId: req.body.approverId });
   const employeeRequestId = normalizeId(req.params.id);
   const approverId = normalizeId(req.body.approverId);
   const status = toOptionalText(req.body.status);
@@ -543,9 +549,11 @@ const updateLeaveStatus = async (req, res) => {
     );
 
     await client.query('COMMIT');
+    logger.info('leave.updateStatus', 'Status updated', { id: employeeRequestId, status });
     return res.json(updatedRows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
+    logger.error('leave.updateStatus', 'DB error (rolled back)', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -553,24 +561,30 @@ const updateLeaveStatus = async (req, res) => {
 };
 
 const getLeaveBalance = async (req, res) => {
+  logger.info('leave.getBalance', 'Entry', { employeeId: req.params.employeeId });
   try {
     const employeeId = normalizeId(req.params.employeeId);
     if (!employeeId) {
+      logger.warn('leave.getBalance', 'Invalid employee id', { id: req.params.employeeId });
       return res.status(400).json({ error: 'Invalid employee id.' });
     }
 
     const balanceRow = await getLeaveBalanceRow(employeeId);
     return res.json(balanceRow);
   } catch (err) {
+    logger.error('leave.getBalance', 'Unhandled error', err, { employeeId: req.params.employeeId });
     return res.status(500).json({ error: err.message });
   }
 };
 
 const getLeaves = async (req, res) => {
+  logger.info('leave.getAll', 'Entry', { userId: req.user?.id });
   try {
     const { rows } = await query('SELECT * FROM leave_requests ORDER BY created_at DESC');
+    logger.info('leave.getAll', `Returning ${rows.length} requests`);
     return res.json(rows);
   } catch (err) {
+    logger.error('leave.getAll', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -618,19 +632,24 @@ const updateLeave = async (req, res) => {
 };
 
 const deleteLeave = async (req, res) => {
+  logger.info('leave.delete', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     const id = normalizeId(req.params.id);
     if (!id) {
+      logger.warn('leave.delete', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ error: 'Invalid leave request id.' });
     }
 
     const { rows } = await query('DELETE FROM leave_requests WHERE id = $1 RETURNING *', [id]);
     if (!rows[0]) {
+      logger.warn('leave.delete', 'Not found', { id });
       return res.status(404).json({ error: 'Leave request not found.' });
     }
 
+    logger.info('leave.delete', 'Deleted', { id });
     return res.json({ success: true, deleted: rows[0] });
   } catch (err) {
+    logger.error('leave.delete', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };

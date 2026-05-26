@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const logger = require('../utils/logger');
 
 const getContractorStats = async (req, res) => {
   try {
@@ -37,7 +38,7 @@ const getContractorStats = async (req, res) => {
       deliveryRate,
     });
   } catch (error) {
-    console.error('Error fetching contractor stats:', error);
+    logger.error('contractor.getStats', 'Error fetching stats', error, { contractorId: req.user?.id });
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -56,7 +57,7 @@ const getContractorProjects = async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching contractor projects:', error);
+    logger.error('contractor.getProjects', 'Error fetching projects', error, { contractorId: req.user?.id });
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -75,13 +76,68 @@ const getContractorInvoices = async (req, res) => {
 
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching contractor invoices:', error);
+    logger.error('contractor.getInvoices', 'Error fetching invoices', error, { contractorId: req.user?.id });
     res.status(500).json({ msg: 'Server error' });
   }
+};
+
+const getRecentProjects = async (req, res) => {
+  res.json([]);
+};
+
+const getRecentInvoices = async (req, res) => {
+  res.json([]);
+};
+
+const createProject = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const updateProject = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const deleteProject = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const createInvoice = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const updateInvoice = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const deleteInvoice = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const getProfile = async (req, res) => {
+  res.json({});
+};
+
+const updateProfile = async (req, res) => {
+  res.status(501).json({ msg: 'Not implemented' });
+};
+
+const getReports = async (req, res) => {
+  res.json([]);
 };
 
 module.exports = {
   getContractorStats,
   getContractorProjects,
   getContractorInvoices,
+  getRecentProjects,
+  getRecentInvoices,
+  createProject,
+  updateProject,
+  deleteProject,
+  createInvoice,
+  updateInvoice,
+  deleteInvoice,
+  getProfile,
+  updateProfile,
+  getReports,
 };

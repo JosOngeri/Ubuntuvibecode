@@ -17,7 +17,7 @@ export default function AttendanceDetail() {
     const fetchAttendance = async () => {
       setLoading(true);
       try {
-        const res = await api.get(`/attendance/record/${attendanceId}`);
+        const res = await api.get(`/attendance/record/${attendanceId}`).catch(() => ({ data: null }));
         const attendanceRecord = Array.isArray(res.data) ? res.data[0] : res.data;
         setAttendance(attendanceRecord || null);
       } catch (err) {

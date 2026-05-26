@@ -1,6 +1,8 @@
 const ContractorQuote = require('../models/ContractorQuote.model');
 const Milestone = require('../models/Milestone.model');
 const Employee = require('../models/Employee.model');
+const { query } = require('../config/db');
+const logger = require('../utils/logger');
 
 // Quotes
 exports.getAllQuotes = async (req, res) => {
@@ -8,11 +10,8 @@ exports.getAllQuotes = async (req, res) => {
     const { status, contractorId } = req.query;
     const filter = {};
     if (status) filter.status = status;
-    if (contractorId) filter.contractorId = contractorId;
-    const quotes = await ContractorQuote.find(filter)
-      .populate('contractorId', 'firstName lastName email companyName')
-      .populate('approvedBy', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    if (contractorId) filter.contractor_id = contractorId;
+    const quotes = await ContractorQuote.find(filter);
     res.json(quotes);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -21,10 +20,11 @@ exports.getAllQuotes = async (req, res) => {
 
 exports.createQuote = async (req, res) => {
   try {
-    const quote = await ContractorQuote.create({
+    const quote = new ContractorQuote({
       ...req.body,
       contractorId: req.body.contractorId || req.user.id,
     });
+    await quote.save();
     res.status(201).json(quote);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -35,8 +35,7 @@ exports.approveQuote = async (req, res) => {
   try {
     const quote = await ContractorQuote.findByIdAndUpdate(
       req.params.id,
-      { status: 'approved', approvedBy: req.user.id, approvedAt: new Date() },
-      { new: true }
+      { status: 'approved', approvedBy: req.user.id, approvedAt: new Date() }
     );
     if (!quote) return res.status(404).json({ msg: 'Quote not found' });
     res.json(quote);
@@ -49,8 +48,7 @@ exports.rejectQuote = async (req, res) => {
   try {
     const quote = await ContractorQuote.findByIdAndUpdate(
       req.params.id,
-      { status: 'rejected', rejectionReason: req.body.reason },
-      { new: true }
+      { status: 'rejected', rejectionReason: req.body.reason }
     );
     if (!quote) return res.status(404).json({ msg: 'Quote not found' });
     res.json(quote);
@@ -65,12 +63,9 @@ exports.getAllMilestones = async (req, res) => {
     const { status, quoteId, contractorId } = req.query;
     const filter = {};
     if (status) filter.status = status;
-    if (quoteId) filter.quoteId = quoteId;
-    if (contractorId) filter.contractorId = contractorId;
-    const milestones = await Milestone.find(filter)
-      .populate('contractorId', 'firstName lastName email companyName')
-      .populate('verifiedBy', 'firstName lastName')
-      .sort({ createdAt: -1 });
+    if (quoteId) filter.quote_id = quoteId;
+    if (contractorId) filter.contractor_id = contractorId;
+    const milestones = await Milestone.find(filter);
     res.json(milestones);
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -79,10 +74,11 @@ exports.getAllMilestones = async (req, res) => {
 
 exports.createMilestone = async (req, res) => {
   try {
-    const milestone = await Milestone.create({
+    const milestone = new Milestone({
       ...req.body,
       contractorId: req.body.contractorId || req.user.id,
     });
+    await milestone.save();
     await ContractorQuote.findByIdAndUpdate(milestone.quoteId, { status: 'in_progress' });
     res.status(201).json(milestone);
   } catch (err) {
@@ -130,7 +126,7 @@ exports.verifyMilestone = async (req, res) => {
       if (milestone.budget > 0 && milestone.contractorId) {
         try {
           const { pool } = require('../config/db');
-          const invoiceNumber = `INV-MS-${milestone._id.toString().slice(-6).toUpperCase()}`;
+          const invoiceNumber = `INV-MS-${String(milestone.id).slice(-6).toUpperCase()}`;
           await pool.query(
             `INSERT INTO invoices (contractor_id, amount, status, due_date, description)
              VALUES ($1, $2, 'Draft', NOW() + INTERVAL '30 days', $3)
@@ -138,14 +134,15 @@ exports.verifyMilestone = async (req, res) => {
             [milestone.contractorId, milestone.budget, `Auto-generated from milestone: ${milestone.title || milestone.description || ''}`]
           );
         } catch (invoiceErr) {
-          console.log('Auto-invoice generation skipped:', invoiceErr.message);
+          logger.warn('contractorLifecycle.verifyMilestone', 'Auto-invoice generation skipped', { error: invoiceErr.message });
         }
       }
 
       // Update contractor_performance delivery_rate
-      const allVerified = await Milestone.find({ contractorId: milestone.contractorId, status: { $in: ['verified', 'paid'] } });
-      if (allVerified.length > 0) {
-        const avgScore = Math.round(allVerified.reduce((s, m) => s + (m.kpiScore?.overall || 0), 0) / allVerified.length);
+      const allVerified = await Milestone.find({ contractor_id: milestone.contractorId });
+      const verifiedMilestones = allVerified.filter(m => m.status === 'verified' || m.status === 'paid');
+      if (verifiedMilestones.length > 0) {
+        const avgScore = Math.round(verifiedMilestones.reduce((s, m) => s + (m.kpiScore?.overall || 0), 0) / verifiedMilestones.length);
         try {
           const { pool } = require('../config/db');
           await pool.query(
@@ -155,12 +152,12 @@ exports.verifyMilestone = async (req, res) => {
             [milestone.contractorId, avgScore]
           );
         } catch (perfErr) {
-          console.log('Contractor performance update skipped:', perfErr.message);
+          logger.warn('contractorLifecycle.verifyMilestone', 'Contractor performance update skipped', { error: perfErr.message });
         }
       }
 
       // Update employee KPI record
-      const allMs = await Milestone.find({ quoteId: milestone.quoteId });
+      const allMs = await Milestone.find({ quote_id: milestone.quoteId });
       const allDone = allMs.every(m => m.status === 'verified' || m.status === 'paid');
       if (allDone && allMs.length > 0) {
         const avg = Math.round(allMs.reduce((s, m) => s + (m.kpiScore?.overall || 0), 0) / allMs.length);
@@ -208,7 +205,7 @@ exports.addDailyWageDay = async (req, res) => {
 exports.getContractorKPI = async (req, res) => {
   try {
     const contractorId = req.params.contractorId || req.user.id;
-    const milestones = await Milestone.find({ contractorId, status: 'verified' });
+    const milestones = await Milestone.find({ contractor_id: contractorId, status: 'verified' });
     if (!milestones.length) return res.json({ overallKPI: 0, completedMilestones: 0, avgTimeliness: 0, avgBudget: 0, avgQuality: 0 });
     const avgTimeliness = Math.round(milestones.reduce((s, m) => s + (m.kpiScore?.timeliness || 0), 0) / milestones.length);
     const avgBudget = Math.round(milestones.reduce((s, m) => s + (m.kpiScore?.budgetAdherence || 0), 0) / milestones.length);

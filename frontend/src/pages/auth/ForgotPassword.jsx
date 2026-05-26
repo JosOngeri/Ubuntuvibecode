@@ -7,22 +7,25 @@ import './Auth.css'
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const navigate = useNavigate()
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
+  const validateEmail = (email) => {
+    if (!email.trim()) return 'Email is required'
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) return 'Please enter a valid email address'
+    return null
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!email) {
-      toast.error('Please enter your email address')
-      return
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      toast.error('Please enter a valid email address')
+    const validationError = validateEmail(email)
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -79,10 +82,19 @@ const ForgotPassword = () => {
                   type="email"
                   placeholder="Enter your registered email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    setError('')
+                  }}
                   disabled={loading}
                   required
+                  className={error ? 'border-red-500' : ''}
                 />
+                {error && (
+                  <span className="text-sm text-red-600 dark:text-red-400 font-medium mt-1 block">
+                    {error}
+                  </span>
+                )}
               </div>
 
               <button

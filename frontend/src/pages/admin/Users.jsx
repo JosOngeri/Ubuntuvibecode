@@ -12,7 +12,7 @@ import { downloadPdfReport } from '../../utils/reportExport'
 import { BsEye, BsPencil, BsTrash, BsCheckCircle } from 'react-icons/bs';
 
 
-const AdminUsers = () => {
+const AdminUsers = ({ standalone = true }) => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +179,17 @@ const AdminUsers = () => {
       )
     },
     {
+      key: 'createdAt',
+      label: 'Created',
+      sortable: true,
+      render: (_, row) => {
+        const date = row.createdAt || row.created_at;
+        if (!date) return '-';
+        const d = new Date(date);
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+    },
+    {
       key: 'actions',
       label: 'Actions',
       render: (_, row) => (
@@ -258,8 +269,7 @@ const AdminUsers = () => {
     });
   };
 
-  return (
-    <DashboardLayout>
+  const content = (
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">User Management</h2>
@@ -371,8 +381,9 @@ const AdminUsers = () => {
         </div>
       </Modal>
     </div>
-    </DashboardLayout>
   );
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content;
 };
 
 export default AdminUsers;

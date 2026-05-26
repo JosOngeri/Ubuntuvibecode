@@ -1,14 +1,15 @@
 const Employee = require('../models/Employee.model');
 const Attendance = require('../models/Attendance.model');
-const Leave = require('../models/Leave.model');
 const Payment = require('../models/Payment.model');
 const KPI = require('../models/KPI.model');
 const User = require('../models/User.model');
 const Job = require('../models/Job.model');
 const JobApplication = require('../models/JobApplication.model');
+const { query } = require('../config/db');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../utils/logger');
 
 const populateEmployeeForAttendance = async (record) => {
   if (!record.employeeId) return record;
@@ -101,11 +102,17 @@ const attendanceReport = async (req, res) => {
     const { range = 'this_month', startDate, endDate, department, employeeId } = req.query;
     const { start, end } = parseDateRange(range, startDate, endDate);
 
-    const filter = { date: { $gte: start, $lt: end } };
-    if (employeeId) filter.employee_id = employeeId;
+    let sql = 'SELECT a.*, e.first_name, e.last_name, e.department FROM attendance a LEFT JOIN employees e ON a.employee_id = e.id WHERE a.attendance_date >= $1 AND a.attendance_date < $2';
+    const params = [start, end];
+    
+    if (employeeId) {
+      sql += ' AND a.employee_id = $3';
+      params.push(employeeId);
+    }
+    sql += ' ORDER BY a.attendance_date DESC';
 
-    let records = await Attendance.find(filter).lean();
-    records = await Promise.all(records.map(populateEmployeeForAttendance));
+    const { rows } = await query(sql, params);
+    let records = rows.map(r => ({ ...r, employeeId: r.employee_id ? { id: r.employee_id, firstName: r.first_name, lastName: r.last_name, department: r.department } : null }));
 
     if (department) {
       records = records.filter(r => r.employeeId?.department === department);
@@ -113,7 +120,7 @@ const attendanceReport = async (req, res) => {
 
     const summary = {
       totalRecords: records.length,
-      present: records.filter(r => r.status === 'present' || r.checkIn).length,
+      present: records.filter(r => r.status === 'present' || r.check_in).length,
       absent: records.filter(r => r.status === 'absent').length,
       late: records.filter(r => r.status === 'late').length,
       halfDay: records.filter(r => r.status === 'half-day').length,
@@ -124,7 +131,7 @@ const attendanceReport = async (req, res) => {
       const day = new Date(r.date).toISOString().split('T')[0];
       if (!dailyBreakdown[day]) dailyBreakdown[day] = { present: 0, absent: 0, late: 0, total: 0 };
       dailyBreakdown[day].total++;
-      if (r.status === 'present' || r.checkIn) dailyBreakdown[day].present++;
+      if (r.status === 'present' || r.check_in) dailyBreakdown[day].present++;
       else if (r.status === 'absent') dailyBreakdown[day].absent++;
       else if (r.status === 'late') dailyBreakdown[day].late++;
     });
@@ -141,12 +148,21 @@ const leaveReport = async (req, res) => {
     const { range = 'this_year', startDate, endDate, department, status, type } = req.query;
     const { start, end } = parseDateRange(range, startDate, endDate);
 
-    const filter = { createdAt: { $gte: start, $lt: end } };
-    if (status && status !== 'all') filter.status = status;
-    if (type && type !== 'all') filter.type = type;
+    let sql = 'SELECT lr.*, e.first_name, e.last_name, e.department FROM leave_requests lr LEFT JOIN employees e ON lr.employee_id = e.id WHERE lr.created_at >= $1 AND lr.created_at < $2';
+    const params = [start, end];
 
-    let records = await Leave.find(filter).lean();
-    records = await Promise.all(records.map(populateEmployeeForLeave));
+    if (status && status !== 'all') {
+      sql += ' AND lr.status = $' + (params.length + 1);
+      params.push(status);
+    }
+    if (type && type !== 'all') {
+      sql += ' AND lr.type = $' + (params.length + 1);
+      params.push(type);
+    }
+    sql += ' ORDER BY lr.created_at DESC';
+
+    const { rows } = await query(sql, params);
+    let records = rows.map(r => ({ ...r, employee: r.employee_id ? { id: r.employee_id, firstName: r.first_name, lastName: r.last_name, department: r.department } : null }));
 
     if (department && department !== 'all') {
       records = records.filter(r => r.employee?.department === department);
@@ -154,9 +170,9 @@ const leaveReport = async (req, res) => {
 
     const summary = {
       totalRequests: records.length,
-      approved: records.filter(r => r.status === 'approved').length,
-      rejected: records.filter(r => r.status === 'rejected').length,
-      pending: records.filter(r => r.status === 'pending').length,
+      approved: records.filter(r => r.status === 'Approved').length,
+      rejected: records.filter(r => r.status === 'Rejected').length,
+      pending: records.filter(r => r.status === 'Pending').length,
     };
 
     const byType = {};
@@ -168,11 +184,11 @@ const leaveReport = async (req, res) => {
 
     const byMonth = {};
     records.forEach(r => {
-      const month = new Date(r.createdAt).toISOString().slice(0, 7);
+      const month = new Date(r.created_at).toISOString().slice(0, 7);
       if (!byMonth[month]) byMonth[month] = { total: 0, approved: 0, rejected: 0, pending: 0 };
       byMonth[month].total++;
-      if (r.status === 'approved') byMonth[month].approved++;
-      else if (r.status === 'rejected') byMonth[month].rejected++;
+      if (r.status === 'Approved') byMonth[month].approved++;
+      else if (r.status === 'Rejected') byMonth[month].rejected++;
       else byMonth[month].pending++;
     });
 
@@ -188,11 +204,17 @@ const payrollReport = async (req, res) => {
     const { range = 'this_year', startDate, endDate, department, status } = req.query;
     const { start, end } = parseDateRange(range, startDate, endDate);
 
-    const filter = { createdAt: { $gte: start, $lt: end } };
-    if (status && status !== 'all') filter.status = status;
+    let sql = 'SELECT p.*, e.first_name, e.last_name, e.department FROM payments p LEFT JOIN employees e ON p.employee_id = e.id WHERE p.date >= $1 AND p.date < $2';
+    const params = [start, end];
 
-    let records = await Payment.find(filter).lean();
-    records = await Promise.all(records.map(populateEmployeeForPayment));
+    if (status && status !== 'all') {
+      sql += ' AND p.status = $' + (params.length + 1);
+      params.push(status);
+    }
+    sql += ' ORDER BY p.date DESC';
+
+    const { rows } = await query(sql, params);
+    let records = rows.map(r => ({ ...r, employee: r.employee_id ? { id: r.employee_id, firstName: r.first_name, lastName: r.last_name, department: r.department } : null }));
 
     if (department && department !== 'all') {
       records = records.filter(r => r.employee?.department === department);
@@ -200,19 +222,19 @@ const payrollReport = async (req, res) => {
 
     const summary = {
       totalPayments: records.length,
-      totalGross: records.reduce((sum, r) => sum + (Number(r.gross_pay) || 0), 0),
-      totalNet: records.reduce((sum, r) => sum + (Number(r.net_pay) || 0), 0),
-      totalDeductions: records.reduce((sum, r) => sum + (Number(r.total_deductions) || 0), 0),
-      disbursed: records.filter(r => r.status === 'Disbursed').length,
-      draft: records.filter(r => r.status === 'Draft').length,
+      totalGross: records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+      totalNet: records.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+      totalDeductions: 0,
+      disbursed: records.filter(r => r.status === 'paid').length,
+      draft: records.filter(r => r.status === 'pending').length,
     };
 
     const byMonth = {};
     records.forEach(r => {
-      const month = new Date(r.createdAt).toISOString().slice(0, 7);
+      const month = new Date(r.date).toISOString().slice(0, 7);
       if (!byMonth[month]) byMonth[month] = { gross: 0, net: 0, count: 0 };
-      byMonth[month].gross += Number(r.gross_pay) || 0;
-      byMonth[month].net += Number(r.net_pay) || 0;
+      byMonth[month].gross += Number(r.amount) || 0;
+      byMonth[month].net += Number(r.amount) || 0;
       byMonth[month].count++;
     });
 
@@ -228,13 +250,20 @@ const kpiReport = async (req, res) => {
     const { range = 'this_year', startDate, endDate, department, status } = req.query;
     const { start, end } = parseDateRange(range, startDate, endDate);
 
-    const filter = { createdAt: { $gte: start, $lt: end } };
-    if (status && status !== 'all') filter.status = status;
+    let sql = 'SELECT ek.*, kd.title as definition_title, e.first_name, e.last_name, e.department FROM employee_kpis ek LEFT JOIN kpi_definitions kd ON ek.definition_id = kd.id LEFT JOIN employees e ON ek.employee_id = e.id WHERE ek.created_at >= $1 AND ek.created_at < $2';
+    const params = [start, end];
 
-    let records = await KPI.find(filter).lean();
+    if (status && status !== 'all') {
+      sql += ' AND ek.status = $' + (params.length + 1);
+      params.push(status);
+    }
+    sql += ' ORDER BY ek.created_at DESC';
+
+    const { rows } = await query(sql, params);
+    let records = rows.map(r => ({ ...r, employee: r.employee_id ? { id: r.employee_id, firstName: r.first_name, lastName: r.last_name, department: r.department } : null }));
 
     if (department && department !== 'all') {
-      records = records.filter(r => r.department === department);
+      records = records.filter(r => r.employee?.department === department);
     }
 
     const evaluated = records.filter(r => r.final_score != null);
@@ -337,23 +366,23 @@ const recruitmentReport = async (req, res) => {
 const dashboardSummary = async (req, res) => {
   try {
     const [employees, attendance, leaves, payments, kpis, jobs, applications] = await Promise.all([
-      Employee.countDocuments(),
-      Attendance.countDocuments({ date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
-      Leave.countDocuments({ status: 'pending' }),
-      Payment.countDocuments({ status: 'Draft' }),
-      KPI.countDocuments(),
-      Job.countDocuments({ status: 'open' }),
-      JobApplication.countDocuments({ status: 'pending' }),
+      query('SELECT COUNT(*) FROM employees WHERE status = $1', ['active']),
+      query('SELECT COUNT(*) FROM attendance WHERE attendance_date = CURRENT_DATE'),
+      query("SELECT COUNT(*) FROM leave_requests WHERE status = 'Pending'"),
+      query("SELECT COUNT(*) FROM payments WHERE status = 'pending'"),
+      query('SELECT COUNT(*) FROM employee_kpis'),
+      query("SELECT COUNT(*) FROM jobs WHERE status = 'open'"),
+      query("SELECT COUNT(*) FROM job_applications WHERE status = 'pending'"),
     ]);
 
     res.json({
-      totalEmployees: employees,
-      presentToday: attendance,
-      pendingLeaves: leaves,
-      pendingPayroll: payments,
-      totalKPIs: kpis,
-      openJobs: jobs,
-      pendingApplications: applications,
+      totalEmployees: parseInt(employees.rows[0].count),
+      presentToday: parseInt(attendance.rows[0].count),
+      pendingLeaves: parseInt(leaves.rows[0].count),
+      pendingPayroll: parseInt(payments.rows[0].count),
+      totalKPIs: parseInt(kpis.rows[0].count),
+      openJobs: parseInt(jobs.rows[0].count),
+      pendingApplications: parseInt(applications.rows[0].count),
     });
   } catch (err) {
     res.status(500).json({ msg: 'Server error', error: err.message });
@@ -365,7 +394,25 @@ const generatePdfReport = async (req, res) => {
     const { type, from, to, department } = req.query;
 
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
-    const filename = `${type}-report-${Date.now()}.pdf`;
+
+    // Generate descriptive filename with day names and abbreviated month names
+    const reportType = type.charAt(0).toUpperCase() + type.slice(1);
+    
+    const formatDateForFilename = (dateStr) => {
+      const date = new Date(dateStr);
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+      const day = date.getDate();
+      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+      const year = date.getFullYear();
+      return `${dayName} ${day} ${monthName} ${year}`;
+    };
+
+    const dateRange = from && to 
+      ? `${formatDateForFilename(from)} -- ${formatDateForFilename(to)}` 
+      : formatDateForFilename(new Date().toISOString().split('T')[0]);
+    
+    const deptSuffix = department ? ` -${department.replace(/\s+/g, '-')}` : '';
+    const filename = `Ubuntu-HRMS ${reportType} Report - ${dateRange}${deptSuffix}.pdf`;
     const pdfPath = path.join(__dirname, '../tmp', filename);
 
     if (!fs.existsSync(path.join(__dirname, '../tmp'))) {
@@ -407,7 +454,7 @@ const generatePdfReport = async (req, res) => {
     await new Promise((resolve) => doc.on('end', resolve));
 
     res.download(pdfPath, filename, (err) => {
-      if (err) console.error(err);
+      if (err) logger.error('report.downloadPdf', 'Error sending PDF', err);
       fs.unlinkSync(pdfPath);
     });
   } catch (err) {

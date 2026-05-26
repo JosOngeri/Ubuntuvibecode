@@ -3,7 +3,7 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
-import DateDropdown from '../../components/common/DateDropdown';
+import DateInput from '../../components/common/DateInput';
 
 import api from '../../services/api';
 import { toast } from 'react-toastify';
@@ -87,6 +87,7 @@ const normalizeProfile = (raw = {}) => ({
 export default function ProfileUpdateForm() {
   const { refreshPortalProfile } = useAuth();
   const [form, setForm] = useState(defaultProfile);
+  const [errors, setErrors] = useState({});
   const [dateOfBirth, setDateOfBirth] = useState(form.dateOfBirth ? new Date(form.dateOfBirth) : null);
   const [dateOfJoining, setDateOfJoining] = useState(form.dateOfJoining ? new Date(form.dateOfJoining) : null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +99,7 @@ export default function ProfileUpdateForm() {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/profile/me');
+        const res = await api.get('/profile/me').catch(() => ({ data: null }));
         setForm({ ...defaultProfile, ...normalizeProfile(res.data || {}) });
       } catch {
         setForm(defaultProfile);
@@ -112,6 +113,7 @@ export default function ProfileUpdateForm() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   // For array fields (skills, interests, etc.)
@@ -122,18 +124,27 @@ export default function ProfileUpdateForm() {
   // For nested objects (emergencyContact, payroll, etc.)
   const handleNestedChange = (section, key, value) => {
     setForm((prev) => ({ ...prev, [section]: { ...prev[section], [key]: value } }));
+    setErrors(prev => ({ ...prev, [`${section}.${key}`]: '' }));
   };
 
   const handleSavePortal = async (e) => {
     e.preventDefault();
+    const newErrors = {};
+    
     if (!form.fullName?.trim()) {
-      toast.error('Full name is required to save your portal profile');
-      return;
+      newErrors.fullName = 'Full name is required';
     }
     if (!form.email?.trim()) {
-      toast.error('Email is required to save your portal profile');
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
+    
     setSavingPortal(true);
     try {
       await api.post('/profile/me', form);
@@ -174,21 +185,22 @@ export default function ProfileUpdateForm() {
               <h3 className="text-xl font-semibold mb-2">Portal profile</h3>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Name and contact shown across the app use this section. Save it separately from the rest of your profile if you only need to update these details.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Full Name" name="fullName" value={form.fullName} onChange={handleChange} required />
-                <Input label="Email" name="email" value={form.email} onChange={handleChange} required />
+                <Input label="Full Name" name="fullName" value={form.fullName} onChange={handleChange} required error={errors.fullName} />
+                <Input label="Email" name="email" value={form.email} onChange={handleChange} required error={errors.email} />
                 <Input label="Phone" name="phone" value={form.phone} onChange={handleChange} />
                 <Input label="Address" name="address" value={form.address} onChange={handleChange} />
-                <DateDropdown 
-                  selectedDate={dateOfBirth}
-                  onDateChange={(date) => {
-                    setDateOfBirth(date);
-                    setForm({...form, dateOfBirth: date ? date.toISOString().split('T')[0] : ''});
-                  }}
+                <DateInput
                   label="Date of Birth"
-                  showYear={true}
-                  showMonth={true}
-                  showDay={true}
-                  yearRange={50}
+                  id="dateOfBirth"
+                  name="dateOfBirth"
+                  value={form.dateOfBirth}
+                  onChange={(e) => {
+                    setForm({...form, dateOfBirth: e.target.value})
+                    setErrors(prev => ({ ...prev, dateOfBirth: '' }))
+                  }}
+                  error={errors.dateOfBirth}
+                  showValidation={true}
+                  showCalendar={false}
                 />
                 <Input label="National ID/Passport" name="nationalId" value={form.nationalId} onChange={handleChange} />
                 <Input label="Professional Headline" name="professionalHeadline" value={form.professionalHeadline} onChange={handleChange} />
@@ -218,17 +230,16 @@ export default function ProfileUpdateForm() {
                 <Input label="Job Title" name="jobTitle" value={form.jobTitle} onChange={handleChange} />
                 <Input label="Department" name="department" value={form.department} onChange={handleChange} />
                 <Input label="Status" name="status" value={form.status} onChange={handleChange} />
-                <DateDropdown 
-                  selectedDate={dateOfJoining}
-                  onDateChange={(date) => {
-                    setDateOfJoining(date);
-                    setForm({...form, dateOfJoining: date ? date.toISOString().split('T')[0] : ''});
-                  }}
+                <DateInput 
                   label="Date of Joining"
-                  showYear={true}
-                  showMonth={true}
-                  showDay={true}
-                  yearRange={20}
+                  id="dateOfJoining"
+                  name="dateOfJoining"
+                  value={form.dateOfJoining}
+                  onChange={(e) => {
+                    setForm({...form, dateOfJoining: e.target.value})
+                    setErrors(prev => ({ ...prev, dateOfJoining: '' }))
+                  }}
+                  error={errors.dateOfJoining}
                 />
                 <Input label="Employment Type" name="employmentType" value={form.employmentType} onChange={handleChange} />
                 <Input label="Work Location" name="workLocation" value={form.workLocation} onChange={handleChange} />

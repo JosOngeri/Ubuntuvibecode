@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import DashboardLayout from '../../components/DashboardLayout'
 import api, { payrollAPI } from '../../services/api'
 import Modal from '../../components/common/Modal'
+import { PayrollEmptyState } from '../../components/common/EmptyState'
 import { downloadPdfReport } from '../../utils/reportExport'
 
 const formatMoney = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(Number(value || 0))
 
-export default function PayrollDisburse() {
+export default function PayrollDisburse({ standalone = true }) {
   const location = useLocation()
   const [activeTab, setActiveTab] = useState(location.state?.filterStatus === 'Draft' ? 'pending' : 'disbursements')
   const [payslips, setPayslips] = useState([])
@@ -144,8 +145,8 @@ export default function PayrollDisburse() {
     }
   }
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Payroll Disbursement</h1>
         <p className="page-subtitle">Review approved payslips, trigger payouts, and view reports.</p>
@@ -222,7 +223,7 @@ export default function PayrollDisburse() {
               ))}
             </div>
           ) : activePayslips.length === 0 ? (
-            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">No active payslip records found.</div>
+            <PayrollEmptyState />
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
@@ -265,6 +266,14 @@ export default function PayrollDisburse() {
                             >
                               View
                             </button>
+                            {statusLower === 'paid' && (
+                              <button
+                                onClick={() => window.open(`/api/payroll/payslip/${payslip.id}`, '_blank')}
+                                className="text-xs font-semibold bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg transition"
+                              >
+                                Payslip
+                              </button>
+                            )}
                             {(statusLower === 'approved' || statusLower === 'failed') && (
                               <button
                                 onClick={() => initiateSingleDisbursement(payslip.id)}
@@ -422,6 +431,8 @@ export default function PayrollDisburse() {
           </div>
         )}
       </Modal>
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

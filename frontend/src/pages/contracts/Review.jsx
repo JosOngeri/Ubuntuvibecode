@@ -17,7 +17,7 @@ const saveMilestones = (items) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 }
 
-export default function ContractReview() {
+export default function ContractReview({ standalone = true }) {
   const [backendInvoices, setBackendInvoices] = useState([])
   const [milestones, setMilestones] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,8 +63,8 @@ export default function ContractReview() {
     toast.success('Invoice approved for payment');
   };
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Contract Review</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -218,6 +218,8 @@ export default function ContractReview() {
           </aside>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

@@ -7,8 +7,10 @@ import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import DateDropdown from '../../components/common/DateDropdown'
+import PageInfoPanel from '../../components/common/PageInfoPanel'
 import { attendanceAPI, employeeAPI } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSettings } from '../../contexts/SettingsContext'
 import { toast } from 'react-toastify'
 import { BsPencil, BsClock } from 'react-icons/bs'
 import { downloadPdfReport } from '../../utils/reportExport'
@@ -21,10 +23,12 @@ import {
 } from '../../../components/ui/select'
 // import './Attendance.css'
 
-const Attendance = ({ role = 'employee' }) => {
+const Attendance = ({ role = 'employee', standalone = true }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const { getShiftTypes } = useSettings()
+  const shiftTypes = getShiftTypes()
 
   const isEmployee = role === 'employee'
   const canManageAttendance = role === 'admin' || role === 'manager'
@@ -33,8 +37,15 @@ const Attendance = ({ role = 'employee' }) => {
   const [loading, setLoading] = useState(true)
   const [showPunchModal, setShowPunchModal] = useState(false)
   const [showAdjustModal, setShowAdjustModal] = useState(false)
+  const [punchError, setPunchError] = useState('')
+  const toLocalDateTimeInput = (date = new Date()) => {
+    const d = new Date(date)
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   const [punchData, setPunchData] = useState({
-    timestamp: new Date().toISOString().slice(0, 16),
+    timestamp: toLocalDateTimeInput(),
     punchState: 'checkIn',
     employeeId: '',
   })
@@ -51,12 +62,14 @@ const Attendance = ({ role = 'employee' }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0])
-  const [dateFilterState, setDateFilterState] = useState(new Date())
+  const [dateFilter, setDateFilter] = useState('')
+  const [dateFilterState, setDateFilterState] = useState(null)
   const [attendanceDate, setAttendanceDate] = useState(null)
   const [biometricDeviceId, setBiometricDeviceId] = useState(localStorage.getItem('biometricDeviceId') || 'BIO-001')
   const [employees, setEmployees] = useState([])
   const [employeeProfile, setEmployeeProfile] = useState(null)
+  const [sortField, setSortField] = useState('date')
+  const [sortDirection, setSortDirection] = useState('desc')
 
 
   // Fetch employee profile for status and privacy
@@ -107,7 +120,7 @@ const Attendance = ({ role = 'employee' }) => {
       setEmployees(items)
 
       if (items.length > 0 && !selectedEmployee) {
-        setSelectedEmployee(items[0]._id || items[0].id)
+        setSelectedEmployee(String(items[0]._id || items[0].id))
       }
     } catch (err) {
       setEmployees([])
@@ -123,15 +136,19 @@ const Attendance = ({ role = 'employee' }) => {
         ? empId
         : (empId || employeeProfile?.id || employeeProfile?._id || user?.userId || user?.id)
 
+      console.log('[fetchAttendance] employeeId:', employeeId, 'canManage:', canManageAttendance, 'profile:', employeeProfile?.id, 'user.id:', user?.id, 'user.userId:', user?.userId)
+
       if (!employeeId) {
+        console.log('[fetchAttendance] No employeeId, returning empty')
         setAttendance([])
         return
       }
 
       const response = await attendanceAPI.getByEmployeeId(employeeId)
+      console.log('[fetchAttendance] response:', response.status, 'records:', response.data?.length || 0, 'data:', JSON.stringify(response.data)?.slice(0, 200))
       setAttendance(response.data || [])
     } catch (error) {
-      console.error('Failed to fetch attendance', error)
+      console.error('[fetchAttendance] Failed to fetch attendance:', error?.response?.status, error?.response?.data || error.message)
       toast.error('Failed to load attendance records')
     } finally {
       setLoading(false)
@@ -172,25 +189,39 @@ const Attendance = ({ role = 'employee' }) => {
 
   const handleManagerPunch = async (e) => {
     e.preventDefault()
+    setPunchError('')
 
+    if (!punchData.employeeId) {
+      setPunchError('Please select an employee')
+      return
+    }
+
+    const payload = {
+      ...punchData,
+      employeeId: String(punchData.employeeId || ''),
+    }
+    console.log('[handleManagerPunch] sending payload:', JSON.stringify(payload))
     try {
-      if (!punchData.employeeId) {
-        toast.error('Please select an employee')
-        return
-      }
-      await attendanceAPI.managerManualPunch({
-        ...punchData,
-      })
+      await attendanceAPI.managerManualPunch(payload)
       toast.success('Attendance recorded successfully')
       setShowPunchModal(false)
       setPunchData({
-        timestamp: new Date().toISOString().slice(0, 16),
+        timestamp: toLocalDateTimeInput(),
         punchState: 'checkIn',
-        employeeId: selectedEmployee || '',
+        employeeId: selectedEmployee ? String(selectedEmployee) : '',
       })
       fetchAttendance(punchData.employeeId)
     } catch (error) {
-      toast.error(error?.response?.data?.msg || 'Failed to record attendance')
+      console.log('[handleManagerPunch] error:', error)
+      console.log('[handleManagerPunch] error.response:', JSON.stringify(error?.response, null, 2))
+      console.log('[handleManagerPunch] error.response.data:', JSON.stringify(error?.response?.data, null, 2))
+      const errors = error?.response?.data?.errors || []
+      const msg = errors.length > 0
+        ? errors.join(', ')
+        : error?.response?.data?.msg || error?.response?.data?.error || 'Failed to record attendance'
+      console.log('[handleManagerPunch] displaying error:', msg)
+      setPunchError(msg)
+      toast.error(msg)
     }
   }
 
@@ -250,19 +281,43 @@ const Attendance = ({ role = 'employee' }) => {
   }
 
   const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredAttendance = attendance.filter((row) => {
-    const dateText = row.attendanceDate ? new Date(row.attendanceDate).toLocaleDateString().toLowerCase() : ''
-    const rowDateStr = row.attendanceDate ? String(row.attendanceDate).slice(0, 10) : ''
-    const matchesSearch =
-      !normalizedSearch ||
-      dateText.includes(normalizedSearch) ||
-      (row.status || '').toLowerCase().includes(normalizedSearch) ||
-      (row.shift || '').toLowerCase().includes(normalizedSearch)
-    const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter
-    const matchesDate = !dateFilter || rowDateStr === dateFilter
+  const filteredAttendance = attendance
+    .filter((row) => {
+      const dateText = row.attendanceDate ? new Date(row.attendanceDate).toLocaleDateString().toLowerCase() : ''
+      const rowDateStr = row.attendanceDate ? String(row.attendanceDate).slice(0, 10) : ''
+      const matchesSearch =
+        !normalizedSearch ||
+        dateText.includes(normalizedSearch) ||
+        (row.status || '').toLowerCase().includes(normalizedSearch) ||
+        (row.shift || '').toLowerCase().includes(normalizedSearch)
+      const matchesStatus = statusFilter === 'all' || (row.status || '').toLowerCase() === statusFilter
+      const matchesDate = !dateFilter || rowDateStr === dateFilter
 
-    return matchesSearch && matchesStatus && matchesDate
-  })
+      return matchesSearch && matchesStatus && matchesDate
+    })
+    .sort((a, b) => {
+      let aVal, bVal
+      if (sortField === 'date' || sortField === 'attendanceDate') {
+        aVal = a.attendanceDate || ''
+        bVal = b.attendanceDate || ''
+        const comparison = new Date(aVal) - new Date(bVal)
+        return sortDirection === 'asc' ? comparison : -comparison
+      } else {
+        aVal = a[sortField] || ''
+        bVal = b[sortField] || ''
+        const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' })
+        return sortDirection === 'asc' ? comparison : -comparison
+      }
+    })
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
 
   const handleExportAttendanceReport = async () => {
     await downloadPdfReport({
@@ -327,8 +382,8 @@ const Attendance = ({ role = 'employee' }) => {
         )}]),
   ]
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header">
         <h1 className="page-title">Attendance</h1>
         <p className="page-subtitle">
@@ -452,17 +507,22 @@ const Attendance = ({ role = 'employee' }) => {
           )}
           <Button type="button" variant="outline" onClick={handleExportAttendanceReport}>Export Report</Button>
         </div>
-        <Table columns={columns} data={filteredAttendance} loading={loading} />
+        <Table columns={columns} data={filteredAttendance} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
       </Card>
 
       {canManageAttendance && (
-        <Modal isOpen={showPunchModal} onClose={() => setShowPunchModal(false)} title="Manager Manual Punch">
+        <Modal isOpen={showPunchModal} onClose={() => { setShowPunchModal(false); setPunchError('') }} title="Manager Manual Punch">
           <form onSubmit={handleManagerPunch} className="punch-form space-y-4">
+            {punchError && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+                {punchError}
+              </div>
+            )}
             <div className="form-group">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Employee</label>
               <Select
                 value={punchData.employeeId}
-                onValueChange={(val) => setPunchData({ ...punchData, employeeId: val })}
+                onValueChange={(val) => { setPunchData({ ...punchData, employeeId: val }); setPunchError('') }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select employee..." />
@@ -498,7 +558,7 @@ const Attendance = ({ role = 'employee' }) => {
               <Button type="submit" variant="primary">
                 Record Punch
               </Button>
-              <Button type="button" variant="outline" onClick={() => setShowPunchModal(false)}>
+              <Button type="button" variant="outline" onClick={() => { setShowPunchModal(false); setPunchError('') }}>
                 Cancel
               </Button>
             </div>
@@ -543,8 +603,9 @@ const Attendance = ({ role = 'employee' }) => {
                 onChange={(e) => setAdjustData({ ...adjustData, shift: e.target.value })}
                 className="form-select"
               >
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
+                {shiftTypes.map(shift => (
+                  <option key={shift} value={shift}>{shift}</option>
+                ))}
               </select>
             </div>
 
@@ -589,8 +650,47 @@ const Attendance = ({ role = 'employee' }) => {
           </form>
         </Modal>
       )}
-    </DashboardLayout>
+      <PageInfoPanel
+        title="Attendance"
+        description="Track employee punch-in/out and work hours"
+        steps={[
+          'Employees can punch in/out using the Punch button (requires biometric device or manual entry).',
+          'Managers can view all attendance records and adjust incorrect entries.',
+          'Filter by date range or employee to find specific records.',
+          'Export attendance reports as PDF for payroll processing.',
+        ]}
+        faqs={[
+          { q: 'Why is an employee not showing in the list?', a: 'The employee may not be assigned to your department or has no attendance records.' },
+          { q: 'Can I edit past attendance records?', a: 'Yes, as a manager you can adjust any attendance record. Changes are logged for audit purposes.' },
+          { q: 'What does "Late" status mean?', a: 'The employee checked in after their scheduled shift start time.' },
+          { q: 'How are work hours calculated?', a: 'Hours are calculated from check-in to check-out, minus break time if recorded.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const today = new Date().toISOString().split('T')[0];
+            const [attRes, empRes] = await Promise.allSettled([
+              api.get('/api/attendance').catch(() => ({ data: [] })),
+              api.get('/api/employees').catch(() => ({ data: [] })),
+            ]);
+            const atts = attRes.status === 'fulfilled' ? (attRes.value.data || []) : [];
+            const emps = empRes.status === 'fulfilled' ? (empRes.value.data || []) : [];
+            const noPunchToday = emps.filter(e => !atts.some(a => a.employee_id === e.id && a.date === today));
+            if (noPunchToday.length > 0) items.push({ level: 'warn', message: `${noPunchToday.length} employee${noPunchToday.length > 1 ? 's have' : ' has'} not punched in today`, detail: 'Check with employees or verify biometric device status.' });
+            const lateToday = atts.filter(a => a.date === today && a.status === 'Late');
+            if (lateToday.length > 0) items.push({ level: 'info', message: `${lateToday.length} late arrival${lateToday.length > 1 ? 's' : ''} today`, detail: 'Review late arrivals with the respective employees.' });
+            const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+            const missingYesterday = emps.filter(e => !atts.some(a => a.employee_id === e.id && a.date === yesterday));
+            if (missingYesterday.length > 0) items.push({ level: 'warn', message: `${missingYesterday.length} employee${missingYesterday.length > 1 ? 's are' : ' is'} missing yesterday\'s attendance`, detail: 'Follow up with employees to ensure records are complete.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'Attendance tracking is up to date — no issues found.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve attendance status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }
 
 export default Attendance

@@ -1,0 +1,590 @@
+"table_name","column_name","data_type","is_nullable","column_default"
+"assets","id","bigint","NO","nextval('assets_id_seq'::regclass)"
+"assets","employee_id","bigint","YES",NULL
+"assets","name","character varying","NO",NULL
+"assets","category","character varying","YES",NULL
+"assets","serial_number","character varying","YES",NULL
+"assets","assigned_date","date","YES",NULL
+"assets","return_date","date","YES",NULL
+"assets","condition","character varying","YES",NULL
+"assets","status","character varying","YES","'active'::character varying"
+"assets","created_at","timestamp with time zone","YES","now()"
+"assets","updated_at","timestamp with time zone","YES","now()"
+"attendance","id","bigint","NO","nextval('attendance_id_seq'::regclass)"
+"attendance","employee_id","bigint","YES",NULL
+"attendance","attendance_date","date","NO",NULL
+"attendance","status","character varying","YES","'Present'::character varying"
+"attendance","shift","character varying","YES",NULL
+"attendance","punch_state","character varying","YES",NULL
+"attendance","check_in","timestamp with time zone","YES",NULL
+"attendance","break_out","timestamp with time zone","YES",NULL
+"attendance","break_in","timestamp with time zone","YES",NULL
+"attendance","check_out","timestamp with time zone","YES",NULL
+"attendance","total_hours_worked","numeric","YES",NULL
+"attendance","punch_history","jsonb","YES","'[]'::jsonb"
+"attendance","notes","text","YES",NULL
+"attendance","created_at","timestamp with time zone","YES","now()"
+"attendance","updated_at","timestamp with time zone","YES","now()"
+"audit_logs","id","bigint","NO","nextval('audit_logs_id_seq'::regclass)"
+"audit_logs","user_id","bigint","YES",NULL
+"audit_logs","username","character varying","YES",NULL
+"audit_logs","user_role","character varying","YES",NULL
+"audit_logs","action","character varying","NO",NULL
+"audit_logs","entity_type","character varying","YES",NULL
+"audit_logs","entity_id","bigint","YES",NULL
+"audit_logs","old_data","jsonb","YES",NULL
+"audit_logs","new_data","jsonb","YES",NULL
+"audit_logs","entity_name","character varying","YES",NULL
+"audit_logs","previous_data","jsonb","YES",NULL
+"audit_logs","department_id","bigint","YES",NULL
+"audit_logs","ip_address","character varying","YES",NULL
+"audit_logs","user_agent","text","YES",NULL
+"audit_logs","reason","text","YES",NULL
+"audit_logs","created_at","timestamp with time zone","YES","now()"
+"component_settings","id","bigint","NO","nextval('component_settings_id_seq'::regclass)"
+"component_settings","component_name","character varying","NO",NULL
+"component_settings","setting_key","character varying","NO",NULL
+"component_settings","setting_value","jsonb","YES",NULL
+"component_settings","is_global","boolean","YES","true"
+"component_settings","user_id","bigint","YES",NULL
+"component_settings","category","character varying","YES",NULL
+"component_settings","description","text","YES",NULL
+"component_settings","created_at","timestamp with time zone","YES","now()"
+"component_settings","updated_at","timestamp with time zone","YES","now()"
+"contractor_performance","id","bigint","NO","nextval('contractor_performance_id_seq'::regclass)"
+"contractor_performance","contractor_id","bigint","YES",NULL
+"contractor_performance","delivery_rate","integer","YES","0"
+"contractor_performance","created_at","timestamp with time zone","YES","now()"
+"contractor_performance","updated_at","timestamp with time zone","YES","now()"
+"contractor_quotes","id","bigint","NO","nextval('contractor_quotes_id_seq'::regclass)"
+"contractor_quotes","contractor_id","bigint","YES",NULL
+"contractor_quotes","job_description","text","YES",NULL
+"contractor_quotes","quote_amount","numeric","YES",NULL
+"contractor_quotes","start_date","date","YES",NULL
+"contractor_quotes","end_date","date","YES",NULL
+"contractor_quotes","status","character varying","YES","'pending'::character varying"
+"contractor_quotes","notes","text","YES",NULL
+"contractor_quotes","created_at","timestamp with time zone","YES","now()"
+"contractor_quotes","updated_at","timestamp with time zone","YES","now()"
+"contracts","id","bigint","NO","nextval('contracts_id_seq'::regclass)"
+"contracts","employee_id","bigint","YES",NULL
+"contracts","title","character varying","NO",NULL
+"contracts","start_date","date","NO",NULL
+"contracts","end_date","date","YES",NULL
+"contracts","terms","text","YES",NULL
+"contracts","status","character varying","YES","'active'::character varying"
+"contracts","document_path","character varying","YES",NULL
+"contracts","created_at","timestamp with time zone","YES","now()"
+"contracts","updated_at","timestamp with time zone","YES","now()"
+"daily_attendance","id","bigint","NO","nextval('daily_attendance_id_seq'::regclass)"
+"daily_attendance","labourer_id","bigint","YES",NULL
+"daily_attendance","date","date","NO",NULL
+"daily_attendance","check_in","timestamp with time zone","YES",NULL
+"daily_attendance","check_out","timestamp with time zone","YES",NULL
+"daily_attendance","status","character varying","YES",NULL
+"daily_attendance","notes","text","YES",NULL
+"daily_attendance","created_at","timestamp with time zone","YES","now()"
+"daily_attendance","updated_at","timestamp with time zone","YES","now()"
+"daily_attendance","wage_for_day","numeric","YES",NULL
+"daily_attendance","approved","boolean","YES","false"
+"daily_attendance","approved_at","timestamp with time zone","YES",NULL
+"daily_attendance","approved_by","bigint","YES",NULL
+"daily_attendance","assigned_to","character varying","YES","'other'::character varying"
+"daily_attendance","assigned_contractor_id","bigint","YES",NULL
+"daily_attendance","assigned_milestone_id","bigint","YES",NULL
+"daily_attendance","recorded_by","bigint","YES",NULL
+"daily_labourers","id","bigint","NO","nextval('daily_labourers_id_seq'::regclass)"
+"daily_labourers","user_id","bigint","YES",NULL
+"daily_labourers","full_name","character varying","NO",NULL
+"daily_labourers","phone","character varying","YES",NULL
+"daily_labourers","id_number","character varying","YES",NULL
+"daily_labourers","department","character varying","YES",NULL
+"daily_labourers","daily_wage","numeric","YES",NULL
+"daily_labourers","status","character varying","YES","'active'::character varying"
+"daily_labourers","created_at","timestamp with time zone","YES","now()"
+"daily_labourers","updated_at","timestamp with time zone","YES","now()"
+"daily_labourers","first_name","character varying","YES",NULL
+"daily_labourers","last_name","character varying","YES",NULL
+"daily_labourers","photo","text","YES",NULL
+"daily_labourers","skills","jsonb","YES","'[]'::jsonb"
+"daily_labourers","daily_rate","numeric","YES",NULL
+"daily_labourers","urgency_level","character varying","YES","'normal'::character varying"
+"daily_labourers","calculated_at","timestamp with time zone","YES",NULL
+"daily_labourers","converted_to_employee_id","bigint","YES",NULL
+"daily_labourers","registered_by","bigint","YES",NULL
+"daily_labourers","notes","text","YES",NULL
+"department_head_assignments","id","bigint","NO","nextval('department_head_assignments_id_seq'::regclass)"
+"department_head_assignments","user_id","bigint","YES",NULL
+"department_head_assignments","department","character varying","NO",NULL
+"department_head_assignments","permissions","jsonb","YES","'[]'::jsonb"
+"department_head_assignments","assigned_by","bigint","YES",NULL
+"department_head_assignments","is_active","boolean","YES","true"
+"department_head_assignments","notes","text","YES",NULL
+"department_head_assignments","created_at","timestamp with time zone","YES","now()"
+"department_head_assignments","updated_at","timestamp with time zone","YES","now()"
+"elevation_requests","id","bigint","NO","nextval('elevation_requests_id_seq'::regclass)"
+"elevation_requests","user_id","bigint","YES",NULL
+"elevation_requests","otp_code","character varying","YES",NULL
+"elevation_requests","reason","text","YES",NULL
+"elevation_requests","status","character varying","YES","'pending'::character varying"
+"elevation_requests","approved_at","timestamp with time zone","YES",NULL
+"elevation_requests","approved_by","bigint","YES",NULL
+"elevation_requests","expires_at","timestamp with time zone","YES",NULL
+"elevation_requests","created_at","timestamp with time zone","YES","now()"
+"employee_documents","id","bigint","NO","nextval('employee_documents_id_seq'::regclass)"
+"employee_documents","employee_id","bigint","YES",NULL
+"employee_documents","document_type","character varying","NO",NULL
+"employee_documents","document_name","character varying","YES",NULL
+"employee_documents","file_url","character varying","YES",NULL
+"employee_documents","file_size","integer","YES",NULL
+"employee_documents","mime_type","character varying","YES",NULL
+"employee_documents","expiry_date","date","YES",NULL
+"employee_documents","status","character varying","YES","'active'::character varying"
+"employee_documents","uploaded_by","bigint","YES",NULL
+"employee_documents","created_at","timestamp with time zone","YES","now()"
+"employee_documents","updated_at","timestamp with time zone","YES","now()"
+"employee_kpis","id","bigint","NO","nextval('employee_kpis_id_seq'::regclass)"
+"employee_kpis","employee_id","bigint","YES",NULL
+"employee_kpis","evaluator_id","bigint","YES",NULL
+"employee_kpis","definition_id","bigint","YES",NULL
+"employee_kpis","period","character varying","NO",NULL
+"employee_kpis","target_value","numeric","YES",NULL
+"employee_kpis","achieved_value","numeric","YES",NULL
+"employee_kpis","final_score","numeric","YES",NULL
+"employee_kpis","status","character varying","YES","'Pending'::character varying"
+"employee_kpis","notes","text","YES",NULL
+"employee_kpis","created_at","timestamp with time zone","YES","now()"
+"employee_kpis","updated_at","timestamp with time zone","YES","now()"
+"employees","id","bigint","NO","nextval('employees_id_seq'::regclass)"
+"employees","user_id","bigint","YES",NULL
+"employees","status","character varying","YES","'active'::character varying"
+"employees","first_name","character varying","YES",NULL
+"employees","last_name","character varying","YES",NULL
+"employees","email","character varying","YES",NULL
+"employees","phone","character varying","YES",NULL
+"employees","biometric_device_id","character varying","YES",NULL
+"employees","mpesa_phone_number","character varying","YES",NULL
+"employees","employment_type","character varying","YES",NULL
+"employees","wage_rate","numeric","YES",NULL
+"employees","department","character varying","YES",NULL
+"employees","date_joined","date","YES",NULL
+"employees","date_of_birth","date","YES",NULL
+"employees","gender","character varying","YES",NULL
+"employees","marital_status","character varying","YES",NULL
+"employees","nationality","character varying","YES",NULL
+"employees","national_id","character varying","YES",NULL
+"employees","residential_address","text","YES",NULL
+"employees","emergency_contact","jsonb","YES",NULL
+"employees","education_history","jsonb","YES",NULL
+"employees","employment_history","jsonb","YES",NULL
+"employees","skills","jsonb","YES",NULL
+"employees","certifications","jsonb","YES",NULL
+"employees","experience_years","integer","YES",NULL
+"employees","availability_weeks","integer","YES",NULL
+"employees","right_to_work","character varying","YES",NULL
+"employees","salary_expectation","numeric","YES",NULL
+"employees","attendance_check_in_morning","time without time zone","YES",NULL
+"employees","attendance_check_in_afternoon","time without time zone","YES",NULL
+"employees","attendance_check_in_evening","time without time zone","YES",NULL
+"employees","attendance_require_multiple_checkins","boolean","YES","false"
+"employees","attendance_location_id","bigint","YES",NULL
+"employees","can_self_record_attendance","boolean","YES","false"
+"employees","created_at","timestamp with time zone","YES","now()"
+"employees","updated_at","timestamp with time zone","YES","now()"
+"favicons","id","bigint","NO","nextval('favicons_id_seq'::regclass)"
+"favicons","svg_content","text","NO",NULL
+"favicons","is_active","boolean","YES","false"
+"favicons","uploaded_by","bigint","YES",NULL
+"favicons","uploaded_at","timestamp with time zone","YES","now()"
+"invoices","id","bigint","NO","nextval('invoices_id_seq'::regclass)"
+"invoices","contractor_id","bigint","YES",NULL
+"invoices","amount","numeric","NO",NULL
+"invoices","status","character varying","YES","'Draft'::character varying"
+"invoices","due_date","date","YES",NULL
+"invoices","description","text","YES",NULL
+"invoices","created_at","timestamp with time zone","YES","now()"
+"invoices","updated_at","timestamp with time zone","YES","now()"
+"job_applications","id","bigint","NO","nextval('job_applications_id_seq'::regclass)"
+"job_applications","job_id","bigint","YES",NULL
+"job_applications","first_name","character varying","YES",NULL
+"job_applications","last_name","character varying","YES",NULL
+"job_applications","email","character varying","YES",NULL
+"job_applications","phone","character varying","YES",NULL
+"job_applications","date_of_birth","date","YES",NULL
+"job_applications","gender","character varying","YES",NULL
+"job_applications","marital_status","character varying","YES",NULL
+"job_applications","nationality","character varying","YES",NULL
+"job_applications","national_id","character varying","YES",NULL
+"job_applications","residential_address","text","YES",NULL
+"job_applications","emergency_contact","jsonb","YES",NULL
+"job_applications","education_history","jsonb","YES",NULL
+"job_applications","employment_history","jsonb","YES",NULL
+"job_applications","skills","jsonb","YES",NULL
+"job_applications","certifications","jsonb","YES",NULL
+"job_applications","experience_years","integer","YES",NULL
+"job_applications","availability_weeks","integer","YES",NULL
+"job_applications","right_to_work","character varying","YES",NULL
+"job_applications","salary_expectation","numeric","YES",NULL
+"job_applications","cover_letter","text","YES",NULL
+"job_applications","resume_url","character varying","YES",NULL
+"job_applications","status","character varying","YES","'pending'::character varying"
+"job_applications","notes","text","YES",NULL
+"job_applications","verification_status","character varying","YES",NULL
+"job_applications","verification_score","integer","YES",NULL
+"job_applications","verification_results","jsonb","YES",NULL
+"job_applications","verification_flags","jsonb","YES",NULL
+"job_applications","ai_ranking","integer","YES",NULL
+"job_applications","ai_ranking_breakdown","jsonb","YES",NULL
+"job_applications","verified_at","timestamp with time zone","YES",NULL
+"job_applications","verified_by","bigint","YES",NULL
+"job_applications","manager_ranking","integer","YES",NULL
+"job_applications","manager_notes","text","YES",NULL
+"job_applications","manager_reviewed_at","timestamp with time zone","YES",NULL
+"job_applications","manager_reviewed_by","bigint","YES",NULL
+"job_applications","owner_status","character varying","YES",NULL
+"job_applications","owner_notes","text","YES",NULL
+"job_applications","owner_reviewed_at","timestamp with time zone","YES",NULL
+"job_applications","owner_reviewed_by","bigint","YES",NULL
+"job_applications","created_at","timestamp with time zone","YES","now()"
+"job_applications","updated_at","timestamp with time zone","YES","now()"
+"jobs","id","bigint","NO","nextval('jobs_id_seq'::regclass)"
+"jobs","title","character varying","NO",NULL
+"jobs","department","character varying","YES",NULL
+"jobs","description","text","YES",NULL
+"jobs","requirements","text","YES",NULL
+"jobs","employment_type","character varying","YES",NULL
+"jobs","salary_min","numeric","YES",NULL
+"jobs","salary_max","numeric","YES",NULL
+"jobs","location","character varying","YES",NULL
+"jobs","status","character varying","YES","'active'::character varying"
+"jobs","created_by","bigint","YES",NULL
+"jobs","created_at","timestamp with time zone","YES","now()"
+"jobs","updated_at","timestamp with time zone","YES","now()"
+"jobs","closing_date","date","YES",NULL
+"jobs","responsibilities","text","YES",NULL
+"jobs","benefits","text","YES",NULL
+"jobs","salary_range","character varying","YES",NULL
+"jobs","qualifications","jsonb","YES",NULL
+"jobs","evaluation_params","jsonb","YES",NULL
+"jobs","advertisement_data","jsonb","YES",NULL
+"jobs","advertisement_image_path","character varying","YES",NULL
+"jobs","number_of_positions","integer","YES","1"
+"jobs","career_level","character varying","YES",NULL
+"jobs","contact_person","character varying","YES",NULL
+"jobs","contact_phone","character varying","YES",NULL
+"jobs","contact_email","character varying","YES",NULL
+"jobs","work_schedule","character varying","YES",NULL
+"jobs","required_languages","character varying","YES",NULL
+"jobs","experience_level","character varying","YES",NULL
+"jobs","education_requirements","text","YES",NULL
+"kpi_definitions","id","bigint","NO","nextval('kpi_definitions_id_seq'::regclass)"
+"kpi_definitions","title","character varying","NO",NULL
+"kpi_definitions","description","text","YES",NULL
+"kpi_definitions","max_score","numeric","NO",NULL
+"kpi_definitions","created_at","timestamp with time zone","YES","now()"
+"kpi_definitions","updated_at","timestamp with time zone","YES","now()"
+"kpis","id","bigint","NO","nextval('kpis_id_seq'::regclass)"
+"kpis","employee_id","bigint","YES",NULL
+"kpis","period","character varying","YES",NULL
+"kpis","metric","character varying","YES",NULL
+"kpis","target","numeric","YES",NULL
+"kpis","actual","numeric","YES",NULL
+"kpis","weight","numeric","YES",NULL
+"kpis","score","numeric","YES",NULL
+"kpis","assessed_by","bigint","YES",NULL
+"kpis","assessed_at","timestamp with time zone","YES",NULL
+"kpis","notes","text","YES",NULL
+"kpis","created_at","timestamp with time zone","YES","now()"
+"kpis","updated_at","timestamp with time zone","YES","now()"
+"leave_balances","id","bigint","NO","nextval('leave_balances_id_seq'::regclass)"
+"leave_balances","employee_id","bigint","YES",NULL
+"leave_balances","year","integer","NO",NULL
+"leave_balances","annual","numeric","YES","0"
+"leave_balances","sick","numeric","YES","0"
+"leave_balances","maternity_paternity","numeric","YES","0"
+"leave_balances","carried_forward_annual","numeric","YES","0"
+"leave_balances","annual_lapsed","numeric","YES","0"
+"leave_balances","created_at","timestamp with time zone","YES","now()"
+"leave_balances","updated_at","timestamp with time zone","YES","now()"
+"leave_policies","id","bigint","NO","nextval('leave_policies_id_seq'::regclass)"
+"leave_policies","type","character varying","NO",NULL
+"leave_policies","max_days","integer","NO",NULL
+"leave_policies","requires_attachment","boolean","YES","false"
+"leave_policies","auto_approve_initial","boolean","YES","false"
+"leave_policies","rule_config","jsonb","YES","'{}'::jsonb"
+"leave_policies","created_at","timestamp with time zone","YES","now()"
+"leave_policies","updated_at","timestamp with time zone","YES","now()"
+"leave_requests","id","bigint","NO","nextval('leave_requests_id_seq'::regclass)"
+"leave_requests","employee_id","bigint","YES",NULL
+"leave_requests","type","character varying","NO",NULL
+"leave_requests","start_date","date","NO",NULL
+"leave_requests","end_date","date","NO",NULL
+"leave_requests","reason","text","YES",NULL
+"leave_requests","status","character varying","YES","'Pending'::character varying"
+"leave_requests","attachment_path","character varying","YES",NULL
+"leave_requests","documentation_submitted","boolean","YES","false"
+"leave_requests","requires_attachment","boolean","YES","false"
+"leave_requests","department_conflict_count","integer","YES","0"
+"leave_requests","department_conflict_pct","numeric","YES","0"
+"leave_requests","instructions","text","YES",NULL
+"leave_requests","days_charged","integer","YES",NULL
+"leave_requests","payroll_flags","jsonb","YES",NULL
+"leave_requests","policy_snapshot","jsonb","YES",NULL
+"leave_requests","leave_balance_effect","jsonb","YES",NULL
+"leave_requests","requires_manager_warning","boolean","YES","false"
+"leave_requests","approver_id","bigint","YES",NULL
+"leave_requests","decision_at","timestamp with time zone","YES",NULL
+"leave_requests","created_at","timestamp with time zone","YES","now()"
+"leave_requests","updated_at","timestamp with time zone","YES","now()"
+"messages","id","bigint","NO","nextval('messages_id_seq'::regclass)"
+"messages","sender_id","bigint","YES",NULL
+"messages","recipient_id","bigint","YES",NULL
+"messages","subject","character varying","YES",NULL
+"messages","content","text","NO",NULL
+"messages","message_type","character varying","YES","'general'::character varying"
+"messages","parent_id","bigint","YES",NULL
+"messages","is_read","boolean","YES","false"
+"messages","read_at","timestamp with time zone","YES",NULL
+"messages","is_resolved","boolean","YES","false"
+"messages","resolved_at","timestamp with time zone","YES",NULL
+"messages","resolved_by","bigint","YES",NULL
+"messages","resolution_notes","text","YES",NULL
+"messages","created_at","timestamp with time zone","YES","now()"
+"messages","updated_at","timestamp with time zone","YES","now()"
+"milestones","id","bigint","NO","nextval('milestones_id_seq'::regclass)"
+"milestones","employee_id","bigint","YES",NULL
+"milestones","title","character varying","NO",NULL
+"milestones","description","text","YES",NULL
+"milestones","due_date","date","YES",NULL
+"milestones","completed_date","date","YES",NULL
+"milestones","status","character varying","YES","'pending'::character varying"
+"milestones","priority","character varying","YES","'medium'::character varying"
+"milestones","created_by","bigint","YES",NULL
+"milestones","created_at","timestamp with time zone","YES","now()"
+"milestones","updated_at","timestamp with time zone","YES","now()"
+"mode_sessions","id","bigint","NO","nextval('mode_sessions_id_seq'::regclass)"
+"mode_sessions","user_id","bigint","YES",NULL
+"mode_sessions","current_mode","character varying","NO",NULL
+"mode_sessions","switch_reason","text","YES",NULL
+"mode_sessions","switched_at","timestamp with time zone","YES","now()"
+"mode_sessions","expires_at","timestamp with time zone","YES",NULL
+"mpesa_callbacks","id","bigint","NO","nextval('mpesa_callbacks_id_seq'::regclass)"
+"mpesa_callbacks","callback_type","character varying","NO",NULL
+"mpesa_callbacks","reference","character varying","YES",NULL
+"mpesa_callbacks","status_code","character varying","YES",NULL
+"mpesa_callbacks","status_desc","text","YES",NULL
+"mpesa_callbacks","payload","jsonb","YES",NULL
+"mpesa_callbacks","created_at","timestamp with time zone","YES","now()"
+"notifications","id","bigint","NO","nextval('notifications_id_seq'::regclass)"
+"notifications","user_id","bigint","YES",NULL
+"notifications","type","character varying","NO",NULL
+"notifications","title","character varying","NO",NULL
+"notifications","message","text","YES",NULL
+"notifications","entity_type","character varying","YES",NULL
+"notifications","entity_id","bigint","YES",NULL
+"notifications","is_read","boolean","YES","false"
+"notifications","read_at","timestamp with time zone","YES",NULL
+"notifications","created_at","timestamp with time zone","YES","now()"
+"onboarding","id","bigint","NO","nextval('onboarding_id_seq'::regclass)"
+"onboarding","employee_id","bigint","YES",NULL
+"onboarding","user_id","bigint","YES",NULL
+"onboarding","start_date","date","YES",NULL
+"onboarding","end_date","date","YES",NULL
+"onboarding","status","character varying","YES","'in_progress'::character varying"
+"onboarding","notes","text","YES",NULL
+"onboarding","created_at","timestamp with time zone","YES","now()"
+"onboarding","updated_at","timestamp with time zone","YES","now()"
+"onboarding","application_id","bigint","YES",NULL
+"onboarding","department","character varying","YES",NULL
+"onboarding","position","character varying","YES",NULL
+"onboarding","supervisor_id","bigint","YES",NULL
+"onboarding","probation_end_date","date","YES",NULL
+"onboarding","steps","jsonb","YES","'[]'::jsonb"
+"onboarding","orientation_checklist","jsonb","YES","'[]'::jsonb"
+"onboarding","documents","jsonb","YES","'[]'::jsonb"
+"onboarding","assets_assigned","jsonb","YES","'[]'::jsonb"
+"onboarding","probation_reviews","jsonb","YES","'[]'::jsonb"
+"onboarding","offer_letter_generated","boolean","YES","false"
+"onboarding","offer_letter_url","text","YES",NULL
+"onboarding","confirmed_at","timestamp with time zone","YES",NULL
+"onboarding","confirmed_by","bigint","YES",NULL
+"orientation_checklists","id","bigint","NO","nextval('orientation_checklists_id_seq'::regclass)"
+"orientation_checklists","onboarding_id","bigint","YES",NULL
+"orientation_checklists","item_name","character varying","NO",NULL
+"orientation_checklists","is_completed","boolean","YES","false"
+"orientation_checklists","completed_at","timestamp with time zone","YES",NULL
+"orientation_checklists","completed_by","bigint","YES",NULL
+"orientation_checklists","created_at","timestamp with time zone","YES","now()"
+"payments","id","bigint","NO","nextval('payments_id_seq'::regclass)"
+"payments","employee_id","bigint","YES",NULL
+"payments","labourer_id","bigint","YES",NULL
+"payments","period_start","date","YES",NULL
+"payments","period_end","date","YES",NULL
+"payments","amount","numeric","YES",NULL
+"payments","payment_type","character varying","YES",NULL
+"payments","status","character varying","YES","'pending'::character varying"
+"payments","payment_date","date","YES",NULL
+"payments","mpesa_receipt","character varying","YES",NULL
+"payments","notes","text","YES",NULL
+"payments","created_at","timestamp with time zone","YES","now()"
+"payments","updated_at","timestamp with time zone","YES","now()"
+"payslips","id","bigint","NO","nextval('payslips_id_seq'::regclass)"
+"payslips","employee_id","bigint","YES",NULL
+"payslips","period","character varying","NO",NULL
+"payslips","gross_pay","numeric","YES","0"
+"payslips","overtime_pay","numeric","YES","0"
+"payslips","kpi_bonus","numeric","YES","0"
+"payslips","deductions","jsonb","YES","'{}'::jsonb"
+"payslips","net_pay","numeric","YES","0"
+"payslips","status","character varying","YES","'Draft'::character varying"
+"payslips","payment_method","character varying","YES","'MPESA'::character varying"
+"payslips","payment_reference","character varying","YES",NULL
+"payslips","mpesa_transaction_id","character varying","YES",NULL
+"payslips","payment_error","text","YES",NULL
+"payslips","disbursed_at","timestamp with time zone","YES",NULL
+"payslips","created_at","timestamp with time zone","YES","now()"
+"payslips","updated_at","timestamp with time zone","YES","now()"
+"pending_bonuses","id","bigint","NO","nextval('pending_bonuses_id_seq'::regclass)"
+"pending_bonuses","employee_id","bigint","YES",NULL
+"pending_bonuses","employee_kpi_id","bigint","YES",NULL
+"pending_bonuses","period","character varying","NO",NULL
+"pending_bonuses","bonus_type","character varying","YES","'KPI Raise'::character varying"
+"pending_bonuses","bonus_amount","numeric","YES","0"
+"pending_bonuses","status","character varying","YES","'pending'::character varying"
+"pending_bonuses","created_at","timestamp with time zone","YES","now()"
+"pending_bonuses","updated_at","timestamp with time zone","YES","now()"
+"profiles","id","bigint","NO","nextval('profiles_id_seq'::regclass)"
+"profiles","user_id","bigint","YES",NULL
+"profiles","full_name","character varying","YES",NULL
+"profiles","photo_url","text","YES",NULL
+"profiles","email","character varying","YES",NULL
+"profiles","phone","character varying","YES",NULL
+"profiles","address","text","YES",NULL
+"profiles","date_of_birth","date","YES",NULL
+"profiles","national_id","character varying","YES",NULL
+"profiles","emergency_contact","jsonb","YES",NULL
+"profiles","professional_headline","text","YES",NULL
+"profiles","summary","text","YES",NULL
+"profiles","employee_id","character varying","YES",NULL
+"profiles","job_title","character varying","YES",NULL
+"profiles","department","character varying","YES",NULL
+"profiles","status","character varying","YES",NULL
+"profiles","date_of_joining","date","YES",NULL
+"profiles","employment_type","character varying","YES",NULL
+"profiles","work_location","text","YES",NULL
+"profiles","reporting_manager","character varying","YES",NULL
+"profiles","certifications","jsonb","YES",NULL
+"profiles","work_history","jsonb","YES",NULL
+"profiles","education","jsonb","YES",NULL
+"profiles","skills","jsonb","YES",NULL
+"profiles","projects","jsonb","YES",NULL
+"profiles","awards","jsonb","YES",NULL
+"profiles","languages","jsonb","YES",NULL
+"profiles","memberships","jsonb","YES",NULL
+"profiles","created_at","timestamp with time zone","YES","now()"
+"profiles","updated_at","timestamp with time zone","YES","now()"
+"projects","id","bigint","NO","nextval('projects_id_seq'::regclass)"
+"projects","contractor_id","bigint","YES",NULL
+"projects","name","character varying","NO",NULL
+"projects","status","character varying","YES","'active'::character varying"
+"projects","due_date","date","YES",NULL
+"projects","created_at","timestamp with time zone","YES","now()"
+"projects","updated_at","timestamp with time zone","YES","now()"
+"salary_reminders","id","bigint","NO","nextval('salary_reminders_id_seq'::regclass)"
+"salary_reminders","reminder_date","date","NO",NULL
+"salary_reminders","message","text","YES",NULL
+"salary_reminders","is_sent","boolean","YES","false"
+"salary_reminders","sent_at","timestamp with time zone","YES",NULL
+"salary_reminders","created_at","timestamp with time zone","YES","now()"
+"settings","id","bigint","NO","nextval('settings_id_seq'::regclass)"
+"settings","setting_key","character varying","NO",NULL
+"settings","category","character varying","YES",NULL
+"settings","setting_value","text","YES",NULL
+"settings","description","text","YES",NULL
+"settings","data_type","character varying","YES","'string'::character varying"
+"settings","is_active","boolean","YES","true"
+"settings","updated_by","bigint","YES",NULL
+"settings","created_at","timestamp with time zone","YES","now()"
+"settings","updated_at","timestamp with time zone","YES","now()"
+"settings_audit_log","id","bigint","NO","nextval('settings_audit_log_id_seq'::regclass)"
+"settings_audit_log","setting_key","character varying","NO",NULL
+"settings_audit_log","category","character varying","YES",NULL
+"settings_audit_log","old_value","text","YES",NULL
+"settings_audit_log","new_value","text","YES",NULL
+"settings_audit_log","changed_by","bigint","YES",NULL
+"settings_audit_log","reason","text","YES",NULL
+"settings_audit_log","changed_at","timestamp with time zone","YES","now()"
+"shift_settings","id","bigint","NO","nextval('shift_settings_id_seq'::regclass)"
+"shift_settings","employment_type","character varying","NO",NULL
+"shift_settings","department","character varying","YES",NULL
+"shift_settings","shift_name","character varying","NO",NULL
+"shift_settings","start_time","time without time zone","NO",NULL
+"shift_settings","end_time","time without time zone","NO",NULL
+"shift_settings","is_default","boolean","YES","false"
+"shift_settings","created_at","timestamp with time zone","YES","now()"
+"shift_settings","updated_at","timestamp with time zone","YES","now()"
+"supervisor_allocations","id","bigint","NO","nextval('supervisor_allocations_id_seq'::regclass)"
+"supervisor_allocations","supervisor_id","bigint","YES",NULL
+"supervisor_allocations","supervisee_id","bigint","YES",NULL
+"supervisor_allocations","type","character varying","NO",NULL
+"supervisor_allocations","start_date","date","YES",NULL
+"supervisor_allocations","end_date","date","YES",NULL
+"supervisor_allocations","permissions","jsonb","YES","'[]'::jsonb"
+"supervisor_allocations","assigned_by","bigint","YES",NULL
+"supervisor_allocations","is_active","boolean","YES","true"
+"supervisor_allocations","notes","text","YES",NULL
+"supervisor_allocations","created_at","timestamp with time zone","YES","now()"
+"supervisor_allocations","updated_at","timestamp with time zone","YES","now()"
+"system_logs","id","bigint","NO","nextval('system_logs_id_seq'::regclass)"
+"system_logs","level","character varying","NO",NULL
+"system_logs","message","text","NO",NULL
+"system_logs","module","character varying","YES",NULL
+"system_logs","action","character varying","YES",NULL
+"system_logs","user_id","bigint","YES",NULL
+"system_logs","ip_address","character varying","YES",NULL
+"system_logs","user_agent","text","YES",NULL
+"system_logs","metadata","jsonb","YES",NULL
+"system_logs","created_at","timestamp with time zone","YES","now()"
+"training","id","bigint","NO","nextval('training_id_seq'::regclass)"
+"training","employee_id","bigint","YES",NULL
+"training","course_name","character varying","NO",NULL
+"training","provider","character varying","YES",NULL
+"training","start_date","date","YES",NULL
+"training","end_date","date","YES",NULL
+"training","status","character varying","YES","'scheduled'::character varying"
+"training","certificate_url","character varying","YES",NULL
+"training","notes","text","YES",NULL
+"training","created_at","timestamp with time zone","YES","now()"
+"training","updated_at","timestamp with time zone","YES","now()"
+"user_permission_overrides","id","bigint","NO","nextval('user_permission_overrides_id_seq'::regclass)"
+"user_permission_overrides","user_id","bigint","YES",NULL
+"user_permission_overrides","permission_key","character varying","NO",NULL
+"user_permission_overrides","is_granted","boolean","YES","true"
+"user_permission_overrides","granted_by","bigint","YES",NULL
+"user_permission_overrides","granted_at","timestamp with time zone","YES","now()"
+"user_permission_overrides","expires_at","timestamp with time zone","YES",NULL
+"user_permission_overrides","duration_type","character varying","YES",NULL
+"user_permission_overrides","duration_value","integer","YES",NULL
+"user_permission_overrides","reason","text","YES",NULL
+"user_permission_overrides","revoked_at","timestamp with time zone","YES",NULL
+"user_permission_overrides","revoked_by","bigint","YES",NULL
+"user_permission_overrides","revoke_reason","text","YES",NULL
+"user_permission_overrides","is_active","boolean","YES","true"
+"user_permission_overrides","created_at","timestamp with time zone","YES","now()"
+"user_permission_overrides","updated_at","timestamp with time zone","YES","now()"
+"user_preferences","id","bigint","NO","nextval('user_preferences_id_seq'::regclass)"
+"user_preferences","user_id","bigint","YES",NULL
+"user_preferences","preferences","jsonb","YES","'{}'::jsonb"
+"user_preferences","created_at","timestamp with time zone","YES","now()"
+"user_preferences","updated_at","timestamp with time zone","YES","now()"
+"users","id","bigint","NO","nextval('users_id_seq'::regclass)"
+"users","username","character varying","NO",NULL
+"users","email","character varying","NO",NULL
+"users","password","character varying","NO",NULL
+"users","role","character varying","NO",NULL
+"users","status","character varying","YES","'active'::character varying"
+"users","must_change_password","boolean","YES","false"
+"users","reset_token","character varying","YES",NULL
+"users","reset_token_expire","timestamp with time zone","YES",NULL
+"users","created_at","timestamp with time zone","YES","now()"
+"users","updated_at","timestamp with time zone","YES","now()"

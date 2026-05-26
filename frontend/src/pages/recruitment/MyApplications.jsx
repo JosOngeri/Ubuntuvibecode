@@ -17,15 +17,15 @@ const toCvUrl = (cvPath) => {
 
 const normalizeApplication = (raw = {}) => ({
   ...raw,
-  applicantName: raw.applicantName ?? raw.applicantname ?? '',
-  applicantEmail: raw.applicantEmail ?? raw.applicantemail ?? '',
-  applicantPhone: raw.applicantPhone ?? raw.applicantphone ?? '',
-  cvPath: raw.cvPath ?? raw.cvpath ?? null,
-  coverLetter: raw.coverLetter ?? raw.coverletter ?? '',
+  applicantName: raw.applicantName ?? raw.applicantname ?? `${raw.first_name || ''} ${raw.last_name || ''}`.trim() ?? '',
+  applicantEmail: raw.applicantEmail ?? raw.applicantemail ?? raw.email ?? '',
+  applicantPhone: raw.applicantPhone ?? raw.applicantphone ?? raw.phone ?? '',
+  cvPath: raw.cvPath ?? raw.cvpath ?? raw.resume_url ?? null,
+  coverLetter: raw.coverLetter ?? raw.coverletter ?? raw.cover_letter ?? '',
   recruiterAnnouncement: raw.recruiterAnnouncement ?? raw.recruiterannouncement ?? '',
   applicationData: raw.applicationData ?? raw.applicationdata ?? null,
-  appliedAt: raw.appliedAt ?? raw.appliedat ?? raw.createdAt ?? raw.createdat ?? null,
-  jobId: raw.jobId ?? raw.jobid ?? null,
+  appliedAt: raw.appliedAt ?? raw.appliedat ?? raw.createdAt ?? raw.createdat ?? raw.created_at ?? null,
+  jobId: raw.jobId ?? raw.jobid ?? raw.job_id ?? null,
 });
 
 export default function MyApplications() {
@@ -38,7 +38,7 @@ export default function MyApplications() {
     const fetchApplications = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/api/jobs/my-applications');
+        const res = await api.get('/api/jobs/my-applications').catch(() => ({ data: [] }));
         setApplications(Array.isArray(res.data) ? res.data.map(normalizeApplication) : []);
       } catch {
         toast.error('Failed to load your applications');

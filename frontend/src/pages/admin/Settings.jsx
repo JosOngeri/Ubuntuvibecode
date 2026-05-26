@@ -1,216 +1,808 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { useSettings } from '../../contexts/SettingsContext'
-import { toast } from 'react-toastify'
-import Card from '../../components/common/Card'
-import Button from '../../components/common/Button'
-import Input from '../../components/common/Input'
-import DashboardLayout from '../../components/DashboardLayout'
-import ColorPalettePicker from '../../components/common/ColorPalettePicker'
-import api from '../../services/api'
-import { BsGeoAlt, BsShieldCheck, BsGear, BsClockHistory, BsPalette, BsBuilding, BsPeople, BsFileText, BsBriefcase, BsChat, BsCamera, BsHouse } from 'react-icons/bs'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
+import { toast } from 'react-toastify';
+import DashboardLayout from '../../components/DashboardLayout';
+import TabNavigation from '../../components/common/TabNavigation';
+import StatsCards from '../../components/common/StatsCards';
+import DataTable from '../../components/common/DataTable';
+import api from '../../services/api';
+import { 
+  BsGeoAlt, BsShieldCheck, BsGear, BsClockHistory, BsPalette, BsBuilding, BsPeople, 
+  BsFileText, BsBriefcase, BsSun, BsClipboardCheck, BsHammer, BsPersonBadge,
+  BsBell, BsLock, BsPlug, BsGrid, BsDatabase, BsImage
+} from 'react-icons/bs';
 
 const AdminSettings = () => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const { refreshSettings } = useSettings()
-  const [activeSection, setActiveSection] = useState('profile')
-  const [selectedColor, setSelectedColor] = useState(null)
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { refreshSettings, getComponentSetting, updateComponentSettings } = useSettings();
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
+  // Office location state
   const [officeLocation, setOfficeLocation] = useState({
     latitude: -1.19293,
     longitude: 36.93057,
     radius_meters: 1000,
     name: 'Main Office',
-  })
+  });
 
-  const [employees, setEmployees] = useState([])
-  const [selectedEmployee, setSelectedEmployee] = useState(null)
-  const [canSelfRecord, setCanSelfRecord] = useState(true)
-  const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState(false)
-  
-  // System values state
-  const [systemSettings, setSystemSettings] = useState({})
-  const [editingSetting, setEditingSetting] = useState(null)
-  const [newSettingForm, setNewSettingForm] = useState({ setting_key: '', category: '', setting_value: '', description: '', data_type: 'string' })
-  
+  // Employees state
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [canSelfRecord, setCanSelfRecord] = useState(true);
+
+  // System settings state
+  const [systemSettings, setSystemSettings] = useState({});
+  const [editingSetting, setEditingSetting] = useState(null);
+
+  // Component settings state
+  const [componentSettings, setComponentSettings] = useState({});
+
   // Audit log state
-  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLogs, setAuditLogs] = useState([]);
+
+  // System logs state
+  const [systemLogs, setSystemLogs] = useState([]);
+  const [systemLogStats, setSystemLogStats] = useState([]);
+  const [systemLogsLoaded, setSystemLogsLoaded] = useState(false);
+  const [auditLogsLoaded, setAuditLogsLoaded] = useState(false);
+
+  // Favicon state
+  const [favicons, setFavicons] = useState([]);
+  const [activeFavicon, setActiveFavicon] = useState(null);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
-      navigate('/dashboard')
-      return
+    if (user?.role !== 'admin' && user?.role !== 'owner') {
+      navigate('/dashboard');
+      return;
     }
-    fetchData()
-  }, [user, navigate])
+    fetchData();
+  }, [user, navigate]);
 
   const fetchData = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
 
       // Fetch office location
-      const locResponse = await api.get('/api/settings/location/office')
+      const locResponse = await api.get('/api/settings/location/office').catch(() => ({ data: {} }));
       if (locResponse.data.location) {
-        setOfficeLocation(locResponse.data.location)
+        setOfficeLocation(locResponse.data.location);
       }
 
       // Fetch employees
-      const empResponse = await api.get('/api/settings/attendance/employees')
+      const empResponse = await api.get('/api/settings/attendance/employees').catch(() => ({ data: {} }));
       if (empResponse.data.employees) {
-        setEmployees(empResponse.data.employees)
+        setEmployees(empResponse.data.employees);
       }
 
       // Fetch system settings
-      const settingsResponse = await api.get('/settings')
+      const settingsResponse = await api.get('/settings').catch(() => ({ data: { settings: [] } }));
       if (settingsResponse.data.settings) {
-        const settingsMap = {}
+        const settingsMap = {};
         settingsResponse.data.settings.forEach(setting => {
-          let value = setting.setting_value
+          let value = setting.setting_value;
           if (setting.data_type === 'array') {
             try {
-              value = JSON.parse(value)
+              value = JSON.parse(value);
             } catch (e) {
-              console.error(`Failed to parse setting ${setting.setting_key}:`, e)
+              console.error(`Failed to parse setting ${setting.setting_key}:`, e);
             }
           }
-          settingsMap[setting.setting_key] = { ...setting, parsedValue: value }
-        })
-        setSystemSettings(settingsMap)
+          settingsMap[setting.setting_key] = { ...setting, parsedValue: value };
+        });
+        setSystemSettings(settingsMap);
+      }
+
+      // Fetch component settings
+      const compResponse = await api.get('/settings/components').catch(() => ({ data: { settings: {} } }));
+      if (compResponse.data.settings) {
+        setComponentSettings(compResponse.data.settings);
+      }
+
+      // Fetch favicons
+      const faviconResponse = await api.get('/favicons').catch(() => ({ data: [] }));
+      if (faviconResponse.data) {
+        setFavicons(faviconResponse.data);
+      }
+
+      // Fetch active favicon
+      const activeResponse = await api.get('/favicons/active').catch(() => ({ data: null }));
+      if (activeResponse.data) {
+        setActiveFavicon(activeResponse.data);
       }
     } catch (err) {
-      console.error('Error fetching data:', err)
-      toast.error('Failed to load settings')
+      console.error('Error fetching data:', err);
+      toast.error('Failed to load settings');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchAuditLogs = async () => {
+    if (auditLogsLoaded) return;
     try {
-      const response = await api.get('/settings/audit/all')
-      setAuditLogs(response.data.audit_logs || [])
+      const response = await api.get('/api/system-logs').catch(() => ({ data: { logs: [] } }));
+      // Filter for audit-relevant events only
+      const filteredLogs = (response.data.logs || []).filter(log => 
+        log.module === 'auth' || 
+        log.module === 'settings' || 
+        log.module === 'employees' || 
+        log.module === 'users' ||
+        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(log.metadata?.method)
+      );
+      setAuditLogs(filteredLogs);
+      setAuditLogsLoaded(true);
     } catch (err) {
-      console.error('Error fetching audit logs:', err)
-      toast.error('Failed to load audit logs')
+      console.error('Error fetching audit logs:', err);
+      toast.error('Failed to load audit logs');
     }
-  }
+  };
+
+  const fetchSystemLogs = async () => {
+    if (systemLogsLoaded) return;
+    try {
+      const response = await api.get('/api/system-logs').catch(() => ({ data: { logs: [] } }));
+      setSystemLogs(response.data.logs || []);
+      setSystemLogsLoaded(true);
+    } catch (err) {
+      console.error('Error fetching system logs:', err);
+      toast.error('Failed to load system logs');
+    }
+  };
+
+  const fetchSystemLogStats = async () => {
+    if (systemLogsLoaded) return;
+    try {
+      const response = await api.get('/api/system-logs/stats').catch(() => ({ data: { stats: [] } }));
+      setSystemLogStats(response.data.stats || []);
+    } catch (err) {
+      console.error('Error fetching system log stats:', err);
+    }
+  };
 
   const handleUpdateLocation = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      setUpdating(true)
-
-      await api.put('/api/settings/location/office', officeLocation)
-
-      toast.success('Office location updated successfully')
+      setUpdating(true);
+      await api.put('/api/settings/location/office', officeLocation);
+      toast.success('Office location updated successfully');
     } catch (err) {
-      console.error('Error updating location:', err)
-      toast.error(err.response?.data?.msg || 'Failed to update location')
+      console.error('Error updating location:', err);
+      toast.error(err.response?.data?.msg || 'Failed to update location');
     } finally {
-      setUpdating(false)
+      setUpdating(false);
     }
-  }
-
-  const handleEmployeeSelect = (emp) => {
-    setSelectedEmployee(emp)
-    setCanSelfRecord(emp.can_self_record_attendance)
-  }
-
-  const handleUpdateEmployeePermission = async (e) => {
-    e.preventDefault()
-    if (!selectedEmployee) return
-
-    try {
-      setUpdating(true)
-
-      await api.put(`/api/settings/attendance/employee/${selectedEmployee.id}`, { can_self_record_attendance: canSelfRecord })
-
-      // Update the employee in the list
-      setEmployees(
-        employees.map((emp) =>
-          emp.id === selectedEmployee.id
-            ? { ...emp, can_self_record_attendance: canSelfRecord }
-            : emp
-        )
-      )
-      setSelectedEmployee({ ...selectedEmployee, can_self_record_attendance: canSelfRecord })
-
-      toast.success('Employee permission updated successfully')
-    } catch (err) {
-      console.error('Error updating permission:', err)
-      toast.error(err.response?.data?.msg || 'Failed to update permission')
-    } finally {
-      setUpdating(false)
-    }
-  }
+  };
 
   const handleUpdateSetting = async (e) => {
-    e.preventDefault()
-    if (!editingSetting) return
+    e.preventDefault();
+    if (!editingSetting) return;
 
     try {
-      setUpdating(true)
-      const { setting_value, reason } = editingSetting
-
-      await api.put(`/settings/${editingSetting.setting_key}`, { setting_value, reason })
-      
-      toast.success('Setting updated successfully')
-      setEditingSetting(null)
-      fetchData()
-      refreshSettings()
+      setUpdating(true);
+      const { setting_value, reason } = editingSetting;
+      await api.put(`/settings/${editingSetting.setting_key}`, { setting_value, reason });
+      toast.success('Setting updated successfully');
+      setEditingSetting(null);
+      fetchData();
+      refreshSettings();
     } catch (err) {
-      console.error('Error updating setting:', err)
-      toast.error(err.response?.data?.msg || 'Failed to update setting')
+      console.error('Error updating setting:', err);
+      toast.error(err.response?.data?.msg || 'Failed to update setting');
     } finally {
-      setUpdating(false)
+      setUpdating(false);
     }
-  }
+  };
 
-  const handleCreateSetting = async (e) => {
-    e.preventDefault()
+  const handleUpdateComponentSetting = async (component, settings) => {
     try {
-      setUpdating(true)
-
-      await api.post('/settings', newSettingForm)
-      
-      toast.success('Setting created successfully')
-      setNewSettingForm({ setting_key: '', category: '', setting_value: '', description: '', data_type: 'string' })
-      fetchData()
-      refreshSettings()
+      setUpdating(true);
+      await api.put(`/settings/components/${component}`, { settings });
+      toast.success('Component settings updated successfully');
+      fetchData();
     } catch (err) {
-      console.error('Error creating setting:', err)
-      toast.error(err.response?.data?.msg || 'Failed to create setting')
+      console.error('Error updating component settings:', err);
+      toast.error(err.response?.data?.msg || 'Failed to update component settings');
     } finally {
-      setUpdating(false)
+      setUpdating(false);
     }
-  }
+  };
 
-  const handleDeleteSetting = async (key) => {
-    if (!window.confirm('Are you sure you want to delete this setting?')) return
+  const handleUploadFavicon = async (e) => {
+    e.preventDefault();
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('favicon', file);
 
     try {
-      await api.delete(`/settings/${key}`)
-      toast.success('Setting deleted successfully')
-      fetchData()
-      refreshSettings()
+      setUploadingFavicon(true);
+      const response = await api.post('/favicons/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success('Favicon uploaded successfully');
+      fetchData();
     } catch (err) {
-      console.error('Error deleting setting:', err)
-      toast.error(err.response?.data?.msg || 'Failed to delete setting')
+      console.error('Error uploading favicon:', err);
+      toast.error(err.response?.data?.error || 'Failed to upload favicon');
+    } finally {
+      setUploadingFavicon(false);
+      e.target.value = '';
     }
-  }
+  };
+
+  const handleSetDefaultFavicon = async (variant) => {
+    try {
+      setUpdating(true);
+      await api.post('/favicons/default', { variant });
+      toast.success('Default favicon set successfully');
+      fetchData();
+    } catch (err) {
+      console.error('Error setting default favicon:', err);
+      toast.error(err.response?.data?.error || 'Failed to set default favicon');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleSetActiveFavicon = async (id) => {
+    try {
+      setUpdating(true);
+      await api.put(`/favicons/${id}/activate`);
+      toast.success('Favicon activated successfully');
+      fetchData();
+    } catch (err) {
+      console.error('Error activating favicon:', err);
+      toast.error(err.response?.data?.error || 'Failed to activate favicon');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteFavicon = async (id) => {
+    if (!confirm('Are you sure you want to delete this favicon?')) return;
+
+    try {
+      setUpdating(true);
+      await api.delete(`/favicons/${id}`);
+      toast.success('Favicon deleted successfully');
+      fetchData();
+    } catch (err) {
+      console.error('Error deleting favicon:', err);
+      toast.error(err.response?.data?.error || 'Failed to delete favicon');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Define tabs
+  const tabs = [
+    {
+      id: 'overview',
+      label: 'Overview',
+      icon: BsGrid,
+      render: () => renderOverviewTab(),
+    },
+    {
+      id: 'system',
+      label: 'System',
+      icon: BsGear,
+      render: () => renderSystemTab(),
+    },
+    {
+      id: 'components',
+      label: 'Components',
+      icon: BsGrid,
+      render: () => renderComponentsTab(),
+    },
+    {
+      id: 'location',
+      label: 'Location',
+      icon: BsGeoAlt,
+      render: () => renderLocationTab(),
+    },
+    {
+      id: 'permissions',
+      label: 'Permissions',
+      icon: BsShieldCheck,
+      render: () => renderPermissionsTab(),
+    },
+    {
+      id: 'audit',
+      label: 'Audit Log',
+      icon: BsClockHistory,
+      onLoad: fetchAuditLogs,
+      render: () => renderAuditTab(),
+    },
+    {
+      id: 'system-logs',
+      label: 'System Logs',
+      icon: BsDatabase,
+      onLoad: () => { fetchSystemLogs(); fetchSystemLogStats(); },
+      render: () => renderSystemLogsTab(),
+    },
+    {
+      id: 'favicon',
+      label: 'Favicon',
+      icon: BsImage,
+      render: () => renderFaviconTab(),
+    },
+  ];
+
+  const renderOverviewTab = () => {
+    const stats = [
+      { key: 'employees', label: 'Total Employees', value: employees.length, icon: BsPeople, trend: 5 },
+      { key: 'settings', label: 'System Settings', value: Object.keys(systemSettings).length, icon: BsGear },
+      { key: 'components', label: 'Component Settings', value: Object.keys(componentSettings).length, icon: BsGrid },
+      { key: 'audit', label: 'Recent Changes', value: auditLogs.length, icon: BsClockHistory },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+          <h2 className="text-2xl font-bold mb-2">System Overview</h2>
+          <p className="text-orange-100">Quick summary of your HRMS configuration</p>
+        </div>
+
+        <StatsCards stats={stats} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <button onClick={() => navigate('/employees')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+                Manage Employees
+              </button>
+              <button onClick={() => navigate('/attendance')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+                View Attendance
+              </button>
+              <button onClick={() => navigate('/payroll')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+                Process Payroll
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Office Location</h3>
+            <div className="space-y-2">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium">Name:</span> {officeLocation.name}
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium">Coordinates:</span> {officeLocation.latitude}, {officeLocation.longitude}
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="font-medium">Radius:</span> {officeLocation.radius_meters}m
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSystemTab = () => {
+    const settingGroups = [
+      { key: 'DEPARTMENTS', label: 'Departments', icon: BsBuilding },
+      { key: 'EMPLOYMENT_TYPES', label: 'Employment Types', icon: BsBriefcase },
+      { key: 'LEAVE_TYPES', label: 'Leave Types', icon: BsFileText },
+      { key: 'SHIFT_TYPES', label: 'Shift Types', icon: BsSun },
+      { key: 'EMPLOYMENT_STATUS', label: 'Employment Status', icon: BsClipboardCheck },
+      { key: 'APPLICATION_STATUS', label: 'Application Status', icon: BsFileText },
+      { key: 'DAILY_LABOUR_DEPARTMENTS', label: 'Daily Labour Depts', icon: BsHammer },
+    ];
+
+    return (
+      <div className="space-y-6">
+        {settingGroups.map(group => (
+          <div key={group.key} className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <group.icon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{group.label}</h3>
+            </div>
+            {renderSystemSettingsContent(group.key)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderComponentsTab = () => {
+    const components = [
+      { id: 'CalendarHeatmap', label: 'Calendar Heatmap', description: 'Attendance visualization settings' },
+      { id: 'TabNavigation', label: 'Tab Navigation', description: 'Dashboard tab behavior' },
+      { id: 'StatsCards', label: 'Stats Cards', description: 'Statistics card appearance' },
+      { id: 'DataTable', label: 'Data Table', description: 'Table display and pagination' },
+      { id: 'FilterBar', label: 'Filter Bar', description: 'Search and filter options' },
+      { id: 'QuickActions', label: 'Quick Actions', description: 'Action button configuration' },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+          <h2 className="text-2xl font-bold mb-2">Component Settings</h2>
+          <p className="text-blue-100">Configure global component behavior and appearance</p>
+        </div>
+
+        {components.map(comp => (
+          <div key={comp.id} className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{comp.label}</h3>
+                <p className="text-sm text-slate-500">{comp.description}</p>
+              </div>
+              <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition">
+                Configure
+              </button>
+            </div>
+            <div className="text-sm text-slate-500">
+              Component ID: <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{comp.id}</code>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderLocationTab = () => (
+    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <BsGeoAlt className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Office Location</h2>
+          <p className="text-sm text-slate-500">Configure office location and attendance radius</p>
+        </div>
+      </div>
+      
+      <form onSubmit={handleUpdateLocation} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Office Name</label>
+          <input
+            type="text"
+            value={officeLocation.name}
+            onChange={(e) => setOfficeLocation({ ...officeLocation, name: e.target.value })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
+            placeholder="e.g., Main Office"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Latitude</label>
+            <input
+              type="number"
+              step="0.00001"
+              value={officeLocation.latitude}
+              onChange={(e) => setOfficeLocation({ ...officeLocation, latitude: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
+              placeholder="-1.19293"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Longitude</label>
+            <input
+              type="number"
+              step="0.00001"
+              value={officeLocation.longitude}
+              onChange={(e) => setOfficeLocation({ ...officeLocation, longitude: parseFloat(e.target.value) })}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
+              placeholder="36.93057"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowed Radius (meters)</label>
+          <input
+            type="number"
+            value={officeLocation.radius_meters}
+            onChange={(e) => setOfficeLocation({ ...officeLocation, radius_meters: parseInt(e.target.value) })}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
+            placeholder="1000"
+          />
+        </div>
+
+        <button type="submit" disabled={updating} className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50">
+          {updating ? 'Updating...' : 'Update Location Settings'}
+        </button>
+      </form>
+    </div>
+  );
+
+  const renderPermissionsTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <BsShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Employee Permissions</h2>
+            <p className="text-sm text-slate-500">Manage employee attendance recording permissions</p>
+          </div>
+        </div>
+
+        <DataTable
+          columns={[
+            { key: 'name', label: 'Name', sortable: true },
+            { key: 'type', label: 'Type', sortable: true },
+            { key: 'department', label: 'Department', sortable: true },
+            { key: 'permission', label: 'Can Self-Record', sortable: true, render: (val) => (
+              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${val ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {val ? '✓ Yes' : '✗ No'}
+              </span>
+            )},
+          ]}
+          data={employees.map(emp => ({
+            id: emp.id,
+            name: `${emp.first_name} ${emp.last_name}`,
+            type: emp.employment_type,
+            department: emp.department,
+            permission: emp.can_self_record_attendance,
+          }))}
+        />
+      </div>
+    </div>
+  );
+
+  const renderAuditTab = () => (
+    <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <BsClockHistory className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Audit Log</h2>
+          <p className="text-sm text-slate-500">History of all user actions and system events</p>
+        </div>
+      </div>
+
+      <DataTable
+        columns={[
+          { key: 'level', label: 'Level', sortable: true },
+          { key: 'message', label: 'Message', sortable: true },
+          { key: 'module', label: 'Module', sortable: true },
+          { key: 'action', label: 'Action', sortable: true },
+          { key: 'changes', label: 'Changes', sortable: true },
+          { key: 'username', label: 'User', sortable: true },
+          { key: 'created_at', label: 'Timestamp', sortable: true },
+        ]}
+        data={auditLogs.map(log => {
+          const metadata = log.metadata || {};
+          const body = metadata.body || {};
+          
+          // Show old/new values if available, otherwise show body changes
+          let changes = '-';
+          if (metadata.old_value !== undefined || metadata.new_value !== undefined) {
+            changes = `Before: ${JSON.stringify(metadata.old_value)} → After: ${JSON.stringify(metadata.new_value)}`;
+          } else {
+            changes = Object.entries(body)
+              .filter(([key]) => key !== 'password' && key !== 'confirmPassword')
+              .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+              .join(', ') || '-';
+          }
+          
+          return {
+            id: log.id,
+            level: (
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                log.level === 'error' ? 'bg-red-100 text-red-700' :
+                log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                log.level === 'info' ? 'bg-blue-100 text-blue-700' :
+                'bg-slate-100 text-slate-700'
+              }`}>
+                {log.level}
+              </span>
+            ),
+            message: log.message,
+            module: log.module || '-',
+            action: log.action || '-',
+            changes: (
+              <div className="max-w-md truncate text-xs" title={changes}>
+                {changes}
+              </div>
+            ),
+            username: log.username || log.email || 'System',
+            created_at: new Date(log.created_at).toLocaleString(),
+          };
+        })}
+      />
+    </div>
+  );
+
+  const renderSystemLogsTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <BsDatabase className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">System Logs</h2>
+            <p className="text-sm text-slate-500">Application-wide event logging and monitoring</p>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {systemLogStats.map(stat => (
+            <div key={stat.level} className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+              <div className="text-2xl font-bold text-slate-900 dark:text-white">{stat.count}</div>
+              <div className="text-sm text-slate-500 capitalize">{stat.level}</div>
+            </div>
+          ))}
+        </div>
+
+        <DataTable
+          columns={[
+            { key: 'level', label: 'Level', sortable: true },
+            { key: 'message', label: 'Message', sortable: true },
+            { key: 'module', label: 'Module', sortable: true },
+            { key: 'action', label: 'Action', sortable: true },
+            { key: 'username', label: 'User', sortable: true },
+            { key: 'ip_address', label: 'IP Address', sortable: true },
+            { key: 'created_at', label: 'Timestamp', sortable: true },
+          ]}
+          data={systemLogs.map(log => ({
+            id: log.id,
+            level: (
+              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                log.level === 'error' ? 'bg-red-100 text-red-700' :
+                log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                log.level === 'info' ? 'bg-blue-100 text-blue-700' :
+                'bg-slate-100 text-slate-700'
+              }`}>
+                {log.level}
+              </span>
+            ),
+            message: log.message,
+            module: log.module || '-',
+            action: log.action || '-',
+            username: log.username || log.email || 'System',
+            ip_address: log.ip_address || '-',
+            created_at: new Date(log.created_at).toLocaleString(),
+          }))}
+        />
+      </div>
+    </div>
+  );
+
+  const renderFaviconTab = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+            <BsImage className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Favicon Management</h2>
+            <p className="text-sm text-slate-500">Manage your application's favicon</p>
+          </div>
+        </div>
+
+        {/* Current Active Favicon */}
+        <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Current Active Favicon</h3>
+          {activeFavicon && (
+            <div className="flex items-center gap-4">
+              <img 
+                src={activeFavicon.type === 'default' ? activeFavicon.path : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${activeFavicon.path}`}
+                alt="Current Favicon"
+                className="w-16 h-16 object-contain border border-slate-300 dark:border-slate-600 rounded"
+              />
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {activeFavicon.type === 'default' ? 'Default Favicon' : 'Custom Favicon'}
+                </p>
+                <p className="text-xs text-slate-500">{activeFavicon.filename}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Default Favicons */}
+        <div className="mb-6">
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Default Favicons</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
+                 onClick={() => handleSetDefaultFavicon('1')}>
+              <img src="/favicon-1.png" alt="Favicon 1" className="w-12 h-12 mx-auto mb-2" />
+              <p className="text-sm text-center text-slate-600 dark:text-slate-400">Favicon 1</p>
+              {activeFavicon?.filename === 'favicon-1.png' && (
+                <p className="text-xs text-center text-green-600 mt-1">Active</p>
+              )}
+            </div>
+            <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
+                 onClick={() => handleSetDefaultFavicon('2')}>
+              <img src="/favicon-2.png" alt="Favicon 2" className="w-12 h-12 mx-auto mb-2" />
+              <p className="text-sm text-center text-slate-600 dark:text-slate-400">Favicon 2</p>
+              {activeFavicon?.filename === 'favicon-2.png' && (
+                <p className="text-xs text-center text-green-600 mt-1">Active</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Upload Custom Favicon */}
+        <div className="mb-6">
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Upload Custom Favicon</h3>
+          <div className="p-4 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+            <input
+              type="file"
+              accept=".png,.ico"
+              onChange={handleUploadFavicon}
+              disabled={uploadingFavicon}
+              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+            />
+            <p className="text-xs text-slate-500 mt-2">Supported formats: PNG, ICO. Maximum size: 1MB</p>
+          </div>
+        </div>
+
+        {/* Custom Favicons List */}
+        {favicons.filter(f => f.type === 'custom').length > 0 && (
+          <div>
+            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Custom Favicons</h3>
+            <div className="space-y-3">
+              {favicons.filter(f => f.type === 'custom').map(favicon => (
+                <div key={favicon.id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <img 
+                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${favicon.path}`}
+                      alt={favicon.originalName}
+                      className="w-12 h-12 object-contain border border-slate-300 dark:border-slate-600 rounded"
+                    />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{favicon.originalName}</p>
+                      <p className="text-xs text-slate-500">Uploaded: {new Date(favicon.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {favicon.isActive ? (
+                      <span className="text-xs text-green-600 font-medium">Active</span>
+                    ) : (
+                      <button
+                        onClick={() => handleSetActiveFavicon(favicon.id)}
+                        disabled={updating}
+                        className="px-3 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition disabled:opacity-50"
+                      >
+                        Set Active
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteFavicon(favicon.id)}
+                      disabled={updating || favicon.isActive}
+                      className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const renderSystemSettingsContent = (settingKey) => {
-    const setting = systemSettings[settingKey]
+    const setting = systemSettings[settingKey];
     if (!setting) {
-      return <p className="text-slate-500 dark:text-slate-400">No settings found</p>
+      return <p className="text-slate-500 dark:text-slate-400">No settings found</p>;
     }
 
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-4 p-4 border border-slate-200 dark:border-slate-800 rounded-lg">
+        <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
           <div className="flex-1">
             <p className="font-medium text-slate-900 dark:text-slate-100">{setting.setting_key}</p>
             <p className="text-sm text-slate-500">{setting.description}</p>
@@ -218,15 +810,16 @@ const AdminSettings = () => {
               {Array.isArray(setting.parsedValue) ? setting.parsedValue.join(', ') : setting.parsedValue}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => setEditingSetting({ ...setting, setting_value: setting.setting_value })}>
-              Edit
-            </Button>
-          </div>
+          <button
+            onClick={() => setEditingSetting({ ...setting, setting_value: setting.setting_value })}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+          >
+            Edit
+          </button>
         </div>
 
         {editingSetting && editingSetting.setting_key === settingKey && (
-          <div className="p-4 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-900">
+          <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900">
             <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4">Edit Setting: {editingSetting.setting_key}</h3>
             <form onSubmit={handleUpdateSetting} className="space-y-4">
               <div>
@@ -235,15 +828,16 @@ const AdminSettings = () => {
                   <textarea
                     value={editingSetting.setting_value}
                     onChange={(e) => setEditingSetting({ ...editingSetting, setting_value: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-1"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                     rows="4"
                     placeholder='["value1", "value2", "value3"]'
                   />
                 ) : (
-                  <Input
+                  <input
+                    type="text"
                     value={editingSetting.setting_value}
                     onChange={(e) => setEditingSetting({ ...editingSetting, setting_value: e.target.value })}
-                    className="mt-1"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                   />
                 )}
               </div>
@@ -253,542 +847,50 @@ const AdminSettings = () => {
                   type="text"
                   value={editingSetting.reason || ''}
                   onChange={(e) => setEditingSetting({ ...editingSetting, reason: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary mt-1"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                   placeholder="Why are you changing this value?"
                 />
               </div>
               <div className="flex gap-2">
-                <Button type="submit" disabled={updating} variant="primary">
+                <button type="submit" disabled={updating} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50">
                   {updating ? 'Saving...' : 'Save Changes'}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setEditingSetting(null)}>
+                </button>
+                <button type="button" onClick={() => setEditingSetting(null)} className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                   Cancel
-                </Button>
+                </button>
               </div>
             </form>
           </div>
         )}
       </div>
-    )
-  }
-
-  useEffect(() => {
-    if (activeSection === 'audit') {
-      fetchAuditLogs()
-    }
-  }, [activeSection])
+    );
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
-    )
+    );
   }
 
   return (
     <DashboardLayout>
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Sidebar Navigation - WhatsApp/Spotify style */}
-        <div className="w-80 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-y-auto">
-          <div className="p-4">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Settings</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Manage your system preferences</p>
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+            <BsGear className="w-6 h-6 text-orange-600 dark:text-orange-400" />
           </div>
-          
-          <nav className="px-2">
-            {/* Profile Section */}
-            <div className="mb-6">
-              <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Profile</p>
-              <button
-                onClick={() => setActiveSection('profile')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'profile'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsPeople className="w-5 h-5" />
-                <span className="font-medium">Account</span>
-              </button>
-            </div>
-
-            {/* Location Section */}
-            <div className="mb-6">
-              <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Location</p>
-              <button
-                onClick={() => setActiveSection('location')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'location'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsGeoAlt className="w-5 h-5" />
-                <span className="font-medium">Office Location</span>
-              </button>
-            </div>
-
-            {/* Permissions Section */}
-            <div className="mb-6">
-              <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Permissions</p>
-              <button
-                onClick={() => setActiveSection('permissions')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'permissions'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsShieldCheck className="w-5 h-5" />
-                <span className="font-medium">Employee Permissions</span>
-              </button>
-            </div>
-
-            {/* System Section */}
-            <div className="mb-6">
-              <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">System</p>
-              <button
-                onClick={() => setActiveSection('departments')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'departments'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsBuilding className="w-5 h-5" />
-                <span className="font-medium">Departments</span>
-              </button>
-              <button
-                onClick={() => setActiveSection('employment')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'employment'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsBriefcase className="w-5 h-5" />
-                <span className="font-medium">Employment Types</span>
-              </button>
-              <button
-                onClick={() => setActiveSection('leave')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'leave'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsFileText className="w-5 h-5" />
-                <span className="font-medium">Leave Types</span>
-              </button>
-              <button
-                onClick={() => setActiveSection('dashboard-colors')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'dashboard-colors'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsPalette className="w-5 h-5" />
-                <span className="font-medium">Dashboard Colors</span>
-              </button>
-            </div>
-
-            {/* Audit Section */}
-            <div className="mb-6">
-              <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">History</p>
-              <button
-                onClick={() => setActiveSection('audit')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  activeSection === 'audit'
-                    ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <BsClockHistory className="w-5 h-5" />
-                <span className="font-medium">Audit Log</span>
-              </button>
-            </div>
-          </nav>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
+            <p className="text-sm text-slate-500">Manage system configuration and preferences</p>
+          </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-8">
-
-          {activeSection === 'profile' && (
-            <Card>
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white text-2xl font-bold">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {user?.firstName} {user?.lastName}
-                  </h2>
-                  <p className="text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Email</p>
-                  <p className="text-slate-900 dark:text-white font-medium">{user?.email}</p>
-                </div>
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Role</p>
-                  <p className="text-slate-900 dark:text-white font-medium capitalize">{user?.role}</p>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {activeSection === 'location' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <BsGeoAlt className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Office Location</h2>
-                  <p className="text-sm text-slate-500">Configure office location and attendance radius</p>
-                </div>
-              </div>
-          
-          <form onSubmit={handleUpdateLocation} className="space-y-4">
-            <Input
-              label="Office Name"
-              id="office-name"
-              type="text"
-              value={officeLocation.name}
-              onChange={(e) =>
-                setOfficeLocation({ ...officeLocation, name: e.target.value })
-              }
-              placeholder="e.g., Main Office"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Latitude"
-                id="latitude"
-                type="number"
-                step="0.00001"
-                value={officeLocation.latitude}
-                onChange={(e) =>
-                  setOfficeLocation({
-                    ...officeLocation,
-                    latitude: parseFloat(e.target.value),
-                  })
-                }
-                placeholder="-1.19293"
-              />
-
-              <Input
-                label="Longitude"
-                id="longitude"
-                type="number"
-                step="0.00001"
-                value={officeLocation.longitude}
-                onChange={(e) =>
-                  setOfficeLocation({
-                    ...officeLocation,
-                    longitude: parseFloat(e.target.value),
-                  })
-                }
-                placeholder="36.93057"
-              />
-            </div>
-
-            <Input
-              label="Allowed Radius (meters)"
-              id="radius"
-              type="number"
-              value={officeLocation.radius_meters}
-              onChange={(e) =>
-                setOfficeLocation({
-                  ...officeLocation,
-                  radius_meters: parseInt(e.target.value),
-                })
-              }
-              placeholder="1000"
-            />
-
-            <Button type="submit" disabled={updating} className="w-full" variant="primary">
-              {updating ? 'Updating...' : 'Update Location Settings'}
-            </Button>
-          </form>
-        </Card>
-      )}
-
-          {activeSection === 'permissions' && (
-            <>
-              <Card className="mb-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <BsShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Employee Permissions</h2>
-                    <p className="text-sm text-slate-500">Manage employee attendance recording permissions</p>
-                  </div>
-                </div>
-              <div className="space-y-4">
-                <div className="flex flex-col gap-1">
-                  <label htmlFor="employee-select" className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Employee</label>
-                  <select
-                    id="employee-select"
-                    value={selectedEmployee?.id || ''}
-                    onChange={(e) => {
-                      const emp = employees.find(
-                        (e) => e.id === parseInt(e.currentTarget.value)
-                      )
-                      if (emp) handleEmployeeSelect(emp)
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="">-- Select an employee --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.first_name} {emp.last_name} ({emp.employment_type})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedEmployee && (
-                  <>
-                    <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg space-y-3 border border-slate-200 dark:border-slate-800">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">Name</p>
-                        <p className="text-slate-900 dark:text-slate-100">
-                          {selectedEmployee.first_name} {selectedEmployee.last_name}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">Employment Type</p>
-                        <p className="text-slate-900 dark:text-slate-100">{selectedEmployee.employment_type}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-slate-500">Department</p>
-                        <p className="text-slate-900 dark:text-slate-100">{selectedEmployee.department}</p>
-                      </div>
-                    </div>
-
-                    <form onSubmit={handleUpdateEmployeePermission} className="space-y-4">
-                      <div className="flex items-center space-x-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-lg">
-                        <input
-                          type="checkbox"
-                          id="can-self-record"
-                          checked={canSelfRecord}
-                          onChange={(e) => setCanSelfRecord(e.target.checked)}
-                          className="w-4 h-4 cursor-pointer accent-primary"
-                        />
-                        <label htmlFor="can-self-record" className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-300">
-                          Allow self-recording of attendance
-                        </label>
-                      </div>
-
-                      {!canSelfRecord && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/30 text-yellow-800 dark:text-yellow-200 p-3 rounded-lg text-sm">
-                          This employee will not be able to manually record their own attendance and
-                          must have attendance recorded by a manager.
-                        </div>
-                      )}
-
-                      <Button type="submit" disabled={updating} className="w-full" variant="primary">
-                        {updating ? 'Updating...' : 'Update Permission'}
-                      </Button>
-                    </form>
-                  </>
-                )}
-              </div>
-            </Card>
-
-          {/* Employees Table */}
-          <Card>
-            <div className="mb-4 border-b border-slate-200 dark:border-slate-700 pb-4">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">All Employees Attendance Status</h2>
-              <p className="text-sm text-slate-500">Overview of all employees and their attendance recording permissions</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium">Name</th>
-                    <th className="text-left px-4 py-3 font-medium">Type</th>
-                    <th className="text-left px-4 py-3 font-medium">Department</th>
-                    <th className="text-center px-4 py-3 font-medium">Can Self-Record</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.length > 0 ? (
-                    employees.map((emp) => (
-                      <tr
-                        key={emp.id}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                        onClick={() => handleEmployeeSelect(emp)}
-                      >
-                        <td className="px-4 py-3 text-slate-900 dark:text-slate-100">
-                          {emp.first_name} {emp.last_name}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{emp.employment_type}</td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{emp.department}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span
-                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                              emp.can_self_record_attendance
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            }`}
-                          >
-                            {emp.can_self_record_attendance ? '✓ Yes' : '✗ No'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="4" className="px-4 py-8 text-center text-slate-500">
-                        No employees found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
-      )}
-
-          {activeSection === 'departments' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <BsBuilding className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Departments</h2>
-                  <p className="text-sm text-slate-500">Manage organization departments</p>
-                </div>
-              </div>
-              {renderSystemSettingsContent('DEPARTMENTS')}
-            </Card>
-          )}
-
-          {activeSection === 'employment' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                  <BsBriefcase className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Employment Types</h2>
-                  <p className="text-sm text-slate-500">Manage employment type categories</p>
-                </div>
-              </div>
-              {renderSystemSettingsContent('EMPLOYMENT_TYPES')}
-            </Card>
-          )}
-
-          {activeSection === 'leave' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                  <BsFileText className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Leave Types</h2>
-                  <p className="text-sm text-slate-500">Manage leave type categories</p>
-                </div>
-              </div>
-              {renderSystemSettingsContent('LEAVE_TYPES')}
-            </Card>
-          )}
-
-          {activeSection === 'dashboard-colors' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
-                  <BsPalette className="w-6 h-6 text-pink-600 dark:text-pink-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard Colors</h2>
-                  <p className="text-sm text-slate-500">Customize dashboard card colors</p>
-                </div>
-              </div>
-              <ColorPalettePicker
-                selectedColor={selectedColor}
-                onColorSelect={setSelectedColor}
-                title="Select Dashboard Card Colors"
-              />
-              {selectedColor && (
-                <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Selected Color:</p>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg ${selectedColor.bg}`} />
-                    <span className="font-medium text-slate-900 dark:text-white">{selectedColor.name}</span>
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
-
-          {activeSection === 'audit' && (
-            <Card>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <BsClockHistory className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Audit Log</h2>
-                  <p className="text-sm text-slate-500">History of all setting changes</p>
-                </div>
-              </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium">Setting Key</th>
-                  <th className="text-left px-4 py-3 font-medium">Category</th>
-                  <th className="text-left px-4 py-3 font-medium">Old Value</th>
-                  <th className="text-left px-4 py-3 font-medium">New Value</th>
-                  <th className="text-left px-4 py-3 font-medium">Changed By</th>
-                  <th className="text-left px-4 py-3 font-medium">Changed At</th>
-                  <th className="text-left px-4 py-3 font-medium">Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.length > 0 ? (
-                  auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                      <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{log.setting_key}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{log.category}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">{log.old_value || '-'}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300 max-w-xs truncate">{log.new_value || '-'}</td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {log.first_name} {log.last_name}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                        {new Date(log.changed_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{log.reason || '-'}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-slate-500">
-                      No audit logs found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-        </div>
+        <TabNavigation tabs={tabs} persistKey="admin-settings" />
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default AdminSettings
+export default AdminSettings;

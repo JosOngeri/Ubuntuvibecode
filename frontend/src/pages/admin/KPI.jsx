@@ -2,6 +2,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getKPIs, createKPI, updateKPI, deleteKPI } from '../../services/kpi';
 import api, { employeeAPI } from '../../services/api';
+import PageInfoPanel from '../../components/common/PageInfoPanel';
+import { KpiEmptyState } from '../../components/common/EmptyState';
 import Card from '../../components/common/Card'
 import DashboardLayout from '../../components/DashboardLayout'
 import Button from '../../components/common/Button'
@@ -11,7 +13,7 @@ import Modal from '../../components/common/Modal'
 import { toast } from 'react-toastify'
 import { downloadPdfReport } from '../../utils/reportExport'
 
-export default function KPI() {
+export default function KPI({ standalone = true }) {
   const navigate = useNavigate();
   const [kpis, setKpis] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'definitions', 'reports'
@@ -37,6 +39,57 @@ export default function KPI() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Sorting
+  const [sortField, setSortField] = useState('');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortData = (data, field, direction) => {
+    if (!field) return data;
+    const dir = direction === 'asc' ? 1 : -1;
+    return [...data].sort((a, b) => {
+      let aVal, bVal;
+      switch (field) {
+        case 'employee':
+          aVal = getEmployeeName(a.employee_id || a.employeeId || a.employee || a.user_id);
+          bVal = getEmployeeName(b.employee_id || b.employeeId || b.employee || b.user_id);
+          break;
+        case 'title':
+          aVal = a.definition_title || a.title || '';
+          bVal = b.definition_title || b.title || '';
+          break;
+        case 'score':
+          aVal = Number(a.final_score ?? 0);
+          bVal = Number(b.final_score ?? 0);
+          break;
+        case 'name':
+          aVal = a.name || a.title || '';
+          bVal = b.name || b.title || '';
+          break;
+        case 'target':
+          aVal = a.target || a.maxScore || a.max_score || 0;
+          bVal = b.target || b.maxScore || b.max_score || 0;
+          break;
+        default:
+          aVal = a[field] ?? '';
+          bVal = b[field] ?? '';
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return -1 * dir;
+      if (aVal > bVal) return 1 * dir;
+      return 0;
+    });
+  };
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -45,8 +98,8 @@ export default function KPI() {
     setLoading(true);
     try {
       const [defsRes, empRes, globalRes] = await Promise.allSettled([
-        getKPIs(),
-        employeeAPI.getAll(),
+        getKPIs().catch(() => ({ data: [] })),
+        employeeAPI.getAll().catch(() => ({ data: [] })),
         api.get('/api/kpis/all').catch(() => ({ data: [] }))
       ]);
 
@@ -205,9 +258,9 @@ export default function KPI() {
   };
 
   const defColumns = [
-    { key: 'name', label: 'KPI Name / Title', render: (_, row) => row.name || row.title },
-    { key: 'description', label: 'Description' },
-    { key: 'target', label: 'Target Metric', render: (_, row) => row.target || row.maxScore || row.max_score },
+    { key: 'name', label: 'KPI Name / Title', sortable: true, render: (_, row) => row.name || row.title },
+    { key: 'description', label: 'Description', sortable: true },
+    { key: 'target', label: 'Target Metric', sortable: true, render: (_, row) => row.target || row.maxScore || row.max_score },
     { key: 'actions', label: 'Actions', render: (_, row) => (
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => handleEdit(row)}>Edit</Button>
@@ -220,6 +273,7 @@ export default function KPI() {
     {
       key: 'employee',
       label: 'Employee',
+      sortable: true,
       render: (_, row) => {
         const empId = row.employee_id || row.employeeId || row.employee || row.user_id;
         const empName = getEmployeeName(empId);
@@ -236,6 +290,7 @@ export default function KPI() {
     {
       key: 'title',
       label: 'Goal Title',
+      sortable: true,
       render: (_, row) => {
         const title = row.definition_title || row.title || 'N/A';
         return (
@@ -251,6 +306,7 @@ export default function KPI() {
     {
       key: 'period',
       label: 'Quarter',
+      sortable: true,
       render: (_, row) => {
         const period = row.period;
         return (
@@ -266,9 +322,9 @@ export default function KPI() {
         );
       }
     },
-    { key: 'target_value', label: 'Target', render: (_, row) => row.target_value },
-    { key: 'achieved_value', label: 'Achieved', render: (_, row) => row.achieved_value ?? '-' },
-    { key: 'score', label: 'Score', render: (_, row) => {
+    { key: 'target_value', label: 'Target', sortable: true, render: (_, row) => row.target_value },
+    { key: 'achieved_value', label: 'Achieved', sortable: true, render: (_, row) => row.achieved_value ?? '-' },
+    { key: 'score', label: 'Score', sortable: true, render: (_, row) => {
         const score = Number(row.final_score ?? 0);
         return (
            <div className="flex items-center gap-2 min-w-[100px] cursor-pointer" onClick={() => toast.info(`Score breakdown: ${score}%`)}>
@@ -282,6 +338,7 @@ export default function KPI() {
     {
       key: 'status',
       label: 'Status',
+      sortable: true,
       render: (_, row) => {
         const status = row.status || 'Pending';
         return (
@@ -313,14 +370,14 @@ export default function KPI() {
   };
   const maxDist = Math.max(...Object.values(scoreDistribution), 1);
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Global KPIs & Performance</h1>
         <p className="page-subtitle">Track company-wide goals, manage KPI definitions, and view performance reports.</p>
       </div>
 
-      <div className="flex space-x-4 mb-6 border-b border-slate-200 dark:border-slate-700">
+      <div className="flex space-x-4 mb-6 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
         <button
           className={`pb-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'all' ? 'border-primary-600 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
           onClick={() => setActiveTab('all')}
@@ -371,11 +428,9 @@ export default function KPI() {
             </Button>
           </div>
           {employeeKpis.length === 0 && !loading ? (
-            <div className="text-center py-8 text-slate-500 border border-dashed border-slate-300 rounded-lg">
-              No global KPI tracking endpoints active. Assignments are currently visible inside the Manager view.
-            </div>
+            <KpiEmptyState description="No KPIs assigned yet. Use '+ Assign KPI' or 'Bulk Assign' to get started." />
           ) : (
-            <Table columns={globalKpiColumns} data={filteredEmployeeKpis} loading={loading} />
+            <Table columns={globalKpiColumns} data={sortData(filteredEmployeeKpis, sortField, sortDirection)} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
           )}
         </Card>
       )}
@@ -388,7 +443,7 @@ export default function KPI() {
               + Create New Definition
             </Button>
           </div>
-          <Table columns={defColumns} data={kpiDefs} loading={loading} />
+          <Table columns={defColumns} data={sortData(kpiDefs, sortField, sortDirection)} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
         </Card>
       )}
 
@@ -569,6 +624,43 @@ export default function KPI() {
           </div>
         </form>
       </Modal>
-    </DashboardLayout>
+      <PageInfoPanel
+        title="KPI Management"
+        description="Define, assign, and assess employee key performance indicators"
+        steps={[
+          'Go to KPI Definitions to create a new KPI (e.g. "Monthly Sales Target" with max score 100).',
+          'Use Assign KPI to link a KPI definition to a specific employee for a period (Q1, Q2, etc.).',
+          'Use Bulk Assign to assign the same KPI to multiple employees at once.',
+          'At period end, go to KPI Assessment page to record each employee\'s achieved score.',
+          'Achieved scores that meet the bonus threshold will automatically create a pending bonus for payroll.',
+        ]}
+        faqs={[
+          { q: 'Why is no bonus generated after assessment?', a: 'The achieved score must meet or exceed the bonus threshold set on the KPI definition.' },
+          { q: 'Can an employee have multiple KPIs in one period?', a: 'Yes, assign as many KPI definitions as needed per employee per period.' },
+          { q: 'Where do KPI bonuses appear in payroll?', a: 'They appear in the gross pay section when payroll is generated for that employee and period.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const [kpiRes, empRes] = await Promise.allSettled([
+              api.get('/api/kpis/all').catch(() => ({ data: [] })),
+              api.get('/api/employees').catch(() => ({ data: [] })),
+            ]);
+            const allKpis = kpiRes.status === 'fulfilled' ? (kpiRes.value.data || []) : [];
+            const emps = empRes.status === 'fulfilled' ? (empRes.value.data || []) : [];
+            const currentPeriod = `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`;
+            const assignedIds = new Set(allKpis.map(k => String(k.employee_id)));
+            const unassigned = emps.filter(e => !assignedIds.has(String(e.id || e._id)));
+            if (unassigned.length > 0) items.push({ level: 'warn', message: `${unassigned.length} employee${unassigned.length > 1 ? 's have' : ' has'} no KPI assigned`, detail: `Current period: ${currentPeriod}. Use Assign KPI or Bulk Assign.` });
+            const overdue = allKpis.filter(k => k.status === 'pending' && k.period && k.period < currentPeriod);
+            if (overdue.length > 0) items.push({ level: 'error', message: `${overdue.length} KPI assessment${overdue.length > 1 ? 's are' : ' is'} overdue`, detail: 'Go to KPI Assessment to record scores for past periods.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'All employees have KPIs assigned and no overdue assessments.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve KPI status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
+    </div>
   );
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content;
 }

@@ -1,0 +1,36 @@
+Step,Step Title,Field,Required,Validation Rules
+1,Personal Details,Surname,Yes,"Letters only, min 2 characters"
+1,Personal Details,First Name,Yes,"Letters only, min 2 characters"
+1,Personal Details,Other Names,No (validated if filled),"Letters only"
+1,Personal Details,Date of Birth,Yes,
+1,Personal Details,Gender,Yes,
+1,Personal Details,Marital Status,Yes,
+1,Personal Details,Nationality,Yes,
+1,Personal Details,National ID,Yes,
+1,Personal Details,Phone,Yes,"Format: +254XXXXXXXXX or 07XXXXXXXXX"
+1,Personal Details,Email,Yes,Valid email format
+2,Education,Education Entry,Yes,"At least one entry required"
+2,Education,Institution,Yes (per entry),
+2,Education,Program,Yes (per entry),
+2,Education,Education Level,Yes (per entry),
+2,Education,Start Year,Yes (per entry),4-digit year
+2,Education,End Year,Yes (per entry),"4-digit year, must be >= start year"
+3,Employment History,Employment Entry,Yes,"At least one entry required"
+3,Employment History,Employer,Yes (per entry),
+3,Employment History,Job Title,Yes (per entry),
+3,Employment History,Start Date,Yes (per entry),
+3,Employment History,End Date,Yes (unless current job),"Must be >= start date"
+4,Certifications & Licenses,Certification Name,No,Optional
+4,Certifications & Licenses,Issuing Organization,Yes (if name filled),
+4,Certifications & Licenses,Issuing Date,Yes (if name filled),
+4,Certifications & Licenses,Expiry Date,Yes (if name filled and no-expiry unchecked),"Must be >= issuing date"
+5,Attachments,CV,Yes,File upload required
+5,Attachments,Cover Letter,No,Optional file upload
+5,Attachments,Other Documents,No,Optional file uploads
+6,Disclosures,Years of Experience,Yes,"Number between 0 and 50"
+6,Disclosures,Availability (weeks notice),Yes,"Number between 0 and 52"
+6,Disclosures,Right to Work,Yes,
+6,Disclosures,Salary Expectation (KES),Yes,"Number between 1 and 10,000,000"
+7,Declaration,Declaration Confirmed,Yes,Checkbox must be checked
+7,Declaration,Privacy Policy Confirmed,Yes,Checkbox must be checked
+7,Declaration,Signature,Yes,"Must exactly match full name (Surname FirstName OtherNames)"

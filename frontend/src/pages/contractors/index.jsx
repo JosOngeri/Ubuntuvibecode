@@ -8,7 +8,7 @@ import api from '../../services/api'
 import { toast } from 'react-toastify'
 import { BsFileText, BsCheckCircle, BsXCircle, BsClock, BsCash, BsPerson, BsFlag } from 'react-icons/bs'
 
-export default function ContractorsPage() {
+export default function ContractorsPage({ standalone = true }) {
   const navigate = useNavigate()
   const [tab, setTab] = useState('quotes')
   const [quotes, setQuotes] = useState([])
@@ -26,8 +26,8 @@ export default function ContractorsPage() {
     setLoading(true)
     try {
       const [qRes, mRes] = await Promise.all([
-        api.get('/contractor-lifecycle/quotes'),
-        api.get('/contractor-lifecycle/milestones'),
+        api.get('/contractor-lifecycle/quotes').catch(() => ({ data: [] })),
+        api.get('/contractor-lifecycle/milestones').catch(() => ({ data: [] })),
       ])
       setQuotes(qRes.data || [])
       setMilestones(mRes.data || [])
@@ -84,8 +84,8 @@ export default function ContractorsPage() {
   const activeMs = milestones.filter(m=>m.status==='in_progress').length
   const pendingPayment = milestones.filter(m=>m.status==='verified').length
   
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Contractor Lifecycle</h1>
         <p className="page-subtitle">Manage quotes, milestones, and payments for contractors.</p>
@@ -208,6 +208,8 @@ export default function ContractorsPage() {
           </div>
         </Modal>
       )}
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

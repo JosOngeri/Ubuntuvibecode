@@ -90,8 +90,8 @@ const validateNoBackdatedAttendance = async (timestamp, employeeId) => {
     
     return { valid: true };
   } catch (err) {
-    console.error('Error validating backdated attendance:', err);
-    return { valid: false, error: 'Validation failed' };
+    console.error('Error validating backdated attendance:', err.message, err.stack);
+    return { valid: false, error: 'Backdate validation error: ' + (err.message || 'unknown') };
   }
 };
 

@@ -14,7 +14,7 @@ import { toast } from 'react-toastify'
 import { downloadPdfReport } from '../../utils/reportExport'
 // import './Employees.css'
 
-const Employees = () => {
+const Employees = ({ standalone = true }) => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { getDepartments, getEmploymentTypes, refreshSettings } = useSettings()
@@ -150,15 +150,15 @@ const Employees = () => {
       fetchEmployees()
     } catch (error) {
       const errors = error?.response?.data?.errors || []
-      const msg = error?.response?.data?.msg || (editingEmployee ? 'Failed to update employee' : 'Failed to add employee')
+      const msg = error?.response?.data?.msg || error?.response?.data?.error || error?.message || (editingEmployee ? 'Failed to update employee' : 'Failed to add employee')
 
       if (errors.length > 0) {
-        // Display each validation error in a user-friendly way
         errors.forEach(err => {
           toast.error(err)
         })
       } else {
         toast.error(msg)
+        console.error('Save employee error:', error?.response?.data || error)
       }
     }
   }
@@ -207,8 +207,22 @@ const Employees = () => {
 
     return matchesSearch && matchesDepartment && matchesEmploymentType && matchesRole
   }).sort((a, b) => {
-    const aVal = a[sortField] || ''
-    const bVal = b[sortField] || ''
+    let aVal, bVal
+
+    // Handle special sort fields
+    if (sortField === 'name') {
+      aVal = `${a.firstName || ''} ${a.lastName || ''}`.trim()
+      bVal = `${b.firstName || ''} ${b.lastName || ''}`.trim()
+    } else if (sortField === 'role') {
+      const aUser = getUserForEmployee(a)
+      const bUser = getUserForEmployee(b)
+      aVal = aUser?.role || ''
+      bVal = bUser?.role || ''
+    } else {
+      aVal = a[sortField] || ''
+      bVal = b[sortField] || ''
+    }
+
     const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' })
     return sortDirection === 'asc' ? comparison : -comparison
   })
@@ -236,6 +250,7 @@ const Employees = () => {
   }
 
   const columns = [
+    { key: 'id', label: 'ID', sortable: true },
     { 
       key: 'name', 
       label: 'Name', 
@@ -298,8 +313,8 @@ const Employees = () => {
     },
   ]
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header">
         <h1 className="page-title">Employees</h1>
         <p className="page-subtitle">Manage all employees in the system</p>
@@ -488,8 +503,10 @@ const Employees = () => {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }
 
 export default Employees

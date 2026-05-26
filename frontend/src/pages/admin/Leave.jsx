@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { leaveAPI, employeeAPI } from '../../services/api'
+import api from '../../services/api'
+import PageInfoPanel from '../../components/common/PageInfoPanel'
+import { LeaveEmptyState } from '../../components/common/EmptyState'
 import Card from '../../components/common/Card'
 import DashboardLayout from '../../components/DashboardLayout'
 import Button from '../../components/common/Button'
@@ -9,7 +12,7 @@ import Table from '../../components/common/Table'
 import { toast } from 'react-toastify'
 import { downloadPdfReport } from '../../utils/reportExport'
 
-const AdminLeave = () => {
+const AdminLeave = ({ standalone = true }) => {
   const navigate = useNavigate()
   const [allLeaves, setAllLeaves] = useState([])
   const [employees, setEmployees] = useState([])
@@ -20,6 +23,8 @@ const AdminLeave = () => {
   const [activeTab, setActiveTab] = useState('approvals') // 'approvals', 'all', 'reports'
   const [statusFilter, setStatusFilter] = useState('all')
   const [searchEmployee, setSearchEmployee] = useState('')
+  const [sortField, setSortField] = useState('startDate')
+  const [sortDirection, setSortDirection] = useState('asc')
 
   useEffect(() => {
     fetchInitialData()
@@ -78,19 +83,47 @@ const AdminLeave = () => {
   }
 
   const filteredAllLeaves = useMemo(() => {
-    return allLeaves.filter(leave => {
+    let result = allLeaves.filter(leave => {
       const empName = String(getEmployeeName(leave.employee_id)).toLowerCase()
       const matchName = empName.includes(searchEmployee.toLowerCase()) || String(leave.employee_id).includes(searchEmployee)
       const matchStatus = statusFilter === 'all' || leave.status === statusFilter
       return matchName && matchStatus
     })
-  }, [allLeaves, searchEmployee, statusFilter, employees])
+
+    return result.sort((a, b) => {
+      let aVal, bVal
+      if (sortField === 'employee') {
+        aVal = getEmployeeName(a.employee_id)
+        bVal = getEmployeeName(b.employee_id)
+      } else if (sortField === 'startDate') {
+        aVal = a.start_date || a.startDate || ''
+        bVal = b.start_date || b.startDate || ''
+      } else if (sortField === 'endDate') {
+        aVal = a.end_date || a.endDate || ''
+        bVal = b.end_date || b.endDate || ''
+      } else {
+        aVal = a[sortField] || ''
+        bVal = b[sortField] || ''
+      }
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' })
+      return sortDirection === 'asc' ? comparison : -comparison
+    })
+  }, [allLeaves, searchEmployee, statusFilter, employees, sortField, sortDirection])
 
   const getDepartmentWarning = (leave) => {
     if (leave.type === 'annual' && leave.department_conflict_count > 0) {
       return `⚠️ ${leave.department_conflict_count} other staff member(s) in ${leave.department || 'the department'} are on leave during these dates (${leave.department_conflict_pct}% of department).`
     }
     return null
+  }
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
   }
 
   const getStatusColor = (status) => {
@@ -168,17 +201,12 @@ const AdminLeave = () => {
   }, {});
   const maxTypeCount = Math.max(...Object.values(leavesByType), 1);
 
-  if (loading && allLeaves.length === 0) {
-    return (
-      <DashboardLayout>
+  const content = (
+    <div>
+      {loading && allLeaves.length === 0 ? (
         <div className="text-center py-8">Loading leave data...</div>
-      </DashboardLayout>
-    )
-  }
-
-  return (
-    <DashboardLayout>
-      <div className="page-header mb-6">
+      ) : (
+      <><div className="page-header mb-6">
         <h1 className="page-title">Leave Management</h1>
         <p className="page-subtitle">Review approvals, manage all leaves, and view reports.</p>
       </div>
@@ -207,7 +235,7 @@ const AdminLeave = () => {
       {activeTab === 'approvals' && (
         pendingLeaves.length === 0 ? (
           <Card>
-            <p className="text-center py-8 text-slate-600 dark:text-slate-400">No pending leave requests found.</p>
+            <LeaveEmptyState />
           </Card>
         ) : (
           <div className="grid gap-6 lg:grid-cols-3">
@@ -349,7 +377,7 @@ const AdminLeave = () => {
               Export Report
             </Button>
           </div>
-          <Table columns={allLeavesColumns} data={filteredAllLeaves} loading={loading} />
+          <Table columns={allLeavesColumns} data={filteredAllLeaves} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
         </Card>
       )}
 
@@ -403,8 +431,40 @@ const AdminLeave = () => {
           </Card>
         </div>
       )}
-    </DashboardLayout>
+      <PageInfoPanel
+        title="Leave Management"
+        description="Manage employee leave requests and balances"
+        steps={[
+          'Employees submit leave requests from their dashboard (type, dates, reason).',
+          'Review pending requests in the Pending tab — Approve or Reject each one.',
+          'Approved leave days are automatically deducted from the employee\'s leave balance.',
+          'Leave days are reflected in the attendance records and excluded from absent count.',
+          'Configure leave types and maximum days per type in Settings → System.',
+        ]}
+        faqs={[
+          { q: 'Why is the leave balance not updating after approval?', a: 'Ensure the leave type is configured with a max balance in Settings. Balance is deducted on approval.' },
+          { q: 'Can a manager approve leave for their team?', a: 'Yes — managers see pending leave requests for employees in their department.' },
+          { q: 'What happens on public holidays?', a: 'Public holidays are not yet automatically excluded — days off must be submitted as leave requests.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const res = await api.get('/api/leaves').catch(() => ({ data: [] }));
+            const leaves = Array.isArray(res.data) ? res.data : (res.data?.leaves || []);
+            const pending = leaves.filter(l => l.status === 'pending');
+            if (pending.length > 0) items.push({ level: 'warn', message: `${pending.length} leave request${pending.length > 1 ? 's are' : ' is'} awaiting approval`, detail: 'Review them in the Pending tab.' });
+            const today = new Date().toISOString().split('T')[0];
+            const onLeave = leaves.filter(l => l.status === 'approved' && l.start_date <= today && l.end_date >= today);
+            if (onLeave.length > 0) items.push({ level: 'info', message: `${onLeave.length} employee${onLeave.length > 1 ? 's are' : ' is'} on leave today` });
+            if (items.length === 0) items.push({ level: 'success', message: 'No pending leave requests — all clear.' });
+          } catch { items.push({ level: 'info', message: 'Could not retrieve leave status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      /></>)}
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }
 
-export default AdminLeave
+export { AdminLeave as default }

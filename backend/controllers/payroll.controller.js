@@ -2,6 +2,7 @@ const { query } = require('../config/db');
 const { Pool } = require('pg');
 const { normalizeId, formatDateOnly, toDate, toOptionalText } = require('../utils/postgres');
 const { sendMpesaB2C } = require('../utils/mpesa');
+const logger = require('../utils/logger');
 
 const getEmployee = async (employeeId) => {
   const { rows } = await query('SELECT * FROM employees WHERE id = $1 LIMIT 1', [employeeId]);
@@ -118,8 +119,6 @@ const getApprovedPayslips = async () => {
             e.last_name,
             e.phone AS phone_number,
             e.mpesa_phone_number,
-            e.bank_account_number,
-            e.bank_code,
             e.department
      FROM payslips p
      JOIN employees e ON e.id = p.employee_id
@@ -152,8 +151,6 @@ const getPayslipById = async (id) => {
             e.last_name,
             e.phone AS phone_number,
             e.mpesa_phone_number,
-            e.bank_account_number,
-            e.bank_code,
             e.department
      FROM payslips p
      JOIN employees e ON e.id = p.employee_id
@@ -163,11 +160,13 @@ const getPayslipById = async (id) => {
 };
 
 const calculatePayroll = async (req, res) => {
+  logger.info('payroll.calculate', 'Entry', { employeeId: req.body.employeeId || req.query.employeeId, period: req.body.period || req.query.period });
   try {
     const employeeId = normalizeId(req.body.employeeId || req.query.employeeId);
     const periodValue = req.body.period || req.query.period || req.params.period;
 
     if (!employeeId || !periodValue) {
+      logger.warn('payroll.calculate', 'Missing params', { employeeId, periodValue });
       return res.status(400).json({ error: 'employeeId and period are required' });
     }
 
@@ -210,16 +209,20 @@ const calculatePayroll = async (req, res) => {
       [employeeId, period.period, grossPay, overtimePay, kpiBonus, deductions, netPay, paymentMethod]
     );
 
+    logger.info('payroll.calculate', 'Payslip created', { id: rows[0]?.id, netPay });
     return res.status(201).json({ payslip: rows[0] });
   } catch (err) {
+    logger.error('payroll.calculate', 'Unhandled error', err);
     return res.status(500).json({ error: err.message });
   }
 };
 
 const approvePayroll = async (req, res) => {
+  logger.info('payroll.approve', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     const id = normalizeId(req.params.id);
     if (!id) {
+      logger.warn('payroll.approve', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ error: 'Invalid payslip id' });
     }
 
@@ -232,11 +235,14 @@ const approvePayroll = async (req, res) => {
     );
 
     if (!rows[0]) {
+      logger.warn('payroll.approve', 'Not found or not draft', { id });
       return res.status(404).json({ error: 'Payslip not found or not in draft status' });
     }
 
+    logger.info('payroll.approve', 'Approved', { id });
     return res.json(rows[0]);
   } catch (err) {
+    logger.error('payroll.approve', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };
@@ -302,6 +308,7 @@ const extractMpesaCallback = (body = {}) => {
 };
 
 const disbursePayroll = async (req, res) => {
+  logger.info('payroll.disburse', 'Entry', { payslipId: req.body?.payslipId, by: req.user?.id });
   try {
     let payslipsToProcess = [];
     if (req.body && req.body.payslipId) {
@@ -337,7 +344,7 @@ const disbursePayroll = async (req, res) => {
 
       if (paymentMethod === 'BANK') {
         const bankRecord = buildBankTransferRecord(payslip);
-        console.log('[Payroll] Bank transfer batch item', bankRecord);
+        logger.info('payroll.disburse', 'Bank transfer batch item', { ...bankRecord, payslipId: payslip.id });
 
         await query(
           `UPDATE payslips
@@ -360,7 +367,7 @@ const disbursePayroll = async (req, res) => {
       const phoneNumber = payslip.mpesa_phone_number || payslip.phone_number;
       if (!phoneNumber) {
         const errorMessage = 'Missing employee phone number for M-Pesa disbursement';
-        console.error('[Payroll] ' + errorMessage, { payslipId: payslip.id, employeeId: payslip.employee_id });
+        logger.warn('payroll.disburse', errorMessage, { payslipId: payslip.id, employeeId: payslip.employee_id });
         await query(
           `UPDATE payslips
            SET status = 'Failed',
@@ -388,13 +395,7 @@ const disbursePayroll = async (req, res) => {
       );
 
       try {
-        console.log('[Payroll] Sending M-Pesa B2C payment', {
-          payslipId: payslip.id,
-          employeeId: payslip.employee_id,
-          amount: Number(payslip.net_pay || 0),
-          phoneNumber,
-          reference: localReference,
-        });
+        logger.info('payroll.disburse', 'Sending M-Pesa B2C', { payslipId: payslip.id, employeeId: payslip.employee_id, amount: Number(payslip.net_pay || 0), reference: localReference });
 
         const mpesaResult = await sendMpesaB2C({
           amount: payslip.net_pay,
@@ -427,11 +428,7 @@ const disbursePayroll = async (req, res) => {
           responseDescription: mpesaResult.responseDescription,
         });
       } catch (error) {
-        console.error('[Payroll] M-Pesa disbursement failed', {
-          payslipId: payslip.id,
-          employeeId: payslip.employee_id,
-          error: error.message,
-        });
+        logger.error('payroll.disburse', 'M-Pesa disbursement failed', error, { payslipId: payslip.id, employeeId: payslip.employee_id });
 
         await query(
           `UPDATE payslips
@@ -454,7 +451,7 @@ const disbursePayroll = async (req, res) => {
       results,
     });
   } catch (err) {
-    console.error('[Payroll] Disbursement error', err);
+    logger.error('payroll.disburse', 'Disbursement error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -480,13 +477,13 @@ const handleMpesaCallback = async (req, res) => {
   try {
     const type = req.path.includes('timeout') ? 'timeout' : 'result';
     await storeMpesaCallback(type, req.body);
-    console.log(`[M-PESA CALLBACK] ${type.toUpperCase()} received`, JSON.stringify(req.body));
+    logger.info('payroll.mpesaCallback', `${type.toUpperCase()} received`);
 
     // Only update payslip status for ResultURL (not timeout)
     if (type === 'result') {
       const callback = extractMpesaCallback(req.body);
       if (!callback.reference) {
-        console.error('[Payroll] M-Pesa callback missing reference', req.body);
+        logger.warn('payroll.mpesaCallback', 'Missing reference in callback');
         return res.status(400).json({ error: 'Callback reference missing' });
       }
       const isSuccess = Number(callback.resultCode) === 0;
@@ -505,27 +502,24 @@ const handleMpesaCallback = async (req, res) => {
         [newStatus, paymentError, callback.reference]
       );
       if (!rows[0]) {
-        console.error('[Payroll] No payslip found for callback reference', callback.reference);
+        logger.warn('payroll.mpesaCallback', 'No payslip for reference', { reference: callback.reference });
         return res.status(404).json({ error: 'Payslip not found for callback reference' });
       }
       if (!isSuccess) {
-        console.error('[Payroll] M-Pesa callback reported failure', {
-          reference: callback.reference,
-          resultCode: callback.resultCode,
-          resultDesc: callback.resultDesc,
-        });
+        logger.warn('payroll.mpesaCallback', 'M-Pesa reported failure', { reference: callback.reference, resultCode: callback.resultCode, resultDesc: callback.resultDesc });
       }
       return res.json({ success: true, payslip: rows[0], callback });
     }
     // For timeout, just acknowledge
     return res.status(200).json({ received: true });
   } catch (err) {
-    console.error('[Payroll] Callback handler error', err);
+    logger.error('payroll.mpesaCallback', 'Callback handler error', err);
     return res.status(500).json({ error: err.message });
   }
 };
 
 const getPayslips = async (req, res) => {
+  logger.info('payroll.getPayslips', 'Entry', { status: req.query.status, userId: req.user?.id });
   try {
     const statusFilter = toOptionalText(req.query.status);
     const params = [];
@@ -557,8 +551,6 @@ const getPayslips = async (req, res) => {
               e.last_name,
               e.phone AS phone_number,
               e.mpesa_phone_number,
-              e.bank_account_number,
-              e.bank_code,
               e.department
        FROM payslips p
        JOIN employees e ON e.id = p.employee_id
@@ -567,8 +559,10 @@ const getPayslips = async (req, res) => {
       params
     );
 
+    logger.info('payroll.getPayslips', `Returning ${rows.length} payslips`);
     return res.json(rows);
   } catch (err) {
+    logger.error('payroll.getPayslips', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -613,6 +607,205 @@ const batchGeneratePayroll = async (req, res) => {
   }
 };
 
+const generatePayslipPdf = async (req, res) => {
+  try {
+    const id = normalizeId(req.params.id);
+    if (!id) {
+      return res.status(400).json({ error: 'Invalid payslip id' });
+    }
+
+    const payslip = await getPayslipById(id);
+    if (!payslip) {
+      return res.status(404).json({ error: 'Payslip not found' });
+    }
+
+    // Generate HTML for payslip with Ubuntu letterhead styling
+    const payslipHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Payslip - ${payslip.first_name} ${payslip.last_name}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+          }
+          .payslip-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .letterhead {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #CB7246;
+          }
+          .letterhead h1 {
+            color: #CB7246;
+            margin: 0;
+            font-size: 28px;
+          }
+          .letterhead p {
+            color: #666;
+            margin: 5px 0 0 0;
+          }
+          .payslip-title {
+            text-align: center;
+            margin: 30px 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+          }
+          .employee-info {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+          }
+          .employee-info p {
+            margin: 5px 0;
+            color: #555;
+          }
+          .employee-info strong {
+            color: #333;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+          }
+          th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            background: #CB7246;
+            color: white;
+            font-weight: bold;
+          }
+          .total-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 5px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+            font-weight: bold;
+            color: #CB7246;
+          }
+          .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+          }
+          .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .signature-box {
+            width: 200px;
+            text-align: center;
+          }
+          .signature-line {
+            border-top: 1px solid #333;
+            margin-top: 60px;
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="payslip-container">
+          <div class="letterhead">
+            <h1>Ubuntu HRMS</h1>
+            <p>Human Resource Management System</p>
+            <p>Payslip Document</p>
+          </div>
+          
+          <div class="payslip-title">PAYSLIP</div>
+          
+          <div class="employee-info">
+            <p><strong>Employee Name:</strong> ${payslip.first_name} ${payslip.last_name}</p>
+            <p><strong>Department:</strong> ${payslip.department || 'N/A'}</p>
+            <p><strong>Pay Period:</strong> ${payslip.period}</p>
+            <p><strong>Payment Method:</strong> ${payslip.payment_method}</p>
+            <p><strong>Status:</strong> ${payslip.status}</p>
+            <p><strong>Date:</strong> ${new Date(payslip.disbursed_at || payslip.created_at).toLocaleDateString()}</p>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th>Amount (KES)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Gross Pay</td>
+                <td>${formatMoney(payslip.gross_pay)}</td>
+              </tr>
+              <tr>
+                <td>Overtime Pay</td>
+                <td>${formatMoney(payslip.overtime_pay)}</td>
+              </tr>
+              <tr>
+                <td>KPI Bonus</td>
+                <td>${formatMoney(payslip.kpi_bonus)}</td>
+              </tr>
+              <tr>
+                <td>Deductions (Unpaid Leave)</td>
+                <td style="color: red;">-${formatMoney(payslip.deductions)}</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <div class="total-section">
+            <div class="total-row">
+              <span>NET PAY:</span>
+              <span>${formatMoney(payslip.net_pay)}</span>
+            </div>
+          </div>
+          
+          <div class="signature-section">
+            <div class="signature-box">
+              <div class="signature-line">Employee Signature</div>
+            </div>
+            <div class="signature-box">
+              <div class="signature-line">Authorized Signature</div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>This is a computer-generated payslip. For any queries, please contact the HR department.</p>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.send(payslipHtml);
+  } catch (err) {
+    logger.error('payroll.generatePdf', 'PDF generation error', err, { id: req.params.id });
+    return res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
   calculatePayroll,
   batchGeneratePayroll,
@@ -620,4 +813,5 @@ module.exports = {
   disbursePayroll,
   handleMpesaCallback,
   getPayslips,
+  generatePayslipPdf,
 };

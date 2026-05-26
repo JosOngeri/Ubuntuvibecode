@@ -10,7 +10,7 @@ const buildAttachmentUrl = (path) => {
   return `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${path.startsWith('/') ? '' : '/'}${path}`
 }
 
-export default function LeaveStatutory() {
+export default function LeaveStatutory({ standalone = true }) {
   const { getLeaveTypes } = useSettings()
   const [leaves, setLeaves] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,8 +44,8 @@ export default function LeaveStatutory() {
     loadData()
   }, [])
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Statutory Leave Review</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
@@ -144,6 +144,8 @@ export default function LeaveStatutory() {
           </aside>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

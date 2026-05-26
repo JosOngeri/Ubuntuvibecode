@@ -1,13 +1,16 @@
 const { query } = require('../config/db');
 const { normalizeId, toOptionalText } = require('../utils/postgres');
+const logger = require('../utils/logger');
 
 const createKPI = async (req, res) => {
+  logger.info('kpi.createDef', 'Entry', { userId: req.user?.id });
   try {
     const title = toOptionalText(req.body.title);
     const description = toOptionalText(req.body.description);
     const maxScore = Number(req.body.maxScore);
 
     if (!title || Number.isNaN(maxScore) || maxScore <= 0) {
+      logger.warn('kpi.createDef', 'Validation failed', { title, maxScore });
       return res.status(400).json({ error: 'title and maxScore are required and maxScore must be a positive number' });
     }
 
@@ -17,17 +20,22 @@ const createKPI = async (req, res) => {
       [title, description, maxScore]
     );
 
+    logger.info('kpi.createDef', 'Created', { id: rows[0]?.id });
     return res.status(201).json(rows[0]);
   } catch (err) {
+    logger.error('kpi.createDef', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
 
 const getKPIs = async (req, res) => {
+  logger.info('kpi.getDefs', 'Entry');
   try {
     const { rows } = await query('SELECT * FROM kpi_definitions ORDER BY created_at DESC');
+    logger.info('kpi.getDefs', `Returning ${rows.length} definitions`);
     return res.json(rows);
   } catch (err) {
+    logger.error('kpi.getDefs', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -73,34 +81,43 @@ const updateKPI = async (req, res) => {
     );
 
     if (!rows[0]) {
+      logger.warn('kpi.updateDef', 'Not found', { id });
       return res.status(404).json({ error: 'KPI definition not found' });
     }
 
+    logger.info('kpi.updateDef', 'Updated', { id });
     return res.json(rows[0]);
   } catch (err) {
+    logger.error('kpi.updateDef', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };
 
 const deleteKPI = async (req, res) => {
+  logger.info('kpi.deleteDef', 'Entry', { id: req.params.id });
   try {
     const id = normalizeId(req.params.id);
     if (!id) {
+      logger.warn('kpi.deleteDef', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ error: 'Invalid KPI definition id' });
     }
 
     const { rows } = await query('DELETE FROM kpi_definitions WHERE id = $1 RETURNING *', [id]);
     if (!rows[0]) {
+      logger.warn('kpi.deleteDef', 'Not found', { id });
       return res.status(404).json({ error: 'KPI definition not found' });
     }
 
+    logger.info('kpi.deleteDef', 'Deleted', { id });
     return res.json({ success: true, deleted: rows[0] });
   } catch (err) {
+    logger.error('kpi.deleteDef', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };
 
 const assignKPI = async (req, res) => {
+  logger.info('kpi.assign', 'Entry', { employeeId: req.body.employeeId, period: req.body.period, by: req.user?.id });
   try {
     const employeeId = normalizeId(req.body.employeeId);
     const evaluatorId = normalizeId(req.body.evaluatorId);
@@ -151,8 +168,10 @@ const assignKPI = async (req, res) => {
       [employeeId, evaluatorId, usedDefinitionId, period, targetValue]
     );
 
+    logger.info('kpi.assign', 'Assigned', { id: rows[0]?.id, employeeId });
     return res.status(201).json(rows[0]);
   } catch (err) {
+    logger.error('kpi.assign', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -181,16 +200,18 @@ const processPendingBonuses = async () => {
       );
     }
   } catch (err) {
-    console.error('KPI bonus processor error:', err);
+    logger.error('kpi.bonusProcessor', 'Error processing bonuses', err);
   }
 };
 
 const evaluateKPI = async (req, res) => {
+  logger.info('kpi.evaluate', 'Entry', { id: req.params.id, achievedValue: req.body.achievedValue, by: req.user?.id });
   try {
     const id = normalizeId(req.params.id);
     const achievedValue = Number(req.body.achievedValue);
 
     if (!id || Number.isNaN(achievedValue) || achievedValue < 0) {
+      logger.warn('kpi.evaluate', 'Validation failed', { id: req.params.id, achievedValue });
       return res.status(400).json({ error: 'A valid KPI id and achievedValue are required' });
     }
 
@@ -221,13 +242,16 @@ const evaluateKPI = async (req, res) => {
 
     await processPendingBonuses();
 
+    logger.info('kpi.evaluate', 'Evaluated', { id, finalScore });
     return res.json(updateResult.rows[0]);
   } catch (err) {
+    logger.error('kpi.evaluate', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };
 
 const getAllAssignedKPIs = async (req, res) => {
+  logger.info('kpi.getAll', 'Entry', { userId: req.user?.id });
   try {
     const { rows } = await query(
       `SELECT ek.id,
@@ -252,16 +276,20 @@ const getAllAssignedKPIs = async (req, res) => {
        ORDER BY ek.created_at DESC`
     );
 
+    logger.info('kpi.getAll', `Returning ${rows.length} assigned KPIs`);
     return res.json(rows);
   } catch (err) {
+    logger.error('kpi.getAll', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
 
 const bulkAssignKPI = async (req, res) => {
+  logger.info('kpi.bulkAssign', 'Entry', { count: req.body.employeeIds?.length, by: req.user?.id });
   try {
     const { employeeIds, definitionId, evaluatorId, period, targetValue } = req.body;
     if (!employeeIds || !Array.isArray(employeeIds) || employeeIds.length === 0) {
+      logger.warn('kpi.bulkAssign', 'No employeeIds provided');
       return res.status(400).json({ error: 'employeeIds array is required' });
     }
     const defId = normalizeId(definitionId);
@@ -285,8 +313,10 @@ const bulkAssignKPI = async (req, res) => {
       if (rows[0]) results.push(rows[0]);
     }
 
+    logger.info('kpi.bulkAssign', `Assigned ${results.length} KPIs`);
     return res.status(201).json({ assigned: results.length, results });
   } catch (err) {
+    logger.error('kpi.bulkAssign', 'DB error', err);
     return res.status(500).json({ error: err.message });
   }
 };
@@ -319,9 +349,11 @@ const selfEvaluateKPI = async (req, res) => {
 };
 
 const getEmployeeKPIs = async (req, res) => {
+  logger.info('kpi.getForEmployee', 'Entry', { employeeId: req.params.id });
   try {
     const employeeId = normalizeId(req.params.id);
     if (!employeeId) {
+      logger.warn('kpi.getForEmployee', 'Invalid id', { id: req.params.id });
       return res.status(400).json({ error: 'Invalid employee id' });
     }
 

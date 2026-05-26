@@ -1,4 +1,5 @@
 const { query } = require('../config/db');
+const logger = require('../utils/logger');
 
 const formatContract = (r) => ({
   id: r.id,
@@ -14,6 +15,7 @@ const formatContract = (r) => ({
 });
 
 exports.createContract = async (req, res) => {
+  logger.info('contract.create', 'Entry', { userId: req.user?.id, employee: req.body.employee });
   try {
     const { employee, title, startDate, endDate, terms, status } = req.body;
     
@@ -27,27 +29,51 @@ exports.createContract = async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW()) RETURNING *`,
       [employee, title, startDate, endDate || null, terms || null, status || 'active', documentPath]
     );
+    logger.info('contract.create', 'Created', { id: rows[0]?.id });
     res.status(201).json(formatContract(rows[0]));
   } catch (err) {
+    logger.error('contract.create', 'DB error', err);
     res.status(400).json({ error: err.message });
   }
 };
 
 exports.getContracts = async (req, res) => {
+  logger.info('contract.getAll', 'Entry', { userId: req.user?.id });
   try {
     const { rows } = await query('SELECT * FROM contracts ORDER BY created_at DESC');
+    logger.info('contract.getAll', `Returning ${rows.length} contracts`);
     res.json(rows.map(formatContract));
   } catch (err) {
+    logger.error('contract.getAll', 'DB error', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getContractById = async (req, res) => {
+  logger.info('contract.getById', 'Entry', { id: req.params.id });
+  try {
+    const { rows } = await query('SELECT * FROM contracts WHERE id = $1', [req.params.id]);
+    if (!rows.length) {
+      logger.warn('contract.getById', 'Not found', { id: req.params.id });
+      return res.status(404).json({ error: 'Contract not found' });
+    }
+    res.json(formatContract(rows[0]));
+  } catch (err) {
+    logger.error('contract.getById', 'DB error', err, { id: req.params.id });
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.updateContract = async (req, res) => {
+  logger.info('contract.update', 'Entry', { id: req.params.id });
   try {
     const { employee, title, startDate, endDate, terms, status } = req.body;
     
     const { rows: existing } = await query('SELECT * FROM contracts WHERE id = $1', [req.params.id]);
-    if (!existing.length) return res.status(404).json({ error: "Contract not found" });
+    if (!existing.length) {
+      logger.warn('contract.update', 'Not found', { id: req.params.id });
+      return res.status(404).json({ error: 'Contract not found' });
+    }
 
     let documentPath = existing[0].document_path;
     if (req.file) {
@@ -67,17 +93,22 @@ exports.updateContract = async (req, res) => {
        WHERE id = $8 RETURNING *`,
       [employee || null, title || null, startDate || null, endDate || null, terms || null, status || null, documentPath, req.params.id]
     );
+    logger.info('contract.update', 'Updated', { id: req.params.id });
     res.json(formatContract(rows[0]));
   } catch (err) {
+    logger.error('contract.update', 'DB error', err, { id: req.params.id });
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.deleteContract = async (req, res) => {
+  logger.info('contract.delete', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     await query('DELETE FROM contracts WHERE id = $1', [req.params.id]);
+    logger.info('contract.delete', 'Deleted', { id: req.params.id });
     res.json({ success: true });
   } catch (err) {
+    logger.error('contract.delete', 'DB error', err, { id: req.params.id });
     res.status(500).json({ error: err.message });
   }
 };

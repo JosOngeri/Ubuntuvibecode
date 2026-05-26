@@ -1,54 +1,53 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import DashboardLayout from '../../components/DashboardLayout'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import Input from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
-import DateDropdown from '../../components/common/DateDropdown'
+import DateInput from '../../components/common/DateInput'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
 import { useSettings } from '../../contexts/SettingsContext'
+import { getAllInstitutions, getInstitutionType } from '../../data/kuccpsInstitutions'
 
 const STEPS = [
-  { id: 1, title: 'Personal Information', description: 'Basic details about yourself' },
-  { id: 2, title: 'Address & Contact', description: 'Your location and emergency contact' },
-  { id: 3, title: 'Position Details', description: 'Job preferences and availability' },
-  { id: 4, title: 'Education', description: 'Academic qualifications and certifications' },
-  { id: 5, title: 'Employment History', description: 'Previous work experience' },
-  { id: 6, title: 'References', description: 'Professional references' },
-  { id: 7, title: 'Skills & Declaration', description: 'Skills and final submission' },
+  { id: 1, title: 'Personal Details', description: 'Basic information about yourself' },
+  { id: 2, title: 'Education', description: 'Academic qualifications and institutions' },
+  { id: 3, title: 'Employment History', description: 'Previous work experience' },
+  { id: 4, title: 'Certifications & Licenses', description: 'Professional certifications' },
+  { id: 5, title: 'Attachments', description: 'Upload your CV and supporting documents' },
+  { id: 6, title: 'Disclosures', description: 'Experience, availability, and work authorization' },
+  { id: 7, title: 'Declaration', description: 'Confirm and submit your application' },
 ]
 
-const emptyWork = { company: '', position: '', startDate: '', endDate: '', reasonForLeaving: '', duties: '', salary: '' }
-const emptyEdu = { institution: '', qualification: '', fieldOfStudy: '', startYear: '', endYear: '' }
-const emptyCert = { name: '', issuingBody: '', dateObtained: '', expiryDate: '' }
-const emptyRef = { name: '', position: '', company: '', phone: '', email: '', relationship: '' }
-const emptySkill = { name: '', proficiency: '' }
-const emptyLanguage = { language: '', proficiency: '' }
+const emptyWork = { employer: '', jobTitle: '', isCurrentJob: false, startDate: '', endDate: '', achievements: '' }
+const emptyEdu = { institution: '', program: '', educationLevel: '', startYear: '', endYear: '' }
+const emptyCert = { name: '', issuingOrganization: '', certificateNumber: '', issuingDate: '', expiryDate: '', noExpiry: false }
 
 export default function MultiStepJobApplicationForm() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { getDepartments, getEmploymentTypes } = useSettings()
-  
+  const { getDepartments, getEmploymentTypes, getEmploymentStatus } = useSettings()
+
   const [currentStep, setCurrentStep] = useState(1)
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  
-  // Date states for DateDropdown components
-  const [dateOfBirth, setDateOfBirth] = useState(null)
-  const [dateAvailable, setDateAvailable] = useState(null)
+  const [errors, setErrors] = useState({})
+  const draftLoaded = useRef(false)
 
   const departments = getDepartments()
   const employmentTypes = getEmploymentTypes()
+  const employmentStatus = getEmploymentStatus()
+  const institutions = getAllInstitutions()
 
   const [form, setForm] = useState({
-    // Step 1: Personal Information
+    // Step 1: Personal Details
+    surname: '',
     firstName: '',
-    lastName: '',
+    otherNames: '',
     dateOfBirth: '',
     gender: '',
     maritalStatus: '',
@@ -57,46 +56,36 @@ export default function MultiStepJobApplicationForm() {
     phone: '',
     email: '',
 
-    // Step 2: Address & Contact
-    residentialAddress: { street: '', city: '', postalCode: '' },
-    postalAddress: { street: '', city: '', postalCode: '' },
-    emergencyContact: { name: '', phone: '', relationship: '' },
+    // Step 2: Education
+    education: [],
 
-    // Step 3: Position Details
-    expectedSalary: '',
-    dateAvailable: '',
-    willingToRelocate: false,
-    willingToTravel: false,
-
-    // Step 4: Education
-    primaryEducation: { school: '', yearCompleted: '', certificate: '' },
-    secondaryEducation: { school: '', yearCompleted: '', certificate: '', grade: '' },
-    furtherEducation: [],
-    certifications: [],
-
-    // Step 5: Employment History
+    // Step 3: Employment History
     employmentHistory: [],
 
-    // Step 6: References
-    references: [],
+    // Step 4: Certifications & Licenses
+    certifications: [],
 
-    // Step 7: Skills & Declaration
-    languages: [],
-    computerSkills: [],
-    otherSkills: [],
-    coverLetter: '',
-    declarationConfirmed: false,
-    backgroundCheckConsent: false,
-    signature: '',
-
-    // CV Upload
+    // Step 5: Attachments
     cv: null,
+    coverLetterFile: null,
+    otherDocuments: [],
+
+    // Step 6: Disclosures
+    experienceYears: '',
+    availabilityWeeks: '',
+    rightToWork: '',
+    salaryExpectation: '',
+
+    // Step 7: Declaration
+    declarationConfirmed: false,
+    privacyPolicyConfirmed: false,
+    signature: '',
   })
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await api.get(`/jobs/public/list`)
+        const res = await api.get(`/jobs/public/list`).catch(() => ({ data: [] }))
         const matched = (res.data || []).find(item => String(item.id) === String(jobId))
         setJob(matched || null)
       } catch { setJob(null) }
@@ -105,19 +94,73 @@ export default function MultiStepJobApplicationForm() {
   }, [jobId])
 
   useEffect(() => {
-    // Save draft to localStorage
-    localStorage.setItem(`jobApplication_${jobId}`, JSON.stringify(form))
-  }, [form, jobId])
+    // Load draft from localStorage for this specific job (only once)
+    if (draftLoaded.current) return
 
-  useEffect(() => {
-    // Load draft from localStorage
     const saved = localStorage.getItem(`jobApplication_${jobId}`)
     if (saved) {
       try {
-        setForm(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        setForm(parsed)
+        draftLoaded.current = true
       } catch { }
+    } else {
+      // Load saved personal information from previous applications
+      const savedPersonalInfo = localStorage.getItem('applicantPersonalInfo')
+      if (savedPersonalInfo) {
+        try {
+          const personalInfo = JSON.parse(savedPersonalInfo)
+          setForm(prev => ({
+            ...prev,
+            surname: personalInfo.surname || prev.surname,
+            firstName: personalInfo.firstName || prev.firstName,
+            otherNames: personalInfo.otherNames || prev.otherNames,
+            dateOfBirth: personalInfo.dateOfBirth || prev.dateOfBirth,
+            gender: personalInfo.gender || prev.gender,
+            maritalStatus: personalInfo.maritalStatus || prev.maritalStatus,
+            nationality: personalInfo.nationality || prev.nationality,
+            nationalId: personalInfo.nationalId || prev.nationalId,
+            phone: personalInfo.phone || prev.phone,
+            email: personalInfo.email || prev.email,
+            address: personalInfo.address || prev.address,
+            city: personalInfo.city || prev.city,
+            postalCode: personalInfo.postalCode || prev.postalCode,
+            country: personalInfo.country || prev.country,
+          }))
+        } catch { }
+      }
+
+      // Load saved education, employment, and certifications from previous applications
+      const savedApplicationData = localStorage.getItem('applicantApplicationData')
+      if (savedApplicationData) {
+        try {
+          const applicationData = JSON.parse(savedApplicationData)
+          setForm(prev => ({
+            ...prev,
+            education: applicationData.education || prev.education,
+            employmentHistory: applicationData.employmentHistory || prev.employmentHistory,
+            certifications: applicationData.certifications || prev.certifications,
+          }))
+        } catch { }
+      }
+
+      draftLoaded.current = true
     }
   }, [jobId])
+
+  useEffect(() => {
+    // Save draft to localStorage (only after draft is loaded)
+    // Exclude File objects — they can't be JSON serialized
+    if (draftLoaded.current) {
+      const draft = {
+        ...form,
+        cv: null,
+        coverLetterFile: null,
+        otherDocuments: []
+      }
+      localStorage.setItem(`jobApplication_${jobId}`, JSON.stringify(draft))
+    }
+  }, [form, jobId])
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target
@@ -125,13 +168,7 @@ export default function MultiStepJobApplicationForm() {
       ...prev,
       [name]: type === 'checkbox' ? checked : type === 'file' ? files[0] : value
     }))
-  }
-
-  const handleNestedChange = (section, field, value) => {
-    setForm(prev => ({
-      ...prev,
-      [section]: { ...prev[section], [field]: value }
-    }))
+    setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const addEmployment = () => setForm(prev => ({ ...prev, employmentHistory: [...prev.employmentHistory, { ...emptyWork }] }))
@@ -140,11 +177,20 @@ export default function MultiStepJobApplicationForm() {
   }
   const removeEmployment = (i) => setForm(prev => ({ ...prev, employmentHistory: prev.employmentHistory.filter((_, j) => j !== i) }))
 
-  const addFurtherEdu = () => setForm(prev => ({ ...prev, furtherEducation: [...prev.furtherEducation, { ...emptyEdu }] }))
-  const updateFurtherEdu = (i, field, value) => {
-    const e = [...form.furtherEducation]; e[i][field] = value; setForm(prev => ({ ...prev, furtherEducation: e }))
+  const addEducation = () => setForm(prev => ({ ...prev, education: [...prev.education, { ...emptyEdu }] }))
+  const updateEducation = (i, field, value) => {
+    const e = [...form.education]; e[i][field] = value; setForm(prev => ({ ...prev, education: e }))
+
+    // Auto-fill education level when institution is selected
+    if (field === 'institution' && value) {
+      const { suggestedLevel } = getInstitutionType(value)
+      if (suggestedLevel && !e[i].educationLevel) {
+        e[i].educationLevel = suggestedLevel
+        setForm(prev => ({ ...prev, education: e }))
+      }
+    }
   }
-  const removeFurtherEdu = (i) => setForm(prev => ({ ...prev, furtherEducation: prev.furtherEducation.filter((_, j) => j !== i) }))
+  const removeEducation = (i) => setForm(prev => ({ ...prev, education: prev.education.filter((_, j) => j !== i) }))
 
   const addCert = () => setForm(prev => ({ ...prev, certifications: [...prev.certifications, { ...emptyCert }] }))
   const updateCert = (i, field, value) => {
@@ -152,47 +198,101 @@ export default function MultiStepJobApplicationForm() {
   }
   const removeCert = (i) => setForm(prev => ({ ...prev, certifications: prev.certifications.filter((_, j) => j !== i) }))
 
-  const addRef = () => setForm(prev => ({ ...prev, references: [...prev.references, { ...emptyRef }] }))
-  const updateRef = (i, field, value) => {
-    const r = [...form.references]; r[i][field] = value; setForm(prev => ({ ...prev, references: r }))
+  const addOtherDocument = () => setForm(prev => ({ ...prev, otherDocuments: [...prev.otherDocuments, null] }))
+  const updateOtherDocument = (i, file) => {
+    const docs = [...form.otherDocuments]; docs[i] = file; setForm(prev => ({ ...prev, otherDocuments: docs }))
   }
-  const removeRef = (i) => setForm(prev => ({ ...prev, references: prev.references.filter((_, j) => j !== i) }))
-
-  const addLanguage = () => setForm(prev => ({ ...prev, languages: [...prev.languages, { ...emptyLanguage }] }))
-  const updateLanguage = (i, field, value) => {
-    const l = [...form.languages]; l[i][field] = value; setForm(prev => ({ ...prev, languages: l }))
-  }
-  const removeLanguage = (i) => setForm(prev => ({ ...prev, languages: prev.languages.filter((_, j) => j !== i) }))
-
-  const addComputerSkill = () => setForm(prev => ({ ...prev, computerSkills: [...prev.computerSkills, { ...emptySkill }] }))
-  const updateComputerSkill = (i, field, value) => {
-    const s = [...form.computerSkills]; s[i][field] = value; setForm(prev => ({ ...prev, computerSkills: s }))
-  }
-  const removeComputerSkill = (i) => setForm(prev => ({ ...prev, computerSkills: prev.computerSkills.filter((_, j) => j !== i) }))
-
-  const [otherSkillInput, setOtherSkillInput] = useState('')
-  const addOtherSkill = () => {
-    if (!otherSkillInput.trim()) return
-    setForm(prev => ({ ...prev, otherSkills: [...prev.otherSkills, otherSkillInput.trim()] }))
-    setOtherSkillInput('')
-  }
+  const removeOtherDocument = (i) => setForm(prev => ({ ...prev, otherDocuments: prev.otherDocuments.filter((_, j) => j !== i) }))
 
   const validateStep = (step) => {
+    const newErrors = {}
+
     switch (step) {
       case 1:
-        return form.firstName && form.lastName && form.email && form.phone
+        if (!form.surname.trim()) newErrors.surname = 'Surname is required'
+        if (!/^[a-zA-Z\s]{2,}$/.test(form.surname)) newErrors.surname = 'Surname must be letters only, min 2 chars'
+        if (!form.firstName.trim()) newErrors.firstName = 'First name is required'
+        if (!/^[a-zA-Z\s]{2,}$/.test(form.firstName)) newErrors.firstName = 'First name must be letters only, min 2 chars'
+        if (form.otherNames && !/^[a-zA-Z\s]*$/.test(form.otherNames)) newErrors.otherNames = 'Other names must be letters only'
+        if (!form.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required'
+        if (!form.gender) newErrors.gender = 'Gender is required'
+        if (!form.maritalStatus) newErrors.maritalStatus = 'Marital status is required'
+        if (!form.nationality) newErrors.nationality = 'Nationality is required'
+        if (!form.nationalId.trim()) newErrors.nationalId = 'National ID is required'
+        if (!form.phone.trim()) newErrors.phone = 'Phone is required'
+        if (!/^(\+254|07)\d{8,9}$/.test(form.phone)) newErrors.phone = 'Invalid phone format (use +254XXXXXXXXX or 07XXXXXXXXX)'
+        if (!form.email.trim()) newErrors.email = 'Email is required'
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Invalid email format'
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 2:
-        return form.residentialAddress.street && form.emergencyContact.name && form.emergencyContact.phone
+        if (form.education.length === 0) newErrors.education = 'At least one education entry is required'
+        form.education.forEach((edu, i) => {
+          if (!edu.institution.trim()) newErrors[`education.${i}.institution`] = 'Institution is required'
+          if (!edu.program.trim()) newErrors[`education.${i}.program`] = 'Program is required'
+          if (!edu.educationLevel) newErrors[`education.${i}.educationLevel`] = 'Education level is required'
+          if (!edu.startYear) newErrors[`education.${i}.startYear`] = 'Start year is required'
+          if (!/^\d{4}$/.test(edu.startYear)) newErrors[`education.${i}.startYear`] = 'Invalid year format'
+          if (!edu.endYear) newErrors[`education.${i}.endYear`] = 'End year is required'
+          if (!/^\d{4}$/.test(edu.endYear)) newErrors[`education.${i}.endYear`] = 'Invalid year format'
+          if (parseInt(edu.endYear) < parseInt(edu.startYear)) newErrors[`education.${i}.endYear`] = 'End year must be >= start year'
+        })
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 3:
-        return true
+        if (form.employmentHistory.length === 0) newErrors.employmentHistory = 'At least one employment entry is required'
+        form.employmentHistory.forEach((work, i) => {
+          if (!work.employer.trim()) newErrors[`employmentHistory.${i}.employer`] = 'Employer is required'
+          if (!work.jobTitle.trim()) newErrors[`employmentHistory.${i}.jobTitle`] = 'Job title is required'
+          if (!work.startDate) newErrors[`employmentHistory.${i}.startDate`] = 'Start date is required'
+          if (!work.isCurrentJob && !work.endDate) newErrors[`employmentHistory.${i}.endDate`] = 'End date is required'
+          if (work.startDate && work.endDate && new Date(work.endDate) < new Date(work.startDate)) {
+            newErrors[`employmentHistory.${i}.endDate`] = 'End date must be >= start date'
+          }
+        })
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 4:
-        return true
+        form.certifications.forEach((cert, i) => {
+          if (cert.name && !cert.issuingOrganization) newErrors[`certifications.${i}.issuingOrganization`] = 'Issuing organization is required'
+          if (cert.name && !cert.issuingDate) newErrors[`certifications.${i}.issuingDate`] = 'Issuing date is required'
+          if (cert.name && !cert.noExpiry && !cert.expiryDate) newErrors[`certifications.${i}.expiryDate`] = 'Expiry date is required'
+          if (cert.issuingDate && cert.expiryDate && new Date(cert.expiryDate) < new Date(cert.issuingDate)) {
+            newErrors[`certifications.${i}.expiryDate`] = 'Expiry date must be >= issuing date'
+          }
+        })
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 5:
-        return true
+        if (!form.cv) newErrors.cv = 'CV is required'
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 6:
-        return true
+        if (!form.experienceYears) newErrors.experienceYears = 'Experience years is required'
+        if (form.experienceYears && (form.experienceYears < 0 || form.experienceYears > 50)) {
+          newErrors.experienceYears = 'Experience must be between 0 and 50 years'
+        }
+        if (!form.availabilityWeeks) newErrors.availabilityWeeks = 'Availability weeks is required'
+        if (form.availabilityWeeks && (form.availabilityWeeks < 0 || form.availabilityWeeks > 52)) {
+          newErrors.availabilityWeeks = 'Availability must be between 0 and 52 weeks'
+        }
+        if (!form.rightToWork) newErrors.rightToWork = 'Right to work is required'
+        if (!form.salaryExpectation) newErrors.salaryExpectation = 'Salary expectation is required'
+        if (form.salaryExpectation && (form.salaryExpectation <= 0 || form.salaryExpectation > 10000000)) {
+          newErrors.salaryExpectation = 'Salary must be between 0 and 10,000,000 KES'
+        }
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       case 7:
-        return form.declarationConfirmed && form.backgroundCheckConsent && form.signature
+        if (!form.declarationConfirmed) newErrors.declarationConfirmed = 'You must confirm the declaration'
+        if (!form.privacyPolicyConfirmed) newErrors.privacyPolicyConfirmed = 'You must acknowledge the privacy policy'
+        if (!form.signature.trim()) newErrors.signature = 'Signature is required'
+        const fullName = `${form.surname} ${form.firstName} ${form.otherNames}`.trim()
+        if (form.signature.trim().toLowerCase() !== fullName.toLowerCase()) {
+          newErrors.signature = 'Signature must match your full name'
+        }
+        setErrors(newErrors)
+        return Object.keys(newErrors).length === 0
       default:
         return false
     }
@@ -210,26 +310,36 @@ export default function MultiStepJobApplicationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    // Only allow submission on step 7
+    if (currentStep !== 7) {
+      return
+    }
     if (!validateStep(7)) {
       toast.error('Please complete all required fields')
+      return
+    }
+
+    // Confirm submission
+    const confirmed = window.confirm('Are you sure you want to submit your application?')
+    if (!confirmed) {
       return
     }
 
     setSubmitting(true)
     try {
       const data = new FormData()
-      
+
       // Basic info
-      data.append('applicantName', `${form.firstName} ${form.lastName}`)
+      data.append('applicantName', `${form.surname} ${form.firstName} ${form.otherNames}`.trim())
       data.append('applicantEmail', form.email)
       data.append('applicantPhone', form.phone)
-      data.append('coverLetter', form.coverLetter)
       data.append('applicationMode', 'structured')
 
       // Multi-step form data
       data.append('personal_info', JSON.stringify({
+        surname: form.surname,
         firstName: form.firstName,
-        lastName: form.lastName,
+        otherNames: form.otherNames,
         dateOfBirth: form.dateOfBirth,
         gender: form.gender,
         maritalStatus: form.maritalStatus,
@@ -239,52 +349,66 @@ export default function MultiStepJobApplicationForm() {
         email: form.email,
       }))
 
-      data.append('address_info', JSON.stringify({
-        residentialAddress: form.residentialAddress,
-        postalAddress: form.postalAddress,
-        emergencyContact: form.emergencyContact,
-      }))
-
-      data.append('position_details', JSON.stringify({
-        position: job?.title,
-        department: job?.department,
-        expectedSalary: form.expectedSalary,
-        dateAvailable: form.dateAvailable,
-        employmentType: job?.employmentType,
-        willingToRelocate: form.willingToRelocate,
-        willingToTravel: form.willingToTravel,
-      }))
-
       data.append('education', JSON.stringify({
-        primary: form.primaryEducation,
-        secondary: form.secondaryEducation,
-        furtherEducation: form.furtherEducation,
+        primaryEducation: [],
+        secondaryEducation: [],
+        tertiaryEducation: form.education,
         certifications: form.certifications,
       }))
 
       data.append('employment_history', JSON.stringify(form.employmentHistory))
-      data.append('references', JSON.stringify(form.references))
-      data.append('skills', JSON.stringify({
-        languages: form.languages,
-        computerSkills: form.computerSkills,
-        otherSkills: form.otherSkills,
-      }))
+      data.append('skills', JSON.stringify([]))
       data.append('declaration', JSON.stringify({
-        coverLetter: form.coverLetter,
         declarationConfirmed: form.declarationConfirmed,
-        backgroundCheckConsent: form.backgroundCheckConsent,
+        privacyPolicyConfirmed: form.privacyPolicyConfirmed,
         signature: form.signature,
       }))
 
+      data.append('disclosures', JSON.stringify({
+        experienceYears: form.experienceYears,
+        availabilityWeeks: form.availabilityWeeks,
+        rightToWork: form.rightToWork,
+        salaryExpectation: form.salaryExpectation,
+      }))
+
       if (form.cv) data.append('cv', form.cv)
+      if (form.coverLetterFile) data.append('coverLetter', form.coverLetterFile)
 
       await api.post(`/jobs/${jobId}/apply`, data, { headers: { 'Content-Type': 'multipart/form-data' } })
-      
+
+      // Save personal information for future applications
+      const personalInfoToSave = {
+        surname: form.surname,
+        firstName: form.firstName,
+        otherNames: form.otherNames,
+        dateOfBirth: form.dateOfBirth,
+        gender: form.gender,
+        maritalStatus: form.maritalStatus,
+        nationality: form.nationality,
+        nationalId: form.nationalId,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        city: form.city,
+        postalCode: form.postalCode,
+        country: form.country,
+      }
+      localStorage.setItem('applicantPersonalInfo', JSON.stringify(personalInfoToSave))
+
+      // Save education, employment, and certifications for future applications
+      const applicationDataToSave = {
+        education: form.education,
+        employmentHistory: form.employmentHistory,
+        certifications: form.certifications,
+      }
+      localStorage.setItem('applicantApplicationData', JSON.stringify(applicationDataToSave))
+
       // Clear draft
       localStorage.removeItem(`jobApplication_${jobId}`)
       setShowSuccess(true)
     } catch (err) {
-      toast.error(err.response?.data?.msg || 'Application failed')
+      console.error('Application error:', err.response?.data)
+      toast.error(err.response?.data?.msg || err.response?.data?.error || 'Application failed')
     } finally {
       setSubmitting(false)
     }
@@ -292,18 +416,23 @@ export default function MultiStepJobApplicationForm() {
 
   const resetForm = () => {
     setForm({
-      firstName: '', lastName: '', dateOfBirth: '', gender: '', maritalStatus: '', nationality: '', nationalId: '', phone: '', email: '',
-      residentialAddress: { street: '', city: '', postalCode: '' },
-      postalAddress: { street: '', city: '', postalCode: '' },
-      emergencyContact: { name: '', phone: '', relationship: '' },
-      expectedSalary: '', dateAvailable: '', willingToRelocate: false, willingToTravel: false,
-      primaryEducation: { school: '', yearCompleted: '', certificate: '' },
-      secondaryEducation: { school: '', yearCompleted: '', certificate: '', grade: '' },
-      furtherEducation: [], certifications: [], employmentHistory: [], references: [],
-      languages: [], computerSkills: [], otherSkills: [],
-      coverLetter: '', declarationConfirmed: false, backgroundCheckConsent: false, signature: '', cv: null,
+      surname: '', firstName: '', otherNames: '', dateOfBirth: '', gender: '', maritalStatus: '', nationality: '', nationalId: '', phone: '', email: '',
+      education: [],
+      employmentHistory: [],
+      certifications: [],
+      cv: null,
+      coverLetterFile: null,
+      otherDocuments: [],
+      experienceYears: '',
+      availabilityWeeks: '',
+      rightToWork: '',
+      salaryExpectation: '',
+      declarationConfirmed: false,
+      privacyPolicyConfirmed: false,
+      signature: '',
     })
     setCurrentStep(1)
+    draftLoaded.current = false
   }
 
   if (loading) return <DashboardLayout><div className="text-center py-8">Loading...</div></DashboardLayout>
@@ -352,23 +481,31 @@ export default function MultiStepJobApplicationForm() {
               <div className="space-y-4">
                 <h3 className="text-xl font-bold mb-4">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="First Name *" name="firstName" value={form.firstName} onChange={handleChange} required />
-                  <Input label="Last Name *" name="lastName" value={form.lastName} onChange={handleChange} required />
-                  <DateDropdown 
-                  selectedDate={dateOfBirth}
-                  onDateChange={(date) => {
-                    setDateOfBirth(date);
-                    setForm({...form, dateOfBirth: date ? date.toISOString().split('T')[0] : ''});
-                  }}
-                  label="Date of Birth"
-                  showYear={true}
-                  showMonth={true}
-                  showDay={true}
-                  yearRange={50}
-                />
+                  <div>
+                    <Input label="Surname *" id="surname" name="surname" value={form.surname} onChange={handleChange} required autocomplete="family-name" error={errors.surname} />
+                  </div>
+                  <div>
+                    <Input label="First Name *" id="firstName" name="firstName" value={form.firstName} onChange={handleChange} required autocomplete="given-name" error={errors.firstName} />
+                  </div>
+                  <Input label="Other Names" id="otherNames" name="otherNames" value={form.otherNames} onChange={handleChange} autocomplete="additional-name" />
+                  <DateInput
+                    label="Date of Birth"
+                    id="dateOfBirth"
+                    name="dateOfBirth"
+                    value={form.dateOfBirth}
+                    onChange={(e) => {
+                      setForm({...form, dateOfBirth: e.target.value})
+                      setErrors(prev => ({ ...prev, dateOfBirth: '' }))
+                    }}
+                    required
+                    error={errors.dateOfBirth}
+                    showValidation={true}
+                    minAge={18}
+                    showCalendar={false}
+                  />
                   <div>
                     <label className="block text-sm font-medium mb-2">Gender</label>
-                    <select className="form-input w-full" name="gender" value={form.gender} onChange={handleChange}>
+                    <select id="gender" className="form-input w-full" name="gender" value={form.gender} onChange={handleChange}>
                       <option value="">Select</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
@@ -377,7 +514,7 @@ export default function MultiStepJobApplicationForm() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Marital Status</label>
-                    <select className="form-input w-full" name="maritalStatus" value={form.maritalStatus} onChange={handleChange}>
+                    <select id="maritalStatus" className="form-input w-full" name="maritalStatus" value={form.maritalStatus} onChange={handleChange}>
                       <option value="">Select</option>
                       <option value="Single">Single</option>
                       <option value="Married">Married</option>
@@ -385,274 +522,436 @@ export default function MultiStepJobApplicationForm() {
                       <option value="Widowed">Widowed</option>
                     </select>
                   </div>
-                  <Input label="Nationality" name="nationality" value={form.nationality} onChange={handleChange} />
-                  <Input label="National ID Number" name="nationalId" value={form.nationalId} onChange={handleChange} />
-                  <Input label="Phone Number *" name="phone" value={form.phone} onChange={handleChange} required />
-                  <Input label="Email Address *" name="email" type="email" value={form.email} onChange={handleChange} required />
+                  <Input label="Nationality" id="nationality" name="nationality" value={form.nationality} onChange={handleChange} autocomplete="country-name" />
+                  <Input label="National ID Number" id="nationalId" name="nationalId" value={form.nationalId} onChange={handleChange} autocomplete="off" />
+                  <Input label="Phone Number *" id="phone" name="phone" value={form.phone} onChange={handleChange} required autocomplete="tel" error={errors.phone} />
+                  <Input label="Email Address *" id="email" name="email" type="email" value={form.email} onChange={handleChange} required autocomplete="email" error={errors.email} />
                 </div>
               </div>
             )}
 
-            {/* Step 2: Address & Contact */}
+            {/* Step 2: Education */}
             {currentStep === 2 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Address & Contact Information</h3>
-                <div className="bg-slate-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium mb-3">Residential Address *</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Street Address" value={form.residentialAddress.street} onChange={(e) => handleNestedChange('residentialAddress', 'street', e.target.value)} required />
-                    <Input label="City" value={form.residentialAddress.city} onChange={(e) => handleNestedChange('residentialAddress', 'city', e.target.value)} required />
-                    <Input label="Postal Code" value={form.residentialAddress.postalCode} onChange={(e) => handleNestedChange('residentialAddress', 'postalCode', e.target.value)} />
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium mb-3">Postal Address (if different)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Street Address" value={form.postalAddress.street} onChange={(e) => handleNestedChange('postalAddress', 'street', e.target.value)} />
-                    <Input label="City" value={form.postalAddress.city} onChange={(e) => handleNestedChange('postalAddress', 'city', e.target.value)} />
-                    <Input label="Postal Code" value={form.postalAddress.postalCode} onChange={(e) => handleNestedChange('postalAddress', 'postalCode', e.target.value)} />
-                  </div>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-lg">
-                  <h4 className="font-medium mb-3">Emergency Contact *</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Name *" value={form.emergencyContact.name} onChange={(e) => handleNestedChange('emergencyContact', 'name', e.target.value)} required />
-                    <Input label="Phone *" value={form.emergencyContact.phone} onChange={(e) => handleNestedChange('emergencyContact', 'phone', e.target.value)} required />
-                    <Input label="Relationship" value={form.emergencyContact.relationship} onChange={(e) => handleNestedChange('emergencyContact', 'relationship', e.target.value)} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Position Details */}
-            {currentStep === 3 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Position Details</h3>
-                <div className="bg-slate-50 p-4 rounded-lg mb-4">
-                  <p className="text-sm text-slate-600 mb-2">Position: <strong>{job?.title || 'N/A'}</strong></p>
-                  <p className="text-sm text-slate-600 mb-2">Department: <strong>{job?.department || 'N/A'}</strong></p>
-                  <p className="text-sm text-slate-600 mb-2">Employment Type: <strong>{job?.employmentType || 'N/A'}</strong></p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Expected Salary" name="expectedSalary" value={form.expectedSalary} onChange={handleChange} />
-                  <DateDropdown 
-                  selectedDate={dateAvailable}
-                  onDateChange={(date) => {
-                    setDateAvailable(date);
-                    setForm({...form, dateAvailable: date ? date.toISOString().split('T')[0] : ''});
-                  }}
-                  label="Date Available to Start"
-                  showYear={true}
-                  showMonth={true}
-                  showDay={true}
-                  yearRange={5}
-                />
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" name="willingToRelocate" checked={form.willingToRelocate} onChange={handleChange} className="w-4 h-4" />
-                    <label className="text-sm">Willing to Relocate</label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input type="checkbox" name="willingToTravel" checked={form.willingToTravel} onChange={handleChange} className="w-4 h-4" />
-                    <label className="text-sm">Willing to Travel</label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Education */}
-            {currentStep === 4 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <h3 className="text-xl font-bold mb-4">Education</h3>
-                <div className="bg-slate-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium mb-3">Primary Education</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <Input label="School" value={form.primaryEducation.school} onChange={(e) => handleNestedChange('primaryEducation', 'school', e.target.value)} />
-                    <Input label="Year Completed" value={form.primaryEducation.yearCompleted} onChange={(e) => handleNestedChange('primaryEducation', 'yearCompleted', e.target.value)} />
-                    <Input label="Certificate" value={form.primaryEducation.certificate} onChange={(e) => handleNestedChange('primaryEducation', 'certificate', e.target.value)} />
-                  </div>
+                <p className="text-sm text-slate-500 mb-4">Add your education history</p>
+                
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-sm text-slate-500">Education entries</p>
+                  <Button type="button" size="sm" onClick={addEducation}>+ Add Education</Button>
                 </div>
-                <div className="bg-slate-50 p-4 rounded-lg mb-4">
-                  <h4 className="font-medium mb-3">Secondary Education</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Input label="School" value={form.secondaryEducation.school} onChange={(e) => handleNestedChange('secondaryEducation', 'school', e.target.value)} />
-                    <Input label="Year Completed" value={form.secondaryEducation.yearCompleted} onChange={(e) => handleNestedChange('secondaryEducation', 'yearCompleted', e.target.value)} />
-                    <Input label="Certificate" value={form.secondaryEducation.certificate} onChange={(e) => handleNestedChange('secondaryEducation', 'certificate', e.target.value)} />
-                    <Input label="Grade" value={form.secondaryEducation.grade} onChange={(e) => handleNestedChange('secondaryEducation', 'grade', e.target.value)} />
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">Further Education</h4>
-                    <Button type="button" size="sm" onClick={addFurtherEdu}>+ Add</Button>
-                  </div>
-                  {form.furtherEducation.map((edu, i) => (
-                    <div key={i} className="bg-slate-50 p-3 rounded-lg mb-2 border">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        <input className="form-input text-sm" placeholder="Institution" value={edu.institution} onChange={e => updateFurtherEdu(i, 'institution', e.target.value)} />
-                        <select className="form-input text-sm" value={edu.qualification} onChange={e => updateFurtherEdu(i, 'qualification', e.target.value)}>
-                          <option value="">Qualification</option>
+                {errors.education && <p className="text-red-500 text-sm mb-2">{errors.education}</p>}
+                {form.education.map((edu, i) => (
+                  <div key={i} className="bg-slate-50 p-4 rounded-lg mb-3 border">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Institution *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`education.${i}.institution`] ? 'border-red-500' : ''}`}
+                          name={`education_institution_${i}`}
+                          placeholder="Institution name"
+                          value={edu.institution}
+                          onChange={e => updateEducation(i, 'institution', e.target.value)}
+                        />
+                        {errors[`education.${i}.institution`] && <p className="text-red-500 text-xs mt-1">{errors[`education.${i}.institution`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Program *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`education.${i}.program`] ? 'border-red-500' : ''}`}
+                          name={`education_program_${i}`}
+                          placeholder="Program of study"
+                          value={edu.program}
+                          onChange={e => updateEducation(i, 'program', e.target.value)}
+                        />
+                        {errors[`education.${i}.program`] && <p className="text-red-500 text-xs mt-1">{errors[`education.${i}.program`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Education Level *</label>
+                        <select
+                          className={`form-input text-sm ${errors[`education.${i}.educationLevel`] ? 'border-red-500' : ''}`}
+                          name={`education_educationLevel_${i}`}
+                          value={edu.educationLevel}
+                          onChange={e => updateEducation(i, 'educationLevel', e.target.value)}
+                        >
+                          <option value="">Select level</option>
+                          <option value="Primary">Primary</option>
+                          <option value="Secondary">Secondary</option>
                           <option value="Certificate">Certificate</option>
                           <option value="Diploma">Diploma</option>
                           <option value="Bachelor's">Bachelor's</option>
                           <option value="Master's">Master's</option>
                           <option value="PhD">PhD</option>
                         </select>
-                        <input className="form-input text-sm" placeholder="Field of Study" value={edu.fieldOfStudy} onChange={e => updateFurtherEdu(i, 'fieldOfStudy', e.target.value)} />
-                        <input className="form-input text-sm" placeholder="Start Year" value={edu.startYear} onChange={e => updateFurtherEdu(i, 'startYear', e.target.value)} />
-                        <input className="form-input text-sm" placeholder="End Year" value={edu.endYear} onChange={e => updateFurtherEdu(i, 'endYear', e.target.value)} />
+                        {errors[`education.${i}.educationLevel`] && <p className="text-red-500 text-xs mt-1">{errors[`education.${i}.educationLevel`]}</p>}
                       </div>
-                      <button type="button" className="text-red-500 text-xs mt-1" onClick={() => removeFurtherEdu(i)}>Remove</button>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Start Year *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`education.${i}.startYear`] ? 'border-red-500' : ''}`}
+                          name={`education_startYear_${i}`}
+                          type="number"
+                          placeholder="YYYY"
+                          value={edu.startYear}
+                          onChange={e => updateEducation(i, 'startYear', e.target.value)}
+                        />
+                        {errors[`education.${i}.startYear`] && <p className="text-red-500 text-xs mt-1">{errors[`education.${i}.startYear`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">End Year *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`education.${i}.endYear`] ? 'border-red-500' : ''}`}
+                          name={`education_endYear_${i}`}
+                          type="number"
+                          placeholder="YYYY"
+                          value={edu.endYear}
+                          onChange={e => updateEducation(i, 'endYear', e.target.value)}
+                        />
+                        {errors[`education.${i}.endYear`] && <p className="text-red-500 text-xs mt-1">{errors[`education.${i}.endYear`]}</p>}
+                      </div>
                     </div>
-                  ))}
-                </div>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">Certifications</h4>
-                    <Button type="button" size="sm" onClick={addCert}>+ Add</Button>
+                    <button type="button" className="text-red-500 text-xs" onClick={() => removeEducation(i)}>Remove</button>
                   </div>
-                  {form.certifications.map((cert, i) => (
-                    <div key={i} className="bg-slate-50 p-3 rounded-lg mb-2 border">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <input className="form-input text-sm" placeholder="Certificate Name" value={cert.name} onChange={e => updateCert(i, 'name', e.target.value)} />
-                        <input className="form-input text-sm" placeholder="Issuing Body" value={cert.issuingBody} onChange={e => updateCert(i, 'issuingBody', e.target.value)} />
-                        <input className="form-input text-sm" type="date" placeholder="Date Obtained" value={cert.dateObtained} onChange={e => updateCert(i, 'dateObtained', e.target.value)} />
-                        <input className="form-input text-sm" type="date" placeholder="Expiry Date" value={cert.expiryDate} onChange={e => updateCert(i, 'expiryDate', e.target.value)} />
-                      </div>
-                      <button type="button" className="text-red-500 text-xs mt-1" onClick={() => removeCert(i)}>Remove</button>
-                    </div>
-                  ))}
-                </div>
+                ))}
+                {form.education.length === 0 && <p className="text-sm text-slate-400">No education added. Click the button above to add.</p>}
               </div>
             )}
 
-            {/* Step 5: Employment History */}
-            {currentStep === 5 && (
+            {/* Step 3: Employment History */}
+            {currentStep === 3 && (
               <div className="space-y-4">
                 <h3 className="text-xl font-bold mb-4">Employment History</h3>
+                <p className="text-sm text-slate-500 mb-4">Add your employment history starting with the most recent</p>
+                {errors.employmentHistory && <p className="text-red-500 text-sm mb-2">{errors.employmentHistory}</p>}
                 <div className="flex justify-between items-center mb-3">
-                  <p className="text-sm text-slate-500">Add your previous work experience</p>
+                  <p className="text-sm text-slate-500">Employment entries</p>
                   <Button type="button" size="sm" onClick={addEmployment}>+ Add Employment</Button>
                 </div>
                 {form.employmentHistory.map((work, i) => (
                   <div key={i} className="bg-slate-50 p-4 rounded-lg mb-3 border">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
-                      <input className="form-input text-sm" placeholder="Company Name" value={work.company} onChange={e => updateEmployment(i, 'company', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Position/Role" value={work.position} onChange={e => updateEmployment(i, 'position', e.target.value)} />
-                      <input className="form-input text-sm" type="date" placeholder="Start Date" value={work.startDate} onChange={e => updateEmployment(i, 'startDate', e.target.value)} />
-                      <input className="form-input text-sm" type="date" placeholder="End Date" value={work.endDate} onChange={e => updateEmployment(i, 'endDate', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Reason for Leaving" value={work.reasonForLeaving} onChange={e => updateEmployment(i, 'reasonForLeaving', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Salary (optional)" value={work.salary} onChange={e => updateEmployment(i, 'salary', e.target.value)} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Employer *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`employmentHistory.${i}.employer`] ? 'border-red-500' : ''}`}
+                          name={`employment_employer_${i}`}
+                          placeholder="Company/Organization name"
+                          value={work.employer}
+                          onChange={e => updateEmployment(i, 'employer', e.target.value)}
+                        />
+                        {errors[`employmentHistory.${i}.employer`] && <p className="text-red-500 text-xs mt-1">{errors[`employmentHistory.${i}.employer`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Job Title *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`employmentHistory.${i}.jobTitle`] ? 'border-red-500' : ''}`}
+                          name={`employment_jobTitle_${i}`}
+                          placeholder="Position/Role"
+                          value={work.jobTitle}
+                          onChange={e => updateEmployment(i, 'jobTitle', e.target.value)}
+                        />
+                        {errors[`employmentHistory.${i}.jobTitle`] && <p className="text-red-500 text-xs mt-1">{errors[`employmentHistory.${i}.jobTitle`]}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          name={`employment_isCurrentJob_${i}`}
+                          checked={work.isCurrentJob}
+                          onChange={e => updateEmployment(i, 'isCurrentJob', e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label className="text-sm">Is this your current job?</label>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Start Date *</label>
+                        <input
+                          className={`form-input text-sm ${errors[`employmentHistory.${i}.startDate`] ? 'border-red-500' : ''}`}
+                          name={`employment_startDate_${i}`}
+                          type="date"
+                          value={work.startDate}
+                          onChange={e => updateEmployment(i, 'startDate', e.target.value)}
+                        />
+                        {errors[`employmentHistory.${i}.startDate`] && <p className="text-red-500 text-xs mt-1">{errors[`employmentHistory.${i}.startDate`]}</p>}
+                      </div>
+                      {!work.isCurrentJob && (
+                        <div>
+                          <label className="block text-sm font-medium mb-1">End Date *</label>
+                          <input
+                            className={`form-input text-sm ${errors[`employmentHistory.${i}.endDate`] ? 'border-red-500' : ''}`}
+                            name={`employment_endDate_${i}`}
+                            type="date"
+                            value={work.endDate}
+                            onChange={e => updateEmployment(i, 'endDate', e.target.value)}
+                          />
+                          {errors[`employmentHistory.${i}.endDate`] && <p className="text-red-500 text-xs mt-1">{errors[`employmentHistory.${i}.endDate`]}</p>}
+                        </div>
+                      )}
                     </div>
-                    <textarea className="form-input text-sm" placeholder="Key Responsibilities/Duties" value={work.duties} onChange={e => updateEmployment(i, 'duties', e.target.value)} rows={2} />
-                    <button type="button" className="text-red-500 text-xs mt-1" onClick={() => removeEmployment(i)}>Remove</button>
+                    <div className="mb-2">
+                      <label className="block text-sm font-medium mb-1">Achievements</label>
+                      <textarea
+                        className="form-input text-sm"
+                        name={`employment_achievements_${i}`}
+                        placeholder="Key achievements and responsibilities"
+                        value={work.achievements}
+                        onChange={e => updateEmployment(i, 'achievements', e.target.value)}
+                        rows={2}
+                        maxLength={500}
+                      />
+                    </div>
+                    <button type="button" className="text-red-500 text-xs" onClick={() => removeEmployment(i)}>Remove</button>
                   </div>
                 ))}
                 {form.employmentHistory.length === 0 && <p className="text-sm text-slate-400">No employment history added. Click the button above to add.</p>}
               </div>
             )}
 
-            {/* Step 6: References */}
-            {currentStep === 6 && (
+            {/* Step 4: Certifications & Licenses */}
+            {currentStep === 4 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">References</h3>
+                <h3 className="text-xl font-bold mb-4">Certifications & Licenses</h3>
+                <p className="text-sm text-slate-500 mb-4">Add your professional certifications (optional)</p>
                 <div className="flex justify-between items-center mb-3">
-                  <p className="text-sm text-slate-500">Add professional references (at least 2 recommended)</p>
-                  <Button type="button" size="sm" onClick={addRef}>+ Add Reference</Button>
+                  <p className="text-sm text-slate-500">Certification entries</p>
+                  <Button type="button" size="sm" onClick={addCert}>+ Add Certification</Button>
                 </div>
-                {form.references.map((ref, i) => (
+                {form.certifications.map((cert, i) => (
                   <div key={i} className="bg-slate-50 p-4 rounded-lg mb-3 border">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      <input className="form-input text-sm" placeholder="Name" value={ref.name} onChange={e => updateRef(i, 'name', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Position/Title" value={ref.position} onChange={e => updateRef(i, 'position', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Company/Organization" value={ref.company} onChange={e => updateRef(i, 'company', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Phone Number" value={ref.phone} onChange={e => updateRef(i, 'phone', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Email" type="email" value={ref.email} onChange={e => updateRef(i, 'email', e.target.value)} />
-                      <input className="form-input text-sm" placeholder="Relationship" value={ref.relationship} onChange={e => updateRef(i, 'relationship', e.target.value)} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Certification Name</label>
+                        <input
+                          className={`form-input text-sm ${errors[`certifications.${i}.issuingOrganization`] && cert.name ? 'border-red-500' : ''}`}
+                          name={`cert_name_${i}`}
+                          placeholder="Certificate name"
+                          value={cert.name}
+                          onChange={e => updateCert(i, 'name', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Issuing Organization {cert.name ? '*' : ''}</label>
+                        <input
+                          className={`form-input text-sm ${errors[`certifications.${i}.issuingOrganization`] ? 'border-red-500' : ''}`}
+                          name={`cert_issuingOrganization_${i}`}
+                          placeholder="Issuing organization"
+                          value={cert.issuingOrganization}
+                          onChange={e => updateCert(i, 'issuingOrganization', e.target.value)}
+                        />
+                        {errors[`certifications.${i}.issuingOrganization`] && <p className="text-red-500 text-xs mt-1">{errors[`certifications.${i}.issuingOrganization`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Certificate Number</label>
+                        <input
+                          className="form-input text-sm"
+                          name={`cert_certificateNumber_${i}`}
+                          placeholder="Certificate number"
+                          value={cert.certificateNumber}
+                          onChange={e => updateCert(i, 'certificateNumber', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Issuing Date {cert.name ? '*' : ''}</label>
+                        <input
+                          className={`form-input text-sm ${errors[`certifications.${i}.issuingDate`] ? 'border-red-500' : ''}`}
+                          name={`cert_issuingDate_${i}`}
+                          type="date"
+                          value={cert.issuingDate}
+                          onChange={e => updateCert(i, 'issuingDate', e.target.value)}
+                        />
+                        {errors[`certifications.${i}.issuingDate`] && <p className="text-red-500 text-xs mt-1">{errors[`certifications.${i}.issuingDate`]}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Expiration Date {cert.name && !cert.noExpiry ? '*' : ''}</label>
+                        <input
+                          className={`form-input text-sm ${errors[`certifications.${i}.expiryDate`] ? 'border-red-500' : ''} ${cert.noExpiry ? 'opacity-50' : ''}`}
+                          name={`cert_expiryDate_${i}`}
+                          type="date"
+                          value={cert.expiryDate}
+                          onChange={e => updateCert(i, 'expiryDate', e.target.value)}
+                          disabled={cert.noExpiry}
+                        />
+                        {errors[`certifications.${i}.expiryDate`] && <p className="text-red-500 text-xs mt-1">{errors[`certifications.${i}.expiryDate`]}</p>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          name={`cert_noExpiry_${i}`}
+                          checked={cert.noExpiry}
+                          onChange={e => updateCert(i, 'noExpiry', e.target.checked)}
+                          className="w-4 h-4"
+                        />
+                        <label className="text-sm">No expiry date?</label>
+                      </div>
                     </div>
-                    <button type="button" className="text-red-500 text-xs mt-1" onClick={() => removeRef(i)}>Remove</button>
+                    <button type="button" className="text-red-500 text-xs" onClick={() => removeCert(i)}>Remove</button>
                   </div>
                 ))}
-                {form.references.length === 0 && <p className="text-sm text-slate-400">No references added. Click the button above to add.</p>}
+                {form.certifications.length === 0 && <p className="text-sm text-slate-400">No certifications added. Click the button above to add.</p>}
               </div>
             )}
 
-            {/* Step 7: Skills & Declaration */}
+            {/* Step 5: Attachments */}
+            {currentStep === 5 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Attachments</h3>
+                <p className="text-sm text-slate-500 mb-4">Upload your CV, cover letter, and other supporting documents</p>
+                {errors.cv && <p className="text-red-500 text-sm mb-2">{errors.cv}</p>}
+                <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                  <label className="block text-sm font-medium mb-2">CV * (PDF, DOC, DOCX - Max 5MB)</label>
+                  <input
+                    type="file"
+                    name="cv"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleChange}
+                    className={`form-input text-sm ${errors.cv ? 'border-red-500' : ''}`}
+                  />
+                  {form.cv && <p className="text-sm text-green-600 mt-1">Selected: {form.cv.name}</p>}
+                </div>
+                <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                  <label className="block text-sm font-medium mb-2">Cover Letter (PDF, DOC, DOCX - Max 2MB)</label>
+                  <input
+                    type="file"
+                    name="coverLetterFile"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleChange}
+                    className="form-input text-sm"
+                  />
+                  {form.coverLetterFile && <p className="text-sm text-green-600 mt-1">Selected: {form.coverLetterFile.name}</p>}
+                </div>
+                <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-medium">Other Supporting Documents (Max 10MB each, max 5 files)</label>
+                    <Button type="button" size="sm" onClick={addOtherDocument}>+ Add Document</Button>
+                  </div>
+                  {form.otherDocuments.map((doc, i) => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <input
+                        type="file"
+                        name={`otherDocument_${i}`}
+                        accept=".pdf,.doc,.docx"
+                        onChange={e => updateOtherDocument(i, e.target.files[0])}
+                        className="form-input text-sm flex-1"
+                      />
+                      <button type="button" className="text-red-500 text-xs" onClick={() => removeOtherDocument(i)}>Remove</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Disclosures */}
+            {currentStep === 6 && (
+              <div className="space-y-4">
+                <h3 className="text-xl font-bold mb-4">Disclosures</h3>
+                <p className="text-sm text-slate-500 mb-4">Please provide the following information</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Experience Years *</label>
+                    <input
+                      type="number"
+                      name="experienceYears"
+                      value={form.experienceYears}
+                      onChange={handleChange}
+                      min="0"
+                      max="50"
+                      className={`form-input ${errors.experienceYears ? 'border-red-500' : ''}`}
+                    />
+                    {errors.experienceYears && <p className="text-red-500 text-xs mt-1">{errors.experienceYears}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Availability (weeks) *</label>
+                    <input
+                      type="number"
+                      name="availabilityWeeks"
+                      value={form.availabilityWeeks}
+                      onChange={handleChange}
+                      min="0"
+                      max="52"
+                      className={`form-input ${errors.availabilityWeeks ? 'border-red-500' : ''}`}
+                    />
+                    {errors.availabilityWeeks && <p className="text-red-500 text-xs mt-1">{errors.availabilityWeeks}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Right to Work in Kenya? *</label>
+                    <select
+                      name="rightToWork"
+                      value={form.rightToWork}
+                      onChange={handleChange}
+                      className={`form-input ${errors.rightToWork ? 'border-red-500' : ''}`}
+                    >
+                      <option value="">Select</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                    {errors.rightToWork && <p className="text-red-500 text-xs mt-1">{errors.rightToWork}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Monthly Salary Expectation (KES) *</label>
+                    <input
+                      type="number"
+                      name="salaryExpectation"
+                      value={form.salaryExpectation}
+                      onChange={handleChange}
+                      min="0"
+                      max="10000000"
+                      className={`form-input ${errors.salaryExpectation ? 'border-red-500' : ''}`}
+                    />
+                    {errors.salaryExpectation && <p className="text-red-500 text-xs mt-1">{errors.salaryExpectation}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Declaration */}
             {currentStep === 7 && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold mb-4">Skills & Declaration</h3>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">Languages Spoken</h4>
-                    <Button type="button" size="sm" onClick={addLanguage}>+ Add</Button>
-                  </div>
-                  {form.languages.map((lang, i) => (
-                    <div key={i} className="bg-slate-50 p-3 rounded-lg mb-2 border flex gap-3">
-                      <input className="form-input text-sm flex-1" placeholder="Language" value={lang.language} onChange={e => updateLanguage(i, 'language', e.target.value)} />
-                      <select className="form-input text-sm" value={lang.proficiency} onChange={e => updateLanguage(i, 'proficiency', e.target.value)}>
-                        <option value="">Proficiency</option>
-                        <option value="Basic">Basic</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Fluent">Fluent</option>
-                        <option value="Native">Native</option>
-                      </select>
-                      <button type="button" className="text-red-500 text-xs" onClick={() => removeLanguage(i)}>Remove</button>
+                <h3 className="text-xl font-bold mb-4">Declaration</h3>
+                <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                  <p className="text-sm text-slate-600 mb-4">
+                    For more information on how we handle your personal data during the recruitment process, including how you can later withdraw your consent to our processing this data, please refer to our <a href="#" className="text-[#CB7246] hover:underline">candidate privacy policy</a>.
+                  </p>
+                  <h4 className="font-medium mb-2">Your Declaration</h4>
+                  <p className="text-sm text-slate-600 mb-4">
+                    I declare that the information provided herein as part of my job submission is true to the best of my knowledge and belief.
+                  </p>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        name="declarationConfirmed"
+                        checked={form.declarationConfirmed}
+                        onChange={handleChange}
+                        className={`w-4 h-4 ${errors.declarationConfirmed ? 'border-red-500' : ''}`}
+                      />
+                      <label className="text-sm">I confirm the above declaration *</label>
                     </div>
-                  ))}
-                </div>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-medium">Computer Skills</h4>
-                    <Button type="button" size="sm" onClick={addComputerSkill}>+ Add</Button>
+                    {errors.declarationConfirmed && <p className="text-red-500 text-xs">{errors.declarationConfirmed}</p>}
                   </div>
-                  {form.computerSkills.map((skill, i) => (
-                    <div key={i} className="bg-slate-50 p-3 rounded-lg mb-2 border flex gap-3">
-                      <input className="form-input text-sm flex-1" placeholder="Skill (e.g., Microsoft Excel)" value={skill.name} onChange={e => updateComputerSkill(i, 'name', e.target.value)} />
-                      <select className="form-input text-sm" value={skill.proficiency} onChange={e => updateComputerSkill(i, 'proficiency', e.target.value)}>
-                        <option value="">Proficiency</option>
-                        <option value="Basic">Basic</option>
-                        <option value="Intermediate">Intermediate</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
-                      <button type="button" className="text-red-500 text-xs" onClick={() => removeComputerSkill(i)}>Remove</button>
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        name="privacyPolicyConfirmed"
+                        checked={form.privacyPolicyConfirmed}
+                        onChange={handleChange}
+                        className={`w-4 h-4 ${errors.privacyPolicyConfirmed ? 'border-red-500' : ''}`}
+                      />
+                      <label className="text-sm">I acknowledge the privacy policy *</label>
                     </div>
-                  ))}
-                </div>
-                <div className="mb-4 bg-slate-50 p-3 rounded-lg border">
-                  <h4 className="font-medium mb-2">Other Skills</h4>
-                  <div className="flex gap-2 mb-2">
-                    <input className="form-input text-sm flex-1" placeholder="e.g., Project Management" value={otherSkillInput} onChange={e => setOtherSkillInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addOtherSkill() } }} />
-                    <Button type="button" size="sm" onClick={addOtherSkill}>Add</Button>
+                    {errors.privacyPolicyConfirmed && <p className="text-red-500 text-xs">{errors.privacyPolicyConfirmed}</p>}
                   </div>
-                  {form.otherSkills.map((skill, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs mr-1 mb-1">
-                      {skill} <button type="button" onClick={() => setForm(prev => ({ ...prev, otherSkills: prev.otherSkills.filter((_, j) => j !== i) }))}>x</button>
-                    </span>
-                  ))}
-                </div>
-                <div className="mb-4">
-                  <label className="font-medium mb-2 block">Cover Letter / Statement of Interest</label>
-                  <textarea className="form-input" value={form.coverLetter} onChange={handleChange} name="coverLetter" rows={4} placeholder="Tell us why you're a great fit for this role..." />
-                </div>
-                <div className="mb-4">
-                  <label className="font-medium mb-2 block">Upload CV (PDF/DOCX)</label>
-                  <input type="file" name="cv" accept=".pdf,.docx" onChange={handleChange} />
-                  {form.cv && <p className="text-sm text-slate-500 mt-1">Selected: {form.cv.name}</p>}
-                </div>
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" name="declarationConfirmed" checked={form.declarationConfirmed} onChange={handleChange} className="w-4 h-4" required />
-                    <span className="font-medium">I declare that all information provided is accurate and complete *</span>
-                  </label>
-                </div>
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" name="backgroundCheckConsent" checked={form.backgroundCheckConsent} onChange={handleChange} className="w-4 h-4" required />
-                    <span className="font-medium">I consent to a background check being conducted *</span>
-                  </label>
-                </div>
-                <div className="mb-4">
-                  <label className="font-medium mb-2 block">Signature (Type your full name) *</label>
-                  <input className="form-input" name="signature" value={form.signature} onChange={handleChange} required />
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-1">Confirm by entering your full name *</label>
+                    <input
+                      type="text"
+                      name="signature"
+                      value={form.signature}
+                      onChange={handleChange}
+                      placeholder={`${form.surname} ${form.firstName} ${form.otherNames}`.trim()}
+                      className={`form-input ${errors.signature ? 'border-red-500' : ''}`}
+                    />
+                    {errors.signature && <p className="text-red-500 text-xs">{errors.signature}</p>}
+                  </div>
                 </div>
               </div>
             )}
@@ -674,6 +973,7 @@ export default function MultiStepJobApplicationForm() {
               <Button variant="primary" onClick={() => { setShowSuccess(false); resetForm(); navigate('/jobs') }}>Okay</Button>
             </div>
           </Modal>
+
         </Card>
       </div>
     </DashboardLayout>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { cn } from '../../lib/utils'
 
 const Table = ({ columns, data, loading = false, className = '', sortField, sortDirection, onSort }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,7 +40,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
   };
 
   return (
-    <div className={`w-full overflow-x-auto ${className}`}>
+    <div className={cn('w-full overflow-x-auto', className)}>
       <table className="w-full border-collapse">
         <thead className="bg-slate-100 dark:bg-slate-800">
           <tr>

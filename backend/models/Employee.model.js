@@ -35,6 +35,11 @@ const mapRow = (row) => {
     employmentHistory: row.employment_history,
     skills: row.skills,
     certifications: row.certifications,
+    experienceYears: row.experience_years,
+    availabilityWeeks: row.availability_weeks,
+    rightToWork: row.right_to_work,
+    salaryExpectation: row.salary_expectation,
+    canSelfRecordAttendance: row.can_self_record_attendance ?? false,
   });
 };
 
@@ -66,6 +71,11 @@ class Employee {
     this.employmentHistory = data.employmentHistory ?? null;
     this.skills = data.skills ?? null;
     this.certifications = data.certifications ?? null;
+    this.experienceYears = data.experienceYears ?? null;
+    this.availabilityWeeks = data.availabilityWeeks ?? null;
+    this.rightToWork = data.rightToWork ?? null;
+    this.salaryExpectation = data.salaryExpectation ?? null;
+    this.canSelfRecordAttendance = data.canSelfRecordAttendance ?? false;
   }
 
   static fromRow(row) {
@@ -178,8 +188,13 @@ class Employee {
               education_history = $19,
               employment_history = $20,
               skills = $21,
-              certifications = $22
-          WHERE id = $23
+              certifications = $22,
+              experience_years = $23,
+              availability_weeks = $24,
+              right_to_work = $25,
+              salary_expectation = $26,
+              can_self_record_attendance = $27
+          WHERE id = $28
           RETURNING *
         `,
         [
@@ -205,6 +220,11 @@ class Employee {
           toJsonb(this.employmentHistory),
           toJsonb(this.skills),
           toJsonb(this.certifications),
+          this.experienceYears,
+          this.availabilityWeeks,
+          this.rightToWork,
+          this.salaryExpectation,
+          this.canSelfRecordAttendance ?? false,
           this.id,
         ]
       );
@@ -219,10 +239,12 @@ class Employee {
           user_id, status, first_name, last_name, email, phone, biometric_device_id, mpesa_phone_number,
           employment_type, wage_rate, department, date_joined, created_at, updated_at,
           date_of_birth, gender, marital_status, nationality, national_id,
-          residential_address, emergency_contact, education_history, employment_history, skills, certifications
+          residential_address, emergency_contact, education_history, employment_history, skills, certifications,
+          experience_years, availability_weeks, right_to_work, salary_expectation,
+          can_self_record_attendance
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13,
-          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
         RETURNING *
       `,
       [
@@ -250,6 +272,11 @@ class Employee {
         toJsonb(this.employmentHistory),
         toJsonb(this.skills),
         toJsonb(this.certifications),
+        this.experienceYears,
+        this.availabilityWeeks,
+        this.rightToWork,
+        this.salaryExpectation,
+        this.canSelfRecordAttendance ?? false,
       ]
     );
 
@@ -291,6 +318,11 @@ class Employee {
       employmentHistory: this.employmentHistory,
       skills: this.skills,
       certifications: this.certifications,
+      experienceYears: this.experienceYears,
+      availabilityWeeks: this.availabilityWeeks,
+      rightToWork: this.rightToWork,
+      salaryExpectation: this.salaryExpectation,
+      canSelfRecordAttendance: this.canSelfRecordAttendance,
     };
   }
 }

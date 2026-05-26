@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Geneology — Ubuntu HRMS</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2.5rem;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      color: rgba(255,255,255,0.9);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.1rem;
+    }
+
+    .search-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+    }
+
+    .dashboard-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+
+    .dashboard-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-header h2 {
+      font-size: 1.3rem;
+      margin: 0;
+    }
+
+    .dashboard-header .toggle {
+      font-size: 1.5rem;
+      transition: transform 0.3s;
+    }
+
+    .dashboard-header .toggle.open {
+      transform: rotate(180deg);
+    }
+
+    .dashboard-content {
+      padding: 20px;
+      display: none;
+    }
+
+    .dashboard-content.open {
+      display: block;
+    }
+
+    .nav-group {
+      margin-bottom: 20px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .nav-group-header {
+      background: #f7fafc;
+      padding: 12px 15px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: #2d3748;
+      transition: background 0.2s;
+    }
+
+    .nav-group-header:hover {
+      background: #edf2f7;
+    }
+
+    .nav-group-header .toggle {
+      font-size: 0.8rem;
+      transition: transform 0.3s;
+    }
+
+    .nav-group-header .toggle.open {
+      transform: rotate(180deg);
+    }
+
+    .nav-group-content {
+      display: none;
+      padding: 15px;
+    }
+
+    .nav-group-content.open {
+      display: block;
+    }
+
+    .nav-item {
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      background: #f7fafc;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .nav-item:hover {
+      background: #edf2f7;
+    }
+
+    .nav-item-label {
+      font-weight: 500;
+      color: #4a5568;
+      margin-bottom: 8px;
+    }
+
+    .interactive-elements {
+      margin-top: 10px;
+      padding-left: 15px;
+      border-left: 3px solid #667eea;
+    }
+
+    .interactive-element {
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      color: #718096;
+    }
+
+    .interactive-element code {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .path-link {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s, text-decoration 0.2s;
+    }
+
+    .path-link:hover {
+      color: #764ba2;
+      text-decoration: underline;
+    }
+
+    .leaf-content {
+      margin-top: 10px;
+      padding: 10px;
+      background: #e6fffa;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #2c7a7b;
+    }
+
+    .leaf-content strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #285e61;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .badge-admin { background: #c53030; color: white; }
+    .badge-manager { background: #2b6cb0; color: white; }
+    .badge-employee { background: #2f855a; color: white; }
+    .badge-labourer { background: #d69e2e; color: white; }
+    .badge-contractor { background: #805ad5; color: white; }
+
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>UI Geneology</h1>
+    <p class="subtitle">Complete hierarchy of UI elements across all dashboards</p>
+    
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search dashboards, navigation items, or elements...">
+    </div>
+
+    <div class="dashboard-grid" id="dashboardGrid">
+      <!-- Dashboard cards will be inserted here by JavaScript -->
+    </div>
+
+    <div class="no-results" id="noResults" style="display: none;">
+      No results found for your search.
+    </div>
+  </div>
+
+  <script>
+    // Configure this to match your frontend dev server URL
+    const FRONTEND_BASE_URL = 'http://localhost:5173'; // Change to your frontend URL (e.g., 'http://localhost:3000' for CRA)
+
+    const genealogyData = [
+      {
+        name: "Admin",
+        badge: "badge-admin",
+        groups: [
+          {
+            name: "Overview → Dashboard",
+            items: [
+              {
+                label: "Stats cards (clickable)",
+                elements: "Total Employees → /admin/employees, Present Today → /admin/attendance, Pending Payroll → /admin/payroll, Avg KPI → /admin/kpis",
+                leaf: "Stats cards display, Quick Actions grid, System Status (API/DB/Last Sync)"
+              },
+              {
+                label: "Quick Actions",
+                elements: "Approve Leaves → /admin/leaves, Generate Payroll → /admin/payroll, View Complaints → /admin/complaints, Check Attendance → /admin/attendance, Review KPIs → /admin/kpis, Settings → /admin/settings",
+                leaf: "Quick Actions grid with navigation buttons"
+              },
+              {
+                label: "Tabs",
+                elements: "Overview, Employees, Attendance, Payroll, KPIs, Analytics",
+                leaf: "Employees tab: DataTable with employee list → click row → /admin/employees/:id. Attendance tab: Empty state. Payroll tab: 3 stat cards + button. KPIs tab: 2 stat cards + button. Analytics tab: BarChart + PieChart"
+              }
+            ]
+          },
+          {
+            name: "Employees → Employees",
+            items: [
+              {
+                label: "DataTable",
+                elements: "Employee list → click row → /admin/employees/:id",
+                leaf: "Employee list table with Name, Department, Role, Status (Active badge)"
+              }
+            ]
+          },
+          {
+            name: "Employees → Users",
+            items: [
+              {
+                label: "DataTable",
+                elements: "User list → click row → /admin/users/:userId",
+                leaf: "User list table with user information"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Attendance",
+            items: [
+              {
+                label: "Tabs",
+                elements: "Overview, Employees, Attendance, Payroll, KPIs, Analytics",
+                leaf: "Attendance records table with Date, Check In, Check Out, Status → click row → /admin/attendance/:attendanceId"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Leave and Off-days",
+            items: [
+              {
+                label: "Leave request list",
+                elements: "Approve/Reject buttons",
+                leaf: "Leave requests table with Employee, Type, Dates, Status"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Statutory Leave Review",
+            items: [
+              {
+                label: "Statutory leave rules table",
+                elements: "Edit buttons",
+                leaf: "Statutory leave policy table with leave types, entitlements, rules"
+              }
+            ]
+          },
+          {
+            name: "Payroll → Payroll Management",
+            items: [
+              {
+                label: "Payroll list table",
+                elements: "Generate button → opens period selection form, Export button",
+                leaf: "Payroll records table with Employee, Period, Gross, Net, Status"
+              }
+            ]
+          },
+          {
+            name: "Payroll → Disburse Payroll",
+            items: [
+              {
+                label: "Payroll list with Pending status",
+                elements: "Approve button per row, Batch Approve button",
+                leaf: "Pending payroll records table"
+              }
+            ]
+          },
+          {
+            name: "Settings → Settings",
+            items: [
+              {
+                label: "Settings categories",
+                elements: "General, Attendance, Payroll, Leave, KPI, Notifications, Save button",
+                leaf: "Settings form with category tabs and input fields"
+              }
+            ]
+          },
+          {
+            name: "Reports → Reports",
+            items: [
+              {
+                label: "Report type selector",
+                elements: "Attendance, Payroll, Leave, KPI, Employee, Date range picker, Generate button, Export button",
+                leaf: "Report type selection form → Generate displays table/chart → Export downloads PDF/Excel"
+              }
+            ]
+          },
+          {
+            name: "Assets → Assets",
+            items: [
+              {
+                label: "Asset list table",
+                elements: "Add Asset button → opens form, Edit/Delete buttons per row",
+                leaf: "Asset inventory table with Name, Type, Status, Assigned To"
+              }
+            ]
+          },
+          {
+            name: "Contracts → Contracts",
+            items: [
+              {
+                label: "Contract list table",
+                elements: "Create Contract button → opens form, View button per row",
+                leaf: "Contract records table with Employee, Type, Start Date, End Date, Status"
+              }
+            ]
+          },
+          {
+            name: "Contracts → Review Submissions",
+            items: [
+              {
+                label: "Pending contract submissions",
+                elements: "Approve/Reject buttons",
+                leaf: "Contract review table with Contractor, Project, Terms"
+              }
+            ]
+          },
+          {
+            name: "Contractors → Contractors",
+            items: [
+              {
+                label: "Contractor list table",
+                elements: "Add Contractor button → opens form, View button per row",
+                leaf: "Contractor records table with Name, Company, Status"
+              }
+            ]
+          },
+          {
+            name: "Workforce → Onboarding",
+            items: [
+              {
+                label: "Onboarding checklist table",
+                elements: "Start Onboarding button, Progress tracker",
+                leaf: "Onboarding tasks table with Task, Status, Due Date"
+              }
+            ]
+          },
+          {
+            name: "Workforce → Daily Labour",
+            items: [
+              {
+                label: "Daily labourer list table",
+                elements: "Add Labourer button → opens form, Approve Wages button",
+                leaf: "Labourer records table with Name, Skill Set, Daily Rate, Status"
+              }
+            ]
+          },
+          {
+            name: "Performance → KPIs",
+            items: [
+              {
+                label: "KPI list table",
+                elements: "Set KPI button → opens form, Assess button per row",
+                leaf: "KPI records table with Employee, Definition, Target, Achieved, Score"
+              }
+            ]
+          },
+          {
+            name: "Performance → Training & Development",
+            items: [
+              {
+                label: "Training list table",
+                elements: "Add Training button → opens form, Assign button per row",
+                leaf: "Training records table with Title, Type, Date, Attendees"
+              }
+            ]
+          },
+          {
+            name: "Organisation → Org Chart",
+            items: [
+              {
+                label: "Department hierarchy tree",
+                elements: "Expand/collapse nodes, Click department → shows employees",
+                leaf: "Visual org chart with departments as nodes"
+              }
+            ]
+          },
+          {
+            name: "Organisation → Document Vault",
+            items: [
+              {
+                label: "Document list table",
+                elements: "Upload button → opens file picker, Download button per row",
+                leaf: "Employee documents table with Employee, Type (National ID, KRA, NSSF, NHIF, Certificate), Status"
+              }
+            ]
+          },
+          {
+            name: "Complaints → Complaints",
+            items: [
+              {
+                label: "Complaint list table",
+                elements: "Resolve button per row, View button per row",
+                leaf: "Complaint records table with Employee, Type, Description, Status, Date"
+              }
+            ]
+          },
+          {
+            name: "Hiring → Recruitment",
+            items: [
+              {
+                label: "Job postings list table",
+                elements: "Create Job button → opens form, View Applicants button per row",
+                leaf: "Job postings table with Title, Department, Status, Deadline → View Applicants → /recruitment/jobs/:jobId/applicants"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Manager",
+        badge: "badge-manager",
+        groups: [
+          {
+            name: "Overview → Dashboard",
+            items: [
+              {
+                label: "Stats cards",
+                elements: "Team Size → /admin/employees, Present Today → /manager/attendance, Pending Approvals → /leave/approvals, Team Avg KPI → /kpi/manage",
+                leaf: "Stats cards, Quick Actions grid, Performance progress bars"
+              },
+              {
+                label: "Quick Actions",
+                elements: "Review Leaves → /leave/approvals, Manage Attendance → /manager/attendance, Set KPI Goals → /kpi/manage, Disburse Payroll → /payroll/disburse, Leave Overview → /manager/leaves",
+                leaf: "Quick Actions grid with navigation buttons"
+              },
+              {
+                label: "Tabs",
+                elements: "Overview, Team Members, Attendance, Leaves, KPIs",
+                leaf: "Team Members tab: DataTable → click row → /admin/employees/:id. Attendance tab: Empty state. Leaves tab: 3 stat cards + button. KPIs tab: Empty state"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Attendance",
+            items: [
+              {
+                label: "Attendance records table",
+                elements: "Filter by date range, Export button",
+                leaf: "Team attendance table with Employee, Date, Check In, Check Out, Status"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Leave and Off-days Overview",
+            items: [
+              {
+                label: "Leave balance summary",
+                elements: "Leave request list",
+                leaf: "Leave balance cards per employee, Leave requests table with status"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Leave and Off-days Management",
+            items: [
+              {
+                label: "Pending leave requests",
+                elements: "Approve/Reject buttons",
+                leaf: "Leave approval queue table"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Statutory Leave Review",
+            items: [
+              {
+                label: "Statutory leave policy table",
+                elements: "View-only",
+                leaf: "Statutory leave rules display (read-only for managers)"
+              }
+            ]
+          },
+          {
+            name: "Team → Team Members",
+            items: [
+              {
+                label: "DataTable",
+                elements: "Team list → click row → /admin/employees/:id",
+                leaf: "Team members table with Name, Department, Type (Permanent/Contract)"
+              }
+            ]
+          },
+          {
+            name: "Performance → Manage KPIs",
+            items: [
+              {
+                label: "KPI list table",
+                elements: "Set KPI button → opens form, Assess button per row",
+                leaf: "KPI records table with Employee, Definition, Target"
+              }
+            ]
+          },
+          {
+            name: "Performance → KPI Assessment",
+            items: [
+              {
+                label: "Assessment form",
+                elements: "Score inputs, Submit button",
+                leaf: "KPI evaluation form with score fields per criterion"
+              }
+            ]
+          },
+          {
+            name: "Onboarding → Onboarding",
+            items: [
+              {
+                label: "Onboarding checklist table",
+                elements: "Start Onboarding button, Progress tracker",
+                leaf: "Onboarding tasks table with Task, Status, Due Date"
+              }
+            ]
+          },
+          {
+            name: "Daily Labour → Daily Labour",
+            items: [
+              {
+                label: "Labourer list table",
+                elements: "Add Labourer button → opens form, Approve Wages button",
+                leaf: "Labourer records table with Name, Skill Set, Daily Rate, Status"
+              }
+            ]
+          },
+          {
+            name: "Complaints → Complaints",
+            items: [
+              {
+                label: "Complaint list table",
+                elements: "Resolve button per row, View button per row",
+                leaf: "Complaint records table with Employee, Type, Description, Status"
+              }
+            ]
+          },
+          {
+            name: "Assets → Assets",
+            items: [
+              {
+                label: "Asset list table (view-only)",
+                elements: "View button per row",
+                leaf: "Asset inventory table (read-only)"
+              }
+            ]
+          },
+          {
+            name: "Contractors → Contractors",
+            items: [
+              {
+                label: "Contractor list table",
+                elements: "View button per row",
+                leaf: "Contractor records table with Name, Company, Status"
+              }
+            ]
+          },
+          {
+            name: "Reports → Reports",
+            items: [
+              {
+                label: "Report type selector",
+                elements: "Date range picker, Generate button, Export button",
+                leaf: "Report generation form → Generate displays table/chart → Export downloads PDF/Excel"
+              }
+            ]
+          },
+          {
+            name: "Hiring → Recruitment",
+            items: [
+              {
+                label: "Job postings list",
+                elements: "View Applicants button per row",
+                leaf: "Job postings table with Title, Department, Status → View Applicants → /recruitment/jobs/:jobId/applicants"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Employee",
+        badge: "badge-employee",
+        groups: [
+          {
+            name: "Overview → My Dashboard",
+            items: [
+              {
+                label: "Stats cards",
+                elements: "Attendance Days → /employee/attendance, Leave Balance → /employee/leaves, Pending Leaves → /leave/request, KPI Score → /kpi/my-goals",
+                leaf: "Welcome banner, Stats cards, Quick Actions grid, Recent Activity feed"
+              },
+              {
+                label: "Quick Actions",
+                elements: "Quick Punch (records attendance), Request Leave → /leave/request, My Profile → /profile/view, My Payslips → /payroll/payslips, Submit Complaint → /admin/complaints",
+                leaf: "Quick Actions grid with action buttons"
+              },
+              {
+                label: "Tabs",
+                elements: "Overview, Attendance, Leaves, Payslips",
+                leaf: "Attendance tab: CalendarHeatmap showing attendance for past 3 months. Leaves tab: 3 stat cards + button. Payslips tab: Empty state"
+              }
+            ]
+          },
+          {
+            name: "Attendance → Manual Punch",
+            items: [
+              {
+                label: "Punch button",
+                elements: "Check In/Check Out, Biometric device ID input",
+                leaf: "Punch form with device ID field"
+              }
+            ]
+          },
+          {
+            name: "Attendance → My Attendance",
+            items: [
+              {
+                label: "Attendance records table",
+                elements: "Filter by date range, Export button",
+                leaf: "Personal attendance table with Date, Check In, Check Out, Total Hours, Status"
+              }
+            ]
+          },
+          {
+            name: "Attendance → My Leave and Off-days",
+            items: [
+              {
+                label: "Leave balance cards",
+                elements: "Leave request list, Request Leave button → /leave/request",
+                leaf: "Leave balance summary (Annual, Sick, Casual), Leave requests table with Type, Dates, Status"
+              }
+            ]
+          },
+          {
+            name: "Leave Request → Request Leave and Off-days",
+            items: [
+              {
+                label: "Leave type selector",
+                elements: "Annual, Sick, Casual, Unpaid, Date range picker, Reason textarea, Submit button",
+                leaf: "Leave request form with type, dates, reason fields"
+              }
+            ]
+          },
+          {
+            name: "Payslips → My Payslips",
+            items: [
+              {
+                label: "Payslip list table",
+                elements: "Download button per row, Filter by period",
+                leaf: "Payslip records table with Period, Gross, Net, Deductions"
+              }
+            ]
+          },
+          {
+            name: "KPIs → My Goals",
+            items: [
+              {
+                label: "KPI goals list table",
+                elements: "View details button per row",
+                leaf: "Personal KPI goals table with Definition, Target, Progress, Deadline"
+              }
+            ]
+          },
+          {
+            name: "Complaints → Submit Complaint",
+            items: [
+              {
+                label: "Complaint type selector",
+                elements: "Description textarea, Submit button",
+                leaf: "Complaint submission form with type, description fields"
+              }
+            ]
+          },
+          {
+            name: "Job Board → Job Board",
+            items: [
+              {
+                label: "Job postings list (public)",
+                elements: "Apply button per job",
+                leaf: "Public job board with Title, Department, Description, Deadline → Apply → /recruitment/apply/:jobId"
+              }
+            ]
+          },
+          {
+            name: "Job Board → My Applications",
+            items: [
+              {
+                label: "Application list table",
+                elements: "View Application button per row",
+                leaf: "Job applications table with Job Title, Applied Date, Status"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Daily Labourer",
+        badge: "badge-labourer",
+        groups: [
+          {
+            name: "Overview → Dashboard",
+            items: [
+              {
+                label: "Stats cards (clickable)",
+                elements: "Days Present → switches to Attendance tab, Days Absent → switches to Attendance tab, Total Earnings → switches to Payments tab, Pending Payments → switches to Payments tab",
+                leaf: "4 stat cards, Profile Summary, Recent Attendance list"
+              },
+              {
+                label: "Tabs",
+                elements: "Overview, Attendance, Payments",
+                leaf: "Attendance tab: Attendance History table with Date, Check In, Check Out, Status. Payments tab: Payment History table with Date, Amount, Days Worked, Status"
+              }
+            ]
+          },
+          {
+            name: "Attendance → My Attendance",
+            items: [
+              {
+                label: "Attendance records table",
+                elements: "Status badges (present, absent, late)",
+                leaf: "Personal attendance table with Date, Check In, Check Out, Status"
+              }
+            ]
+          },
+          {
+            name: "Payments → Payments",
+            items: [
+              {
+                label: "Payment records table",
+                elements: "Status badges (paid, pending, rejected)",
+                leaf: "Payment history table with Date, Amount, Days Worked, Status"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: "Contractor",
+        badge: "badge-contractor",
+        groups: [
+          {
+            name: "Overview → Dashboard",
+            items: [
+              {
+                label: "Stats cards",
+                elements: "Active Projects → /contractor/projects, Pending Invoices → /contractor/invoices, Delivery Rate → /contractor/reports, Total Earnings → /contractor/invoices",
+                leaf: "Stats cards, Quick Actions grid, Performance Summary"
+              },
+              {
+                label: "Quick Actions",
+                elements: "Submit Milestone → /contractor/portal, View Invoices → /contractor/invoices, My KPI → /contractor/reports, My Projects → /contractor/projects",
+                leaf: "Quick Actions grid with navigation buttons"
+              },
+              {
+                label: "Tabs",
+                elements: "Overview, Projects, Invoices, Performance",
+                leaf: "Projects tab: Empty state. Invoices tab: 3 stat cards + button. Performance tab: 2 stat cards + button"
+              }
+            ]
+          },
+          {
+            name: "Projects → Projects",
+            items: [
+              {
+                label: "Project list table",
+                elements: "View Project button per row, Submit Milestone button per project",
+                leaf: "Project records table with Name, Client, Start Date, End Date, Status → Submit Milestone → /contractor/portal"
+              }
+            ]
+          },
+          {
+            name: "Milestones → Submit Milestones",
+            items: [
+              {
+                label: "Project selector",
+                elements: "Milestone description textarea, File upload for deliverables, Submit button",
+                leaf: "Milestone submission form with project, description, file fields"
+              }
+            ]
+          },
+          {
+            name: "Invoices → Invoices",
+            items: [
+              {
+                label: "Invoice list table",
+                elements: "Create Invoice button → opens form, Download button per row",
+                leaf: "Invoice records table with Project, Amount, Date, Status"
+              }
+            ]
+          },
+          {
+            name: "KPIs → My KPI",
+            items: [
+              {
+                label: "KPI metrics display",
+                elements: "Performance charts, Historical data table",
+                leaf: "KPI dashboard with Delivery Rate, Average Rating, Completed Projects, Charts showing performance trends"
+              }
+            ]
+          }
+        ]
+      }
+    ];
+
+    function renderDashboard(dashboard) {
+      const card = document.createElement('div');
+      card.className = 'dashboard-card';
+      card.dataset.search = `${dashboard.name} ${dashboard.groups.map(g => g.name + ' ' + g.items.map(i => i.label + ' ' + i.elements).join(' ')).join(' ')}`.toLowerCase();
+
+      const header = document.createElement('div');
+      header.className = 'dashboard-header';
+      header.innerHTML = `
+        <h2>${dashboard.name} <span class="badge ${dashboard.badge}">${dashboard.groups.length} groups</span></h2>
+        <span class="toggle">▼</span>
+      `;
+
+      const content = document.createElement('div');
+      content.className = 'dashboard-content';
+
+      dashboard.groups.forEach(group => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'nav-group';
+
+        const groupHeader = document.createElement('div');
+        groupHeader.className = 'nav-group-header';
+        groupHeader.innerHTML = `
+          <span>${group.name}</span>
+          <span class="toggle">▼</span>
+        `;
+
+        const groupContent = document.createElement('div');
+        groupContent.className = 'nav-group-content';
+
+        group.items.forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.className = 'nav-item';
+          itemDiv.innerHTML = `
+            <div class="nav-item-label">${item.label}</div>
+            <div class="interactive-elements">
+              <div class="interactive-element">${item.elements.split(', ').map(e => {
+                const match = e.match(/(.+?)\s*→\s*(\/[^\s]+)/);
+                if (match) {
+                  return `<a href="${FRONTEND_BASE_URL}${match[2]}" target="_blank" class="path-link">${match[1]} → ${match[2]}</a>`;
+                }
+                return `<span>${e}</span>`;
+              }).join('<br>')}</div>
+              <div class="leaf-content"><strong>Leaf:</strong> ${item.leaf}</div>
+            </div>
+          `;
+          groupContent.appendChild(itemDiv);
+        });
+
+        groupHeader.addEventListener('click', () => {
+          groupHeader.querySelector('.toggle').classList.toggle('open');
+          groupContent.classList.toggle('open');
+        });
+
+        groupDiv.appendChild(groupHeader);
+        groupDiv.appendChild(groupContent);
+        content.appendChild(groupDiv);
+      });
+
+      header.addEventListener('click', () => {
+        header.querySelector('.toggle').classList.toggle('open');
+        content.classList.toggle('open');
+      });
+
+      card.appendChild(header);
+      card.appendChild(content);
+      return card;
+    }
+
+    function renderAllDashboards() {
+      const grid = document.getElementById('dashboardGrid');
+      grid.innerHTML = '';
+      genealogyData.forEach(dashboard => {
+        grid.appendChild(renderDashboard(dashboard));
+      });
+    }
+
+    function filterDashboards(searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const cards = document.querySelectorAll('.dashboard-card');
+      let hasResults = false;
+
+      cards.forEach(card => {
+        const searchData = card.dataset.search;
+        if (searchData.includes(term)) {
+          card.style.display = '';
+          hasResults = true;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      document.getElementById('noResults').style.display = hasResults ? 'none' : 'block';
+    }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      filterDashboards(e.target.value);
+    });
+
+    // Initial render
+    renderAllDashboards();
+  </script>
+</body>
+</html>

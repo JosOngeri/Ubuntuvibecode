@@ -1,0 +1,207 @@
+@import './styles/dashboard.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: #f3f4f6;
+  }
+  
+  body {
+    background-color: #fefdfb;
+    color: #1f2937;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  .dark body {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .dark * {
+    border-color: #374151;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700;
+  }
+  
+  .btn-secondary {
+    @apply btn bg-gold-100 text-gray-900 hover:bg-gold-200;
+  }
+  
+  .btn-success {
+    @apply btn bg-green-600 text-white hover:bg-green-700;
+  }
+  
+  .btn-warning {
+    @apply btn bg-gold-600 text-white hover:bg-gold-700;
+  }
+  
+  .btn-error {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+  
+  .btn-outline {
+    @apply btn border border-gray-300 bg-white hover:bg-secondary-50 text-gray-900;
+  }
+  
+  .btn-sm {
+    @apply h-9 px-3 rounded-md;
+  }
+  
+  .btn-md {
+    @apply h-10 py-2 px-4;
+  }
+  
+  .btn-lg {
+    @apply h-11 px-8 rounded-md;
+  }
+  
+  .input {
+    @apply flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+  }
+  
+  .card-header {
+    @apply flex flex-col space-y-1.5 p-6;
+  }
+  
+  .card-title {
+    @apply text-2xl font-semibold leading-none tracking-tight;
+  }
+  
+  .card-description {
+    @apply text-sm text-gray-600;
+  }
+  
+  .card-content {
+    @apply p-6 pt-0;
+  }
+  
+  .card-footer {
+    @apply flex items-center p-6 pt-0;
+  }
+  
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .badge-primary {
+    @apply badge bg-primary-100 text-primary-800;
+  }
+  
+  .badge-secondary {
+    @apply badge bg-gray-100 text-gray-800;
+  }
+  
+  .badge-success {
+    @apply badge bg-green-100 text-green-800;
+  }
+  
+  .badge-warning {
+    @apply badge bg-gold-100 text-gold-800;
+  }
+  
+  .badge-error {
+    @apply badge bg-red-100 text-red-800;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Fix for missing utility classes */
+  .hover\:text-primary-600:hover {
+    color: #2563eb;
+  }
+  
+  .dark\:text-primary-600 {
+    color: #2563eb;
+  }
+  
+  /* Fix for loading spinner */
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Fix for dark mode transitions */
+  .transition-colors {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+  
+  /* Fix for focus states */
+  .focus\:ring-2:focus {
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  }
+  
+  .focus\:ring-blue-500:focus {
+    --tw-ring-color: #3b82f6;
+  }
+  
+  .focus\:ring-offset-2:focus {
+    --tw-ring-offset-width: 2px;
+  }
+  
+  .focus\:outline-none:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+  }
+  
+  /* Fix for border colors */
+  .border-gray-200 {
+    --tw-border-opacity: 1;
+    border-color: rgb(229 231 235 / var(--tw-border-opacity));
+  }
+  
+  .border-gray-300 {
+    --tw-border-opacity: 1;
+    border-color: rgb(209 213 219 / var(--tw-border-opacity));
+  }
+  
+  .dark\:border-gray-600 {
+    --tw-border-opacity: 1;
+    border-color: rgb(75 85 99 / var(--tw-border-opacity));
+  }
+  
+  .dark\:border-gray-700 {
+    --tw-border-opacity: 1;
+    border-color: rgb(55 65 81 / var(--tw-border-opacity));
+  }
+
+  /* Hide scrollbar for horizontal scroll */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

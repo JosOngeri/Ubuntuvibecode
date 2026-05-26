@@ -1,4 +1,5 @@
 import React from 'react'
+import { cn } from '../../lib/utils'
 
 const Button = ({
   children,
@@ -28,7 +29,7 @@ const Button = ({
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant] || variantClasses.primary} ${sizeClasses[size] || sizeClasses.md} ${className}`}
+      className={cn(baseClasses, variantClasses[variant] || variantClasses.primary, sizeClasses[size] || sizeClasses.md, className)}
       disabled={disabled || loading}
       {...props}
     >

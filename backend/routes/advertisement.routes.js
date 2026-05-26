@@ -8,5 +8,6 @@ const upload = require('../middleware/cvUpload');
 router.post('/upload-letterhead', auth, role(['admin', 'manager', 'hr']), upload.single('letterhead'), advertisementController.uploadLetterhead);
 router.post('/generate/:jobId', auth, role(['admin', 'manager', 'hr']), advertisementController.generateAdvertisement);
 router.get('/download/:jobId/:format', auth, role(['admin', 'manager', 'hr']), advertisementController.downloadAdvertisement);
+router.get('/image/:jobId', advertisementController.getAdvertisementImage);
 
 module.exports = router;

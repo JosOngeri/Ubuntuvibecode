@@ -13,6 +13,7 @@ const ResetPassword = () => {
     password: '',
     confirmPassword: '',
   })
+  const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
@@ -47,33 +48,26 @@ const ResetPassword = () => {
       ...prev,
       [name]: value
     }))
+    setErrors(prev => ({ ...prev, [name]: '' }))
   }
 
   const validateForm = () => {
-    if (!formData.password || !formData.confirmPassword) {
-      toast.error('Please fill in all fields')
-      return false
-    }
-
-    if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long')
-      return false
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match')
-      return false
-    }
-
-    const hasUpperCase = /[A-Z]/.test(formData.password)
-    const hasLowerCase = /[a-z]/.test(formData.password)
-    const hasNumber = /[0-9]/.test(formData.password)
+    const newErrors = {}
     
-    if (!(hasUpperCase && hasLowerCase && hasNumber)) {
-      toast.warning('Password should contain uppercase, lowercase, and numbers for better security')
+    if (!formData.password) {
+      newErrors.password = 'Password is required'
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters'
     }
-
-    return true
+    
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password'
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e) => {
@@ -218,7 +212,13 @@ const ResetPassword = () => {
                   onChange={handleChange}
                   disabled={loading}
                   required
+                  className={errors.password ? 'border-red-500' : ''}
                 />
+                {errors.password && (
+                  <span className="text-sm text-red-600 dark:text-red-400 font-medium mt-1 block">
+                    {errors.password}
+                  </span>
+                )}
               </div>
 
               <div className="form-group">
@@ -232,7 +232,13 @@ const ResetPassword = () => {
                   onChange={handleChange}
                   disabled={loading}
                   required
+                  className={errors.confirmPassword ? 'border-red-500' : ''}
                 />
+                {errors.confirmPassword && (
+                  <span className="text-sm text-red-600 dark:text-red-400 font-medium mt-1 block">
+                    {errors.confirmPassword}
+                  </span>
+                )}
               </div>
 
               <button

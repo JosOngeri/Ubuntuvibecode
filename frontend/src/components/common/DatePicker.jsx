@@ -99,7 +99,8 @@ export default function DatePicker({
   onDateChange, 
   label = "Select Date",
   showDay = true,
-  yearRange = 10
+  yearRange = 10,
+  showHeader = true
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date())
@@ -260,38 +261,54 @@ export default function DatePicker({
         <div className="absolute z-50 mt-1 w-[320px] bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
           
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#CB7246] to-[#F27C12] text-white p-4">
-            <p className="text-xs uppercase tracking-wider opacity-80">Select Date</p>
-            <h3 className="text-xl font-bold mt-1">{formatDisplayDate()}</h3>
-            {selectedDate && (
-              <p className="text-sm opacity-90 mt-1">{getRelativeDescription(selectedDate)}</p>
-            )}
-          </div>
+          {showHeader && (
+            <div className="bg-gradient-to-r from-[#CB7246] to-[#F27C12] text-white p-4">
+              <p className="text-xs uppercase tracking-wider opacity-80">Select Date</p>
+              <h3 className="text-xl font-bold mt-1">{formatDisplayDate()}</h3>
+              {selectedDate && (
+                <p className="text-sm opacity-90 mt-1">{getRelativeDescription(selectedDate)}</p>
+              )}
+            </div>
+          )}
 
           {/* Desktop: Calendar Grid */}
           {!isMobile && (
             <div className="p-4">
               {/* Month/Year Navigation */}
               <div className="flex items-center justify-between mb-4">
-                <button type="button" onClick={() => {
-                  if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1) }
-                  else setViewMonth(viewMonth - 1)
-                }} className="p-1 hover:bg-gray-100 rounded">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => setViewYear(viewYear - 1)} className="p-1 hover:bg-gray-100 rounded" title="Previous Year">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <button type="button" onClick={() => {
+                    if (viewMonth === 0) { setViewMonth(11); setViewYear(viewYear - 1) }
+                    else setViewMonth(viewMonth - 1)
+                  }} className="p-1 hover:bg-gray-100 rounded" title="Previous Month">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                </div>
                 <span className="font-semibold text-gray-800">
                   {MONTHS[viewMonth]} {viewYear}
                 </span>
-                <button type="button" onClick={() => {
-                  if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1) }
-                  else setViewMonth(viewMonth + 1)
-                }} className="p-1 hover:bg-gray-100 rounded">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button type="button" onClick={() => {
+                    if (viewMonth === 11) { setViewMonth(0); setViewYear(viewYear + 1) }
+                    else setViewMonth(viewMonth + 1)
+                  }} className="p-1 hover:bg-gray-100 rounded" title="Next Month">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button type="button" onClick={() => setViewYear(viewYear + 1)} className="p-1 hover:bg-gray-100 rounded" title="Next Year">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Day Headers */}

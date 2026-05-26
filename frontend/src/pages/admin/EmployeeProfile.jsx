@@ -4,6 +4,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Table from '../../components/common/Table';
+import { AttendanceEmptyState, PayrollEmptyState, KpiEmptyState, LeaveEmptyState, RecruitmentEmptyState } from '../../components/common/EmptyState';
 import { employeeAPI, attendanceAPI, payrollAPI, leaveAPI, kpiAPI, jobApplicationAPI, complaintAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { 
@@ -223,6 +224,12 @@ export default function EmployeeProfile() {
   const [jobApplication, setJobApplication] = useState(null);
   const [complaints, setComplaints] = useState({ asRespondent: [], asComplainant: [] });
   const [tabLoading, setTabLoading] = useState({});
+  
+  // Sorting states
+  const [payslipSort, setPayslipSort] = useState({ field: 'period', direction: 'desc' });
+  const [leaveSort, setLeaveSort] = useState({ field: 'startDate', direction: 'desc' });
+  const [kpiSort, setKpiSort] = useState({ field: 'title', direction: 'asc' });
+  const [complaintSort, setComplaintSort] = useState({ field: 'date', direction: 'desc' });
 
   useEffect(() => {
     fetchEmployee();
@@ -342,6 +349,43 @@ export default function EmployeeProfile() {
     } finally {
       setTabLoading(prev => ({ ...prev, complaints: false }));
     }
+  };
+
+  const handleSort = (section, field) => {
+    const sortState = section === 'payslip' ? payslipSort :
+                      section === 'leave' ? leaveSort :
+                      section === 'kpi' ? kpiSort : complaintSort;
+    
+    const setSort = section === 'payslip' ? setPayslipSort :
+                    section === 'leave' ? setLeaveSort :
+                    section === 'kpi' ? setKpiSort : setComplaintSort;
+    
+    if (sortState.field === field) {
+      setSort({ field, direction: sortState.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setSort({ field, direction: 'asc' });
+    }
+  };
+
+  const getSortedData = (section, data) => {
+    const sortState = section === 'payslip' ? payslipSort :
+                      section === 'leave' ? leaveSort :
+                      section === 'kpi' ? kpiSort : complaintSort;
+    
+    return [...data].sort((a, b) => {
+      let aVal, bVal;
+      if (section === 'leave' && (sortState.field === 'startDate' || sortState.field === 'endDate')) {
+        aVal = a[sortState.field] || a.start_date || a.end_date || '';
+        bVal = b[sortState.field] || b.start_date || b.end_date || '';
+        const comparison = new Date(aVal) - new Date(bVal);
+        return sortState.direction === 'asc' ? comparison : -comparison;
+      } else {
+        aVal = a[sortState.field] || '';
+        bVal = b[sortState.field] || '';
+      }
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+      return sortState.direction === 'asc' ? comparison : -comparison;
+    });
   };
 
   const attendanceColumns = [
@@ -705,9 +749,9 @@ export default function EmployeeProfile() {
                 {tabLoading.payslips ? (
                   <div className="text-center py-8">Loading payslips...</div>
                 ) : payslips.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">No payslips found</div>
+                  <PayrollEmptyState />
                 ) : (
-                  <Table columns={payslipColumns} data={payslips} />
+                  <Table columns={payslipColumns} data={getSortedData('payslip', payslips)} sortField={payslipSort.field} sortDirection={payslipSort.direction} onSort={(field) => handleSort('payslip', field)} />
                 )}
               </div>
             )}
@@ -719,9 +763,9 @@ export default function EmployeeProfile() {
                 {tabLoading.leave ? (
                   <div className="text-center py-8">Loading leaves...</div>
                 ) : leaves.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">No leave records found</div>
+                  <LeaveEmptyState />
                 ) : (
-                  <Table columns={leaveColumns} data={leaves} />
+                  <Table columns={leaveColumns} data={getSortedData('leave', leaves)} sortField={leaveSort.field} sortDirection={leaveSort.direction} onSort={(field) => handleSort('leave', field)} />
                 )}
               </div>
             )}
@@ -733,9 +777,9 @@ export default function EmployeeProfile() {
                 {tabLoading.kpi ? (
                   <div className="text-center py-8">Loading KPIs...</div>
                 ) : kpis.length === 0 ? (
-                  <div className="text-center py-8 text-slate-500">No KPI records found</div>
+                  <KpiEmptyState />
                 ) : (
-                  <Table columns={kpiColumns} data={kpis} />
+                  <Table columns={kpiColumns} data={getSortedData('kpi', kpis)} sortField={kpiSort.field} sortDirection={kpiSort.direction} onSort={(field) => handleSort('kpi', field)} />
                 )}
               </div>
             )}
@@ -747,7 +791,7 @@ export default function EmployeeProfile() {
                 {tabLoading.jobApplication ? (
                   <div className="text-center py-8">Loading application...</div>
                 ) : !jobApplication ? (
-                  <div className="text-center py-8 text-slate-500">No job application found</div>
+                  <RecruitmentEmptyState />
                 ) : (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -816,7 +860,7 @@ export default function EmployeeProfile() {
                       {complaints.asRespondent.length === 0 ? (
                         <div className="text-center py-4 text-slate-500">No complaints about this employee</div>
                       ) : (
-                        <Table columns={complaintColumns} data={complaints.asRespondent} />
+                        <Table columns={complaintColumns} data={getSortedData('complaint', complaints.asRespondent)} sortField={complaintSort.field} sortDirection={complaintSort.direction} onSort={(field) => handleSort('complaint', field)} />
                       )}
                     </div>
                     <div>
@@ -824,7 +868,7 @@ export default function EmployeeProfile() {
                       {complaints.asComplainant.length === 0 ? (
                         <div className="text-center py-4 text-slate-500">No complaints submitted by this employee</div>
                       ) : (
-                        <Table columns={complaintColumns} data={complaints.asComplainant} />
+                        <Table columns={complaintColumns} data={getSortedData('complaint', complaints.asComplainant)} sortField={complaintSort.field} sortDirection={complaintSort.direction} onSort={(field) => handleSort('complaint', field)} />
                       )}
                     </div>
                   </>

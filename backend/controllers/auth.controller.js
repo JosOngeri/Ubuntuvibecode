@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendEmail } = require('../utils/email');
+const logger = require('../utils/logger');
 
 const buildResetLink = (resetToken) => `${process.env.FRONTEND_URL || 'http://localhost:5177'}/reset-password?token=${resetToken}`;
 
@@ -28,9 +29,13 @@ const signAuthToken = (user) => new Promise((resolve, reject) => {
 // Register user
 const register = async (req, res) => {
   const { username, password, role, email } = req.body;
+  logger.info('auth.register', 'Attempt', { username, role, email });
   try {
     let user = await User.findOne({ username });
-    if (user) return res.status(400).json({ msg: 'User already exists' });
+    if (user) {
+      logger.warn('auth.register', 'Username already exists', { username });
+      return res.status(400).json({ msg: 'User already exists' });
+    }
 
     user = new User({ username, password, role, email });
     const salt = await bcrypt.genSalt(10);
@@ -49,12 +54,14 @@ const register = async (req, res) => {
     }
 
     const token = await signAuthToken(user);
+    logger.info('auth.register', 'Success', { username, role, userId: user.id });
     res.json({ token, emailNotification: emailResult.sent ? 'sent' : 'not-sent' });
   } catch (err) {
     if (err?.code === '23505') {
+      logger.warn('auth.register', 'Duplicate user', { username, code: err.code });
       return res.status(400).json({ msg: 'User already exists' });
     }
-
+    logger.error('auth.register', 'Unhandled error', err, { username });
     res.status(500).send('Server error');
   }
 };
@@ -62,12 +69,25 @@ const register = async (req, res) => {
 // Login user
 const login = async (req, res) => {
   const { username, password } = req.body;
+  logger.info('auth.login', 'Attempt', { username });
   try {
     const user = await User.findOne({ username });
-    if (!user) return res.status(400).json({ msg: 'Invalid credentials' });
+    if (!user) {
+      logger.warn('auth.login', 'User not found', { username });
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
+    if (!isMatch) {
+      logger.warn('auth.login', 'Wrong password', { username });
+      return res.status(400).json({ msg: 'Invalid credentials' });
+    }
+
+    // Check if user is inactive/deactivated
+    if (user.status === 'inactive') {
+      logger.warn('auth.login', 'Account inactive', { username, userId: user.id });
+      return res.status(403).json({ msg: 'Account has been deactivated. Please contact administrator.' });
+    }
 
     if (user.mustChangePassword) {
       const resetToken = crypto.randomBytes(32).toString('hex');
@@ -85,8 +105,10 @@ const login = async (req, res) => {
     }
 
     const token = await signAuthToken(user);
+    logger.info('auth.login', 'Success', { username, userId: user.id, role: user.role });
     res.json({ token, mustChangePassword: false });
   } catch (err) {
+    logger.error('auth.login', 'Unhandled error', err, { username });
     res.status(500).send('Server error');
   }
 };
@@ -124,6 +146,7 @@ const forgotPassword = async (req, res) => {
 
     res.json({ msg: 'If an account with that email exists, a password reset link will be sent' });
   } catch (err) {
+    logger.error('auth.forgotPassword', 'Unhandled error', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -161,8 +184,10 @@ const resetPassword = async (req, res) => {
 
     await user.save();
 
+    logger.info('auth.resetPassword', 'Password reset successful');
     res.json({ msg: 'Password reset successful' });
   } catch (err) {
+    logger.error('auth.resetPassword', 'Unhandled error', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
@@ -198,8 +223,10 @@ const adminResetPassword = async (req, res) => {
       });
     }
 
+    logger.info('auth.adminResetPassword', 'Password reset', { targetUserId: userId, by: req.user?.id });
     res.json({ msg: 'Password reset successfully' });
   } catch (err) {
+    logger.error('auth.adminResetPassword', 'Unhandled error', err, { targetUserId: userId });
     res.status(500).json({ msg: 'Server error' });
   }
 };

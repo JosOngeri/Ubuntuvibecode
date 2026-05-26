@@ -1,0 +1,20 @@
+1,Surname *,Ongeri
+2,First Name *,Josiah
+3,Other Names,Omesa
+4,Date of Birth *,10021997
+5,Gender,male
+6,Marital Status,single
+7,Nationality,Kenyan
+8,National ID Number,33498740
+9,Phone Number *,0724363290
+10,Email Address *,ongerijosiah@gmail.com
+
+11,Street Address,Kiserian
+12,City, Nairobi
+13,Postal Code,00206
+14,Street Address, Kiserian
+15,City,Nairobu
+16,Postal Code,00206
+17,Name *,Jacob OMwoyo
+18,Phone *,0794353511
+19,Relationship,Brother

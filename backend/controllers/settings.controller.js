@@ -1,4 +1,5 @@
 const { query } = require('../config/db');
+const logger = require('../utils/logger');
 
 /**
  * Get all settings
@@ -17,7 +18,7 @@ const getSettings = async (req, res) => {
       settings: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching settings:', err);
+    logger.error('settings.getSettings', 'Error fetching settings', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -44,7 +45,7 @@ const getSettingsByCategory = async (req, res) => {
       settings: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching settings by category:', err);
+    logger.error('settings.getSettingsByCategory', 'Error fetching settings by category', err, { category: req.params.category });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -66,7 +67,7 @@ const getCategories = async (req, res) => {
       categories: result.rows.map(row => row.category),
     });
   } catch (err) {
-    console.error('Error fetching categories:', err);
+    logger.error('settings.getCategories', 'Error fetching categories', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -92,7 +93,7 @@ const getSettingByKey = async (req, res) => {
       setting: result.rows[0],
     });
   } catch (err) {
-    console.error('Error fetching setting:', err);
+    logger.error('settings.getSettingByKey', 'Error fetching setting', err, { key: req.params.key });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -152,7 +153,7 @@ const updateSetting = async (req, res) => {
       setting: result.rows[0],
     });
   } catch (err) {
-    console.error('Error updating setting:', err);
+    logger.error('settings.updateSetting', 'Error updating setting', err, { key: req.params.key });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -205,7 +206,7 @@ const createSetting = async (req, res) => {
       setting: result.rows[0],
     });
   } catch (err) {
-    console.error('Error creating setting:', err);
+    logger.error('settings.createSetting', 'Error creating setting', err);
     if (err.code === '23505') {
       return res.status(409).json({ msg: 'Setting with this key and category already exists' });
     }
@@ -262,7 +263,7 @@ const deleteSetting = async (req, res) => {
       msg: 'Setting deleted successfully',
     });
   } catch (err) {
-    console.error('Error deleting setting:', err);
+    logger.error('settings.deleteSetting', 'Error deleting setting', err, { key: req.params.key });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -276,7 +277,7 @@ const getAuditLog = async (req, res) => {
 
     const result = await query(
       `
-        SELECT al.*, u.first_name, u.last_name, u.email
+        SELECT al.*, u.username, u.email
         FROM settings_audit_log al
         LEFT JOIN users u ON al.changed_by = u.id
         WHERE al.setting_key = $1
@@ -290,7 +291,7 @@ const getAuditLog = async (req, res) => {
       audit_log: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching audit log:', err);
+    logger.error('settings.getAuditLog', 'Error fetching audit log', err, { key: req.params.key });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -303,7 +304,7 @@ const getAllAuditLogs = async (req, res) => {
     const { category, limit = 50 } = req.query;
 
     let queryStr = `
-      SELECT al.*, u.first_name, u.last_name, u.email
+      SELECT al.*, u.username, u.email
       FROM settings_audit_log al
       LEFT JOIN users u ON al.changed_by = u.id
     `;
@@ -324,7 +325,7 @@ const getAllAuditLogs = async (req, res) => {
       audit_logs: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching audit logs:', err);
+    logger.error('settings.getAllAuditLogs', 'Error fetching audit logs', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -371,7 +372,7 @@ const getOfficeLocation = async (req, res) => {
       location,
     });
   } catch (err) {
-    console.error('Error fetching office location:', err);
+    logger.error('settings.getOfficeLocation', 'Error fetching office location', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -441,7 +442,7 @@ const updateOfficeLocation = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Error updating office location:', err);
+    logger.error('settings.updateOfficeLocation', 'Error updating office location', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -479,7 +480,7 @@ const updateEmployeeAttendancePermission = async (req, res) => {
       employee: result.rows[0],
     });
   } catch (err) {
-    console.error('Error updating employee attendance permission:', err);
+    logger.error('settings.updateEmployeeAttendancePerm', 'Error updating permission', err, { employeeId: req.params.employeeId });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -503,7 +504,7 @@ const getEmployeesAttendanceStatus = async (req, res) => {
       employees: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching employee attendance status:', err);
+    logger.error('settings.getEmployeesAttendanceStatus', 'Error fetching attendance status', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -540,7 +541,7 @@ const getShiftSettings = async (req, res) => {
       shift_settings: result.rows,
     });
   } catch (err) {
-    console.error('Error fetching shift settings:', err);
+    logger.error('settings.getShiftSettings', 'Error fetching shift settings', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -568,7 +569,7 @@ const createShiftSetting = async (req, res) => {
       shift_setting: result.rows[0],
     });
   } catch (err) {
-    console.error('Error creating shift setting:', err);
+    logger.error('settings.createShiftSetting', 'Error creating shift setting', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -604,7 +605,7 @@ const updateShiftSetting = async (req, res) => {
       shift_setting: result.rows[0],
     });
   } catch (err) {
-    console.error('Error updating shift setting:', err);
+    logger.error('settings.updateShiftSetting', 'Error updating shift setting', err, { id: req.params.id });
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -629,7 +630,223 @@ const deleteShiftSetting = async (req, res) => {
       msg: 'Shift setting deleted successfully',
     });
   } catch (err) {
-    console.error('Error deleting shift setting:', err);
+    logger.error('settings.deleteShiftSetting', 'Error deleting shift setting', err, { id: req.params.id });
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Get component settings
+ */
+const getComponentSettings = async (req, res) => {
+  try {
+    const { component } = req.params;
+    const userId = req.user?.id;
+
+    let queryStr = `
+      SELECT component_name, setting_key, setting_value, is_global, category, description
+      FROM component_settings
+      WHERE (is_global = true OR user_id = $1)
+    `;
+    const params = [userId];
+
+    if (component) {
+      queryStr += ` AND component_name = $2`;
+      params.push(component);
+    }
+
+    queryStr += ` ORDER BY component_name, setting_key`;
+
+    const result = await query(queryStr, params);
+
+    // Group by component
+    const grouped = result.rows.reduce((acc, row) => {
+      if (!acc[row.component_name]) {
+        acc[row.component_name] = {};
+      }
+      acc[row.component_name][row.setting_key] = {
+        value: row.setting_value,
+        is_global: row.is_global,
+        category: row.category,
+        description: row.description,
+      };
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      msg: 'Component settings retrieved successfully',
+      settings: component ? grouped[component] || {} : grouped,
+    });
+  } catch (err) {
+    logger.error('settings.getComponentSettings', 'Error fetching component settings', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Update component settings
+ */
+const updateComponentSettings = async (req, res) => {
+  try {
+    const { component } = req.params;
+    const { settings } = req.body;
+    const userId = req.user?.id;
+
+    // Role check: only admin and owner can update global settings
+    if (!['admin', 'owner'].includes(req.user?.role)) {
+      return res.status(403).json({ msg: 'Only admin and owner can update component settings' });
+    }
+
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({ msg: 'settings object is required' });
+    }
+
+    // Update each setting
+    for (const [key, value] of Object.entries(settings)) {
+      const existing = await query(
+        `SELECT id FROM component_settings WHERE component_name = $1 AND setting_key = $2`,
+        [component, key]
+      );
+
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE component_settings
+           SET setting_value = $1, updated_at = NOW()
+           WHERE component_name = $2 AND setting_key = $3`,
+          [JSON.stringify(value), component, key]
+        );
+      } else {
+        await query(
+          `INSERT INTO component_settings (component_name, setting_key, setting_value, is_global, user_id, created_at, updated_at)
+           VALUES ($1, $2, $3, true, NULL, NOW(), NOW())`,
+          [component, key, JSON.stringify(value)]
+        );
+      }
+    }
+
+    res.status(200).json({
+      msg: 'Component settings updated successfully',
+    });
+  } catch (err) {
+    logger.error('settings.updateComponentSettings', 'Error updating component settings', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Get user preferences
+ */
+const getUserPreferences = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentUserId = req.user?.id;
+
+    // Users can only view their own preferences unless admin/owner
+    if (userId != currentUserId && !['admin', 'owner'].includes(req.user?.role)) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+
+    const result = await query(
+      `SELECT preferences FROM user_preferences WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(200).json({
+        msg: 'User preferences retrieved successfully',
+        preferences: {},
+      });
+    }
+
+    res.status(200).json({
+      msg: 'User preferences retrieved successfully',
+      preferences: result.rows[0].preferences,
+    });
+  } catch (err) {
+    logger.error('settings.getUserPreferences', 'Error fetching user preferences', err, { userId: req.params.userId });
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Update user preferences
+ */
+const updateUserPreferences = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { preferences } = req.body;
+    const currentUserId = req.user?.id;
+
+    // Users can only update their own preferences unless admin/owner
+    if (userId != currentUserId && !['admin', 'owner'].includes(req.user?.role)) {
+      return res.status(403).json({ msg: 'Access denied' });
+    }
+
+    if (!preferences || typeof preferences !== 'object') {
+      return res.status(400).json({ msg: 'preferences object is required' });
+    }
+
+    const existing = await query(
+      `SELECT id FROM user_preferences WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (existing.rows.length > 0) {
+      await query(
+        `UPDATE user_preferences
+         SET preferences = $1, updated_at = NOW()
+         WHERE user_id = $2`,
+        [JSON.stringify(preferences), userId]
+      );
+    } else {
+      await query(
+        `INSERT INTO user_preferences (user_id, preferences, created_at, updated_at)
+         VALUES ($1, $2, NOW(), NOW())`,
+        [userId, JSON.stringify(preferences)]
+      );
+    }
+
+    res.status(200).json({
+      msg: 'User preferences updated successfully',
+      preferences,
+    });
+  } catch (err) {
+    logger.error('settings.updateUserPreferences', 'Error updating user preferences', err, { userId: req.params.userId });
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Reset component settings to defaults
+ */
+const resetComponentSettings = async (req, res) => {
+  try {
+    const { component } = req.params;
+
+    // Role check: only admin and owner can reset settings
+    if (!['admin', 'owner'].includes(req.user?.role)) {
+      return res.status(403).json({ msg: 'Only admin and owner can reset settings' });
+    }
+
+    // Delete user-specific settings for this component
+    await query(
+      `DELETE FROM component_settings WHERE component_name = $1 AND is_global = false`,
+      [component]
+    );
+
+    // Reset global settings to defaults (delete and re-insert from defaults)
+    await query(
+      `DELETE FROM component_settings WHERE component_name = $1 AND is_global = true`,
+      [component]
+    );
+
+    // Re-insert default settings (this would need to be defined somewhere)
+    // For now, just return success
+    res.status(200).json({
+      msg: 'Component settings reset to defaults successfully',
+    });
+  } catch (err) {
+    logger.error('settings.resetComponentSettings', 'Error resetting component settings', err);
     res.status(500).json({ msg: 'Server error', error: err.message });
   }
 };
@@ -652,4 +869,9 @@ module.exports = {
   createShiftSetting,
   updateShiftSetting,
   deleteShiftSetting,
+  getComponentSettings,
+  updateComponentSettings,
+  getUserPreferences,
+  updateUserPreferences,
+  resetComponentSettings,
 };

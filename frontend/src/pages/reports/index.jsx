@@ -8,6 +8,9 @@ import api from '../../services/api'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
 import { BsGraphUp, BsPeople, BsCalendarCheck, BsCash, BsClock, BsDownload } from 'react-icons/bs'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import PageInfoPanel from '../../components/common/PageInfoPanel'
+import { ReportsEmptyState } from '../../components/common/EmptyState'
 
 const REPORT_TYPES = [
   { k: 'attendance', l: 'Attendance' },
@@ -20,7 +23,7 @@ const REPORT_TYPES = [
   { k: 'daily-labour', l: 'Daily Labour' },
 ]
 
-export default function ReportsPage() {
+export default function ReportsPage({ standalone = true }) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [type, setType] = useState('attendance')
@@ -53,7 +56,7 @@ export default function ReportsPage() {
       if (range.from) params.from = range.from
       if (range.to) params.to = range.to
       if (dept !== 'all') params.department = dept
-      const r = await api.get('/reports/' + type, { params })
+      const r = await api.get('/reports/' + type, { params }).catch(() => ({ data: null }))
       setData(r.data)
     } catch { toast.error('Failed to load report') }
     finally { setLoading(false) }
@@ -90,8 +93,8 @@ export default function ReportsPage() {
 
   const maxVal = data?.rows?.length ? Math.max(...data.rows.map(r => Object.values(r).find(v => typeof v === 'number') || 0), 1) : 1
 
-  return (
-    <DashboardLayout>
+  const content = (
+    <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Reports</h1>
         <p className="page-subtitle">Dynamic reports with filtering and export.</p>
@@ -168,30 +171,78 @@ export default function ReportsPage() {
       ) : null}
 
       {data?.rows?.length > 0 ? (
-        <Card>
-          <h3 className="font-bold mb-4 text-lg">{type.charAt(0).toUpperCase() + type.slice(1)} Breakdown</h3>
-          <div className="space-y-3">
-            {data.rows.map((row, i) => {
-              const label = Object.values(row)[0]
-              const val = Object.values(row).find(v => typeof v === 'number') || 0
-              const pct = Math.round((val / maxVal) * 100)
-              return (
-                <div key={i} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-slate-700">{String(label)}</span>
-                    <span className="text-slate-500">{typeof val === 'number' ? val.toLocaleString() : val}</span>
+        <>
+          <Card className="mb-4">
+            <h3 className="font-bold mb-4 text-lg">{type.charAt(0).toUpperCase() + type.slice(1)} — Chart</h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={data.rows.map(row => ({ name: String(Object.values(row)[0]).slice(0, 20), value: Object.values(row).find(v => typeof v === 'number') || 0 }))} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v) => v.toLocaleString()} />
+                <Bar dataKey="value" fill="#f97316" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+          <Card>
+            <h3 className="font-bold mb-4 text-lg">{type.charAt(0).toUpperCase() + type.slice(1)} Breakdown</h3>
+            <div className="space-y-3">
+              {data.rows.map((row, i) => {
+                const label = Object.values(row)[0]
+                const val = Object.values(row).find(v => typeof v === 'number') || 0
+                const pct = Math.round((val / maxVal) * 100)
+                return (
+                  <div key={i} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium text-slate-700">{String(label)}</span>
+                      <span className="text-slate-500">{typeof val === 'number' ? val.toLocaleString() : val}</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-3">
+                      <div className="bg-primary h-3 rounded-full transition-all duration-500" style={{ width: pct + '%', minWidth: pct > 0 ? '4px' : '0' }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-3">
-                    <div className="bg-primary h-3 rounded-full transition-all duration-500" style={{ width: pct + '%', minWidth: pct > 0 ? '4px' : '0' }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
+                )
+              })}
+            </div>
+          </Card>
+        </>
       ) : !loading ? (
-        <Card><div className="text-center py-8 text-slate-500">Select filters and click Generate to view report.</div></Card>
+        <ReportsEmptyState description="Select a report type, apply date filters, and click Generate to view data." />
       ) : null}
-    </DashboardLayout>
+
+      <PageInfoPanel
+        title="Reports"
+        description="Generate, filter, and export HR reports across all modules"
+        steps={[
+          'Select a report type from the tab row (Attendance, Leave, Payroll, KPI, Recruitment, etc.).',
+          'Set the date range using the From/To dropdowns, and optionally filter by Department.',
+          'Click Generate to fetch and display the report data with a bar chart and breakdown table.',
+          'Click Export CSV to download the raw data as a spreadsheet.',
+          'Click Export PDF to generate a printable PDF report.',
+        ]}
+        faqs={[
+          { q: 'Why does the report show no data?', a: 'Ensure the selected date range has activity. Try widening the date range or selecting All for department.' },
+          { q: 'How do I filter by a specific employee?', a: 'Employee-level filtering is available on the individual module pages (Attendance, KPI, Payroll). Reports show department-level summaries.' },
+          { q: 'PDF export opens a blank page?', a: 'Ensure the backend PDF endpoint is accessible and the VITE_API_URL environment variable is correctly set.' },
+        ]}
+        fetchStatus={async () => {
+          const items = [];
+          try {
+            const checks = await Promise.allSettled([
+              api.get('/reports/attendance').catch(() => ({ data: null })),
+              api.get('/reports/payroll').catch(() => ({ data: null })),
+            ]);
+            const attOk = checks[0].status === 'fulfilled';
+            const payOk = checks[1].status === 'fulfilled';
+            if (!attOk) items.push({ level: 'warn', message: 'Attendance report endpoint is not responding', detail: 'Check backend connectivity.' });
+            if (!payOk) items.push({ level: 'warn', message: 'Payroll report endpoint is not responding', detail: 'Check backend connectivity.' });
+            if (items.length === 0) items.push({ level: 'success', message: 'All report endpoints are responding correctly.' });
+          } catch { items.push({ level: 'info', message: 'Could not check report status. Ensure the backend is running.' }); }
+          return items;
+        }}
+      />
+    </div>
   )
+
+  return standalone ? <DashboardLayout>{content}</DashboardLayout> : content
 }

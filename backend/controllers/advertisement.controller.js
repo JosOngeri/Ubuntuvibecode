@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 const Job = require('../models/Job.model');
+const logger = require('../utils/logger');
 
 const advertisementController = {
   async uploadLetterhead(req, res) {
@@ -27,7 +28,7 @@ const advertisementController = {
 
       res.json({ success: true, message: 'Letterhead uploaded successfully' });
     } catch (err) {
-      console.error('Letterhead upload error:', err);
+      logger.error('advertisement.uploadLetterhead', 'Letterhead upload error', err);
       res.status(500).json({ msg: 'Failed to upload letterhead', error: err.message });
     }
   },
@@ -140,21 +141,26 @@ const advertisementController = {
 
       // Wait for PDF to finish writing
       doc.on('end', async () => {
-        // Generate JPEG from PDF
-        const jpegPath = path.join(__dirname, '../tmp', `job-ad-${jobId}.jpeg`);
+        // Generate PNG from PDF
+        const pngPath = path.join(__dirname, '../tmp', `job-ad-${jobId}.png`);
         await sharp(pdfPath)
           .resize(1200, 1697, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
-          .jpeg({ quality: 90 })
-          .toFile(jpegPath);
+          .png({ quality: 90 })
+          .toFile(pngPath);
+
+        // Store PNG path in job record
+        const relativePngPath = `/tmp/job-ad-${jobId}.png`;
+        await Job.update(jobId, { advertisement_image_path: relativePngPath });
 
         res.json({
           success: true,
           pdfUrl: `/api/advertisements/download/${jobId}/pdf`,
-          jpegUrl: `/api/advertisements/download/${jobId}/jpeg`
+          pngUrl: `/api/advertisements/download/${jobId}/png`,
+          imageUrl: relativePngPath
         });
       });
     } catch (err) {
-      console.error('Advertisement generation error:', err);
+      logger.error('advertisement.generate', 'Advertisement generation error', err, { jobId: req.params.jobId });
       res.status(500).json({ msg: 'Failed to generate advertisement', error: err.message });
     }
   },
@@ -162,7 +168,7 @@ const advertisementController = {
   async downloadAdvertisement(req, res) {
     try {
       const { jobId, format } = req.params;
-      const ext = format === 'jpeg' ? 'jpeg' : 'pdf';
+      const ext = format === 'png' ? 'png' : 'pdf';
       const filePath = path.join(__dirname, '../tmp', `job-ad-${jobId}.${ext}`);
 
       if (!fs.existsSync(filePath)) {
@@ -172,6 +178,27 @@ const advertisementController = {
       res.download(filePath, `job-advertisement.${ext}`);
     } catch (err) {
       res.status(500).json({ msg: 'Failed to download advertisement', error: err.message });
+    }
+  },
+
+  async getAdvertisementImage(req, res) {
+    try {
+      const { jobId } = req.params;
+      const job = await Job.findById(jobId);
+
+      if (!job || !job.advertisement_image_path) {
+        return res.status(404).json({ msg: 'Advertisement image not found' });
+      }
+
+      const imagePath = path.join(__dirname, '..', job.advertisement_image_path);
+
+      if (!fs.existsSync(imagePath)) {
+        return res.status(404).json({ msg: 'Image file not found' });
+      }
+
+      res.sendFile(imagePath);
+    } catch (err) {
+      res.status(500).json({ msg: 'Failed to get advertisement image', error: err.message });
     }
   }
 };
