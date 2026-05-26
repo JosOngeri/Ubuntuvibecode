@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
-import { BsSearch, BsFilter, BsArrowUpDown, BsBriefcase, BsPerson, BsCalendar, BsStar } from 'react-icons/bs';
+import { BsSearch, BsFilter, BsArrowDownUp, BsBriefcase, BsPerson, BsCalendar, BsStar, BsEnvelope, BsClipboardCheck } from 'react-icons/bs';
 
 const AllApplicantsPage = () => {
   const [applications, setApplications] = useState([]);
@@ -113,10 +113,53 @@ const AllApplicantsPage = () => {
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <BsArrowUpDown className="text-gray-400" />;
-    return sortDirection === 'asc' ? 
-      <BsArrowUpDown className="text-orange-500 rotate-180" /> : 
-      <BsArrowUpDown className="text-orange-500" />;
+    if (sortField !== field) return <BsArrowDownUp className="text-gray-400" />;
+    return sortDirection === 'asc' ?
+      <BsArrowDownUp className="text-orange-500 rotate-180" /> :
+      <BsArrowDownUp className="text-orange-500" />;
+  };
+
+  const handleShortlist = async (appId) => {
+    try {
+      await api.post(`/jobs/applications/${appId}/shortlist`);
+      toast.success('Applicant shortlisted successfully');
+      fetchAllApplications(); // Refresh the list
+    } catch (err) {
+      console.error('Failed to shortlist applicant:', err);
+      toast.error(err.response?.data?.msg || 'Failed to shortlist applicant');
+    }
+  };
+
+  const handleInterviewInvite = (app) => {
+    // Create a simple modal or navigate to interview invite page
+    const panelistEmail = prompt('Enter panelist email:');
+    if (!panelistEmail) return;
+
+    const customMetrics = [
+      { name: 'Communication', maxScore: 10 },
+      { name: 'Technical Knowledge', maxScore: 10 },
+      { name: 'Problem Solving', maxScore: 10 },
+      { name: 'Cultural Fit', maxScore: 10 }
+    ];
+
+    api.post(`/jobs/applications/${app.id}/interview-invite`, {
+      interviewerEmails: [panelistEmail],
+      customMetrics: customMetrics,
+      interviewDate: new Date().toISOString()
+    })
+    .then(() => {
+      toast.success('Interview invitation sent successfully');
+      fetchAllApplications(); // Refresh the list
+    })
+    .catch(err => {
+      console.error('Failed to send interview invite:', err);
+      toast.error(err.response?.data?.msg || 'Failed to send interview invitation');
+    });
+  };
+
+  const handleInputScores = (app) => {
+    // Navigate to the detailed applicant page for score input
+    window.location.href = `/recruitment/applicants/${app.id}`;
   };
 
   return (
@@ -248,6 +291,7 @@ const AllApplicantsPage = () => {
                         <SortIcon field="created_at" />
                       </div>
                     </th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -259,7 +303,12 @@ const AllApplicantsPage = () => {
                             {(app.applicantName || 'A').charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{app.applicantName || 'N/A'}</p>
+                            <p 
+                              className="font-medium text-slate-900 cursor-pointer hover:text-orange-600"
+                              onClick={() => window.location.href = `/recruitment/applicants/${app.id}`}
+                            >
+                              {app.applicantName || 'N/A'}
+                            </p>
                             <p className="text-xs text-slate-500">ID: {app.id}</p>
                           </div>
                         </div>
@@ -291,6 +340,55 @@ const AllApplicantsPage = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
                         {app.appliedAt ? new Date(app.appliedAt).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {/* View Job Applicants Button */}
+                          <button
+                            onClick={() => window.location.href = `/recruitment/jobs/${app.jobId}/applicants`}
+                            className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+                            title="View all applicants for this job"
+                          >
+                            <BsBriefcase className="inline mr-1" />
+                            View Job
+                          </button>
+                          
+                          {/* Shortlist Button */}
+                          {app.status !== 'shortlisted' && app.status !== 'interview_scheduled' && app.status !== 'offer_sent' && app.status !== 'hired' && (
+                            <button
+                              onClick={() => handleShortlist(app.id)}
+                              className="px-3 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100 transition-colors"
+                              title="Shortlist applicant"
+                            >
+                              <BsStar className="inline mr-1" />
+                              Shortlist
+                            </button>
+                          )}
+                          
+                          {/* Interview Invite Button */}
+                          {(app.status === 'shortlisted' || app.status === 'interview_scheduled') && (
+                            <button
+                              onClick={() => handleInterviewInvite(app)}
+                              className="px-3 py-1 text-xs font-medium text-orange-600 bg-orange-50 rounded hover:bg-orange-100 transition-colors"
+                              title="Send interview invitation"
+                            >
+                              <BsEnvelope className="inline mr-1" />
+                              Interview
+                            </button>
+                          )}
+                          
+                          {/* Input Scores Button */}
+                          {(app.status === 'interview_scheduled' || app.status === 'interview_completed') && (
+                            <button
+                              onClick={() => handleInputScores(app)}
+                              className="px-3 py-1 text-xs font-medium text-purple-600 bg-purple-50 rounded hover:bg-purple-100 transition-colors"
+                              title="Input panelist scores"
+                            >
+                              <BsClipboardCheck className="inline mr-1" />
+                              Scores
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

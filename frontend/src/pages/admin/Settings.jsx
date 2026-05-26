@@ -37,6 +37,7 @@ const AdminSettings = () => {
   // System settings state
   const [systemSettings, setSystemSettings] = useState({});
   const [editingSetting, setEditingSetting] = useState(null);
+  const [settingInputs, setSettingInputs] = useState({}); // For additive list inputs
 
   // Component settings state
   const [componentSettings, setComponentSettings] = useState({});

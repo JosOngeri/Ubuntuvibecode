@@ -190,10 +190,15 @@ const content = (
           return (
             <Card key={o.id}>
               <div className="flex items-center gap-3 mb-2">
-          <BsPerson size={20} className="text-primary" />
-          <div><h3 className="font-bold">{emp.firstName} {emp.lastName}</h3><p className="text-sm text-slate-500">{o.department||emp.department} — {o.position||emp.position}</p></div>
-          <span className={'px-2 py-0.5 rounded-full text-xs font-medium '+(o.status==='completed'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-700')}>{o.status}</span>
-          </div><div className="w-full bg-slate-200 rounded-full h-2 mb-2"><div className="bg-primary h-2 rounded-full" style={{width:Math.round(cnt/8*100)+'%'}}/></div>
+                <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-semibold cursor-pointer hover:bg-orange-200" onClick={() => navigate(`/admin/employees/${o.employee_id}`)}>
+                  {(emp.firstName || 'A').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold cursor-pointer hover:text-orange-600" onClick={() => navigate(`/admin/employees/${o.employee_id}`)}>{emp.firstName} {emp.lastName}</h3>
+                  <p className="text-sm text-slate-500">{o.department||emp.department} — {o.position||emp.position}</p>
+                </div>
+                <span className={'px-2 py-0.5 rounded-full text-xs font-medium '+(o.status==='completed'?'bg-green-100 text-green-700':'bg-blue-100 text-blue-700')}>{o.status}</span>
+              </div><div className="w-full bg-slate-200 rounded-full h-2 mb-2"><div className="bg-primary h-2 rounded-full" style={{width:Math.round(cnt/8*100)+'%'}}/></div>
           <p className="text-xs text-slate-400 mb-3">{cnt}/8 steps</p><div className="flex flex-wrap gap-2">
           {STEPS.map(step => {
                   const isDone = getDone(o, step.name)
@@ -207,9 +212,9 @@ const content = (
                     } else if (step.name === 'documents') {
                       navigate('/admin/documents')
                     } else if (step.name === 'department_assignment') {
-                      navigate(`/employees/${o.employee_id}`)
+                      navigate(`/admin/employees/${o.employee_id}`)
                     } else if (step.name === 'asset_allocation') {
-                      navigate('/assets')
+                      navigate('/admin/assets')
                     } else if (step.name === 'orientation') {
                       navigate('/admin/training')
                     } else {

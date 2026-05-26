@@ -23,34 +23,43 @@ export const downloadPdfReport = async ({
   rows,
   columns,
   metadata = [],
-  logoUrl = '/ubuntu_logo.png',
+  logoUrl = '/ubuntu-header.png',
+  footerUrl = '/ubuntu-footer.png',
 }) => {
   const safeColumns = Array.isArray(columns) ? columns : []
   const safeRows = Array.isArray(rows) ? rows : []
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
 
   const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
   const logoDataUrl = await toDataUrl(logoUrl)
+  const footerDataUrl = await toDataUrl(footerUrl)
 
-  pdf.setFillColor(245, 248, 245)
-  pdf.rect(0, 0, pageWidth, 88, 'F')
-
+  // Header with Ubuntu header image
   if (logoDataUrl) {
-    pdf.addImage(logoDataUrl, 'PNG', 36, 16, 56, 56)
+    // Calculate aspect ratio to fit within header area
+    const headerHeight = 100
+    const headerWidth = pageWidth - 72 // margins
+    pdf.addImage(logoDataUrl, 'PNG', 36, 10, headerWidth, headerHeight)
+  } else {
+    // Fallback background
+    pdf.setFillColor(245, 248, 245)
+    pdf.rect(0, 0, pageWidth, 88, 'F')
   }
 
+  // Title below header image
   pdf.setTextColor(50, 84, 41)
   pdf.setFont('helvetica', 'bold')
-  pdf.setFontSize(18)
-  pdf.text(title || 'Report', 104, 40)
+  pdf.setFontSize(16)
+  pdf.text(title || 'Report', 36, 130)
 
   pdf.setFont('helvetica', 'normal')
   pdf.setTextColor(102, 102, 102)
-  pdf.setFontSize(10)
-  pdf.text(`Generated: ${new Date().toLocaleString()}`, 104, 58)
-  pdf.text(`Total records: ${safeRows.length}`, 104, 74)
+  pdf.setFontSize(9)
+  pdf.text(`Generated: ${new Date().toLocaleString()}`, 36, 146)
+  pdf.text(`Total records: ${safeRows.length}`, pageWidth - 150, 146)
 
-  let startY = 106
+  let startY = 160
   if (metadata.length > 0) {
     const metaText = metadata
       .filter((item) => item && item.label)
@@ -88,10 +97,21 @@ export const downloadPdfReport = async ({
     },
     margin: { left: 36, right: 36 },
     didDrawPage: () => {
-      const footerY = pdf.internal.pageSize.getHeight() - 18
+      const footerY = pdf.internal.pageSize.getHeight() - 80
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      
+      // Add letterhead footer image at bottom
+      if (footerDataUrl) {
+        const footerHeight = 60
+        const footerWidth = pageWidth - 72
+        pdf.addImage(footerDataUrl, 'PNG', 36, footerY, footerWidth, footerHeight)
+      }
+      
+      // Additional footer text
       pdf.setFontSize(8)
-      pdf.setTextColor(120, 120, 120)
-      pdf.text('Ubuntu HRMS Report', 36, footerY)
+      pdf.setTextColor(80, 80, 80)
+      pdf.text('Ubuntu Ecolodge & Safari - HR Management System', 36, pageHeight - 15)
+      pdf.text(`Page ${pdf.getCurrentPageInfo().pageNumber || 1}`, pageWidth - 80, pageHeight - 15)
     },
   })
 

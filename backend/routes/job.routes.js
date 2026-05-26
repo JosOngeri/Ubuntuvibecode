@@ -41,12 +41,28 @@ router.get('/applications/all', auth, role(['admin', 'manager', 'hr']), jobContr
 router.get('/applications/employee/:employeeId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByEmployee);
 router.get('/applications/applicant/:email', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByApplicant);
 
+// Simple test endpoint
+router.post('/test-route', (req, res) => {
+  console.log('=== SIMPLE TEST ROUTE HIT ===');
+  res.json({ message: 'Simple test working' });
+});
+
+// Test endpoint - must come before wildcard routes
+router.post('/applications/:appId/interview-invite-test', (req, res) => {
+  console.log('=== TEST ENDPOINT HIT ===');
+  console.log('Params:', req.params);
+  console.log('Body:', req.body);
+  console.log('User:', req.user);
+  res.json({ message: 'Test endpoint working', params: req.params, body: req.body });
+});
+
 // :appId wildcard routes
 router.post('/applications/:applicationId/reverse-rating', auth, role(['admin', 'manager', 'hr']), jobController.reverseRating);
 router.post('/applications/:appId/shortlist', auth, role(['admin', 'manager', 'hr']), jobController.shortlistApplication);
 router.put('/applications/:appId/interview-score', auth, role(['admin', 'manager', 'hr']), jobController.updateInterviewScore);
 router.post('/applications/:appId/send-offer', auth, role(['admin', 'manager', 'hr']), jobController.sendOffer);
-router.post('/applications/:appId/interview-invite', auth, role(['admin', 'manager', 'hr']), jobController.createInterviewInvite);
+router.post('/applications/:appId/interview-invite', jobController.createInterviewInvite);
+router.post('/applications/:appId/input-scores', auth, role(['admin', 'manager', 'hr']), jobController.inputPanelistScores);
 router.post('/applications/:appId/interview-feedback/:token', jobController.submitInterviewFeedback);
 router.get('/applications/:appId/interview-summary', auth, role(['admin', 'manager', 'hr']), jobController.getInterviewSummary);
 router.get('/applications/:appId/interview-detail', auth, role(['admin', 'manager', 'hr']), jobController.getInterviewDetail);

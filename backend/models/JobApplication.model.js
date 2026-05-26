@@ -148,41 +148,52 @@ const JobApplication = {
     return res.rows[0];
   },
   async findByJob(jobId) {
-    const res = await pool.query(
-      `SELECT ${APPLICATION_SELECT_COLUMNS} FROM ${JOB_APPLICATION_TABLE} WHERE job_id = $1 ORDER BY created_at DESC`,
-      [jobId]
-    );
-    return res.rows;
+    try {
+      const res = await pool.query(
+        `SELECT ${APPLICATION_SELECT_COLUMNS} FROM ${JOB_APPLICATION_TABLE} WHERE job_id = $1 ORDER BY created_at DESC`,
+        [jobId]
+      );
+      return res.rows;
+    } catch (err) {
+      console.error('JobApplication.findByJob error:', err);
+      throw err;
+    }
   },
   async findShortlisted() {
-    const res = await pool.query(
-      `SELECT
-        ja.id,
-        ja.job_id AS "jobId",
-        j.title AS "jobTitle",
-        j.department AS "jobDepartment",
-        CONCAT(ja.first_name, ' ', ja.last_name) AS "applicantName",
-        ja.email AS "applicantEmail",
-        ja.phone AS "applicantPhone",
-        ja.resume_url AS "cvPath",
-        ja.status,
-        ja.created_at AS "appliedAt",
-        ja.interview_score AS "interviewScore",
-        ja.interview_notes AS "interviewNotes",
-        ja.interview_status AS "interviewStatus",
-        ja.interview_date AS "interviewDate",
-        ja.interview_invitations AS "interviewInvitations",
-        ja.interview_feedbacks AS "interviewFeedbacks",
-        ja.salary_expectation,
-        ja.notes,
-        ja.created_at,
-        ja.updated_at
-      FROM ${JOB_APPLICATION_TABLE} ja
-      LEFT JOIN jobs j ON ja.job_id = j.id
-      WHERE ja.status IN ('shortlisted', 'interview_scheduled', 'interview_completed', 'offer_sent', 'hired')
-      ORDER BY ja.interview_score DESC NULLS LAST, ja.created_at DESC`
-    );
-    return res.rows;
+    try {
+      const res = await pool.query(
+        `SELECT
+          ja.id,
+          ja.job_id AS "jobId",
+          j.title AS "jobTitle",
+          j.department AS "jobDepartment",
+          CONCAT(ja.first_name, ' ', ja.last_name) AS "applicantName",
+          ja.email AS "applicantEmail",
+          ja.phone AS "applicantPhone",
+          ja.resume_url AS "cvPath",
+          ja.status,
+          ja.created_at AS "appliedAt",
+          ja.interview_score AS "interviewScore",
+          ja.interview_notes AS "interviewNotes",
+          ja.interview_status AS "interviewStatus",
+          ja.interview_date AS "interviewDate",
+          ja.interview_invitations AS "interviewInvitations",
+          ja.interview_feedbacks AS "interviewFeedbacks",
+          ja.salary_expectation,
+          ja.notes,
+          ja.created_at,
+          ja.updated_at
+        FROM ${JOB_APPLICATION_TABLE} ja
+        LEFT JOIN jobs j ON ja.job_id = j.id
+        WHERE ja.status IN ('shortlisted', 'interview_scheduled', 'interview_completed', 'offer_sent', 'hired')
+        ORDER BY ja.interview_score DESC NULLS LAST, ja.created_at DESC`
+      );
+      console.log('JobApplication.findShortlisted found:', res.rows.length, 'applications');
+      return res.rows;
+    } catch (err) {
+      console.error('JobApplication.findShortlisted error:', err);
+      throw err;
+    }
   },
   async findByApplicantEmail(applicantEmail) {
     const res = await pool.query(

@@ -49,7 +49,20 @@ export default function ApplicantReviewDashboard({ jobId }) {
   const [scores, setScores] = useState(null)
   const [scoreModal, setScoreModal] = useState(null)
   const [showOfferModal, setShowOfferModal] = useState(false)
-  const [offerAmount, setOfferAmount] = useState('')
+  const [offerDetails, setOfferDetails] = useState({
+    offerAmount: '',
+    jobTitle: '',
+    department: '',
+    employmentType: '',
+    startDate: '',
+    reportingTo: '',
+    workLocation: '',
+    workingHours: '8:00 AM – 5:00 PM, Monday to Friday',
+    probationPeriod: '3 months',
+    offerExpiryDays: 7,
+    benefits: '',
+    additionalNotes: '',
+  })
   const [showInterviewModal, setShowInterviewModal] = useState(false)
   const [interviewScore, setInterviewScore] = useState('')
   const [interviewNotes, setInterviewNotes] = useState('')
@@ -140,13 +153,11 @@ export default function ApplicantReviewDashboard({ jobId }) {
   }
 
   const handleSendOffer = async () => {
+    if (!offerDetails.offerAmount) { toast.error('Salary offer amount is required'); return }
     try {
-      await api.post(`/jobs/applications/${selected.id}/send-offer`, {
-        offerAmount
-      })
-      toast.success('Offer sent successfully')
+      await api.post(`/jobs/applications/${selected.id}/send-offer`, offerDetails)
+      toast.success('Offer letter sent successfully')
       setShowOfferModal(false)
-      setOfferAmount('')
       fetchApplications()
     } catch {
       toast.error('Failed to send offer')
@@ -155,7 +166,12 @@ export default function ApplicantReviewDashboard({ jobId }) {
 
   const openOfferModal = (app) => {
     setSelected(app)
-    setOfferAmount(app.expectedSalary || '')
+    setOfferDetails(prev => ({
+      ...prev,
+      offerAmount: app.salaryExpectation || app.expectedSalary || '',
+      jobTitle: app.jobTitle || '',
+      department: app.department || '',
+    }))
     setShowOfferModal(true)
   }
 
@@ -809,24 +825,124 @@ export default function ApplicantReviewDashboard({ jobId }) {
           </div>
         )}
       </Modal>
-      <Modal isOpen={showOfferModal} onClose={() => setShowOfferModal(false)} title="Send Job Offer">
+      <Modal isOpen={showOfferModal} onClose={() => setShowOfferModal(false)} title="Send Job Offer Letter">
         {selected && (
-          <div className="space-y-4">
-            <div><strong>Applicant:</strong> {selected.applicantName}</div>
-            <div><strong>Email:</strong> {selected.applicantEmail}</div>
-            <div className="form-group">
-              <label>Offer Amount</label>
-              <input
-                type="number"
-                className="form-input"
-                value={offerAmount}
-                onChange={(e) => setOfferAmount(e.target.value)}
-                placeholder="Enter salary offer"
-              />
+          <div className="space-y-5 max-h-[78vh] overflow-y-auto pr-1">
+            {/* Candidate info banner */}
+            <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#CB7246] text-white flex items-center justify-center font-bold text-lg shrink-0">
+                {(selected.applicantName || '?')[0].toUpperCase()}
+              </div>
+              <div>
+                <div className="font-semibold text-slate-800">{selected.applicantName}</div>
+                <div className="text-xs text-slate-500">{selected.applicantEmail}</div>
+              </div>
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="primary" onClick={handleSendOffer}>Send Offer</Button>
+
+            {/* Section: Position Details */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Position Details</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="form-group">
+                  <label>Job Title <span className="text-red-500">*</span></label>
+                  <input className="form-input" value={offerDetails.jobTitle}
+                    onChange={e => setOfferDetails(p => ({ ...p, jobTitle: e.target.value }))}
+                    placeholder="e.g. Software Engineer" />
+                </div>
+                <div className="form-group">
+                  <label>Department</label>
+                  <input className="form-input" value={offerDetails.department}
+                    onChange={e => setOfferDetails(p => ({ ...p, department: e.target.value }))}
+                    placeholder="e.g. Engineering" />
+                </div>
+                <div className="form-group">
+                  <label>Employment Type</label>
+                  <select className="form-input" value={offerDetails.employmentType}
+                    onChange={e => setOfferDetails(p => ({ ...p, employmentType: e.target.value }))}>
+                    <option value="">Select type</option>
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Contract</option>
+                    <option>Internship</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Start Date</label>
+                  <input type="date" className="form-input" value={offerDetails.startDate}
+                    onChange={e => setOfferDetails(p => ({ ...p, startDate: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>Reporting To</label>
+                  <input className="form-input" value={offerDetails.reportingTo}
+                    onChange={e => setOfferDetails(p => ({ ...p, reportingTo: e.target.value }))}
+                    placeholder="e.g. Head of Engineering" />
+                </div>
+                <div className="form-group">
+                  <label>Work Location</label>
+                  <input className="form-input" value={offerDetails.workLocation}
+                    onChange={e => setOfferDetails(p => ({ ...p, workLocation: e.target.value }))}
+                    placeholder="e.g. Nairobi, Kenya / Remote" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Compensation */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Compensation</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="form-group sm:col-span-2">
+                  <label>Gross Monthly Salary (KES) <span className="text-red-500">*</span></label>
+                  <input type="number" className="form-input" value={offerDetails.offerAmount}
+                    onChange={e => setOfferDetails(p => ({ ...p, offerAmount: e.target.value }))}
+                    placeholder="e.g. 150000" />
+                </div>
+                <div className="form-group sm:col-span-2">
+                  <label>Benefits &amp; Allowances</label>
+                  <textarea className="form-input" rows={3} value={offerDetails.benefits}
+                    onChange={e => setOfferDetails(p => ({ ...p, benefits: e.target.value }))}
+                    placeholder="e.g. Medical cover (self + 2 dependants), Transport allowance KES 5,000, Airtime allowance KES 2,000" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Terms */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Terms &amp; Conditions</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="form-group">
+                  <label>Working Hours</label>
+                  <input className="form-input" value={offerDetails.workingHours}
+                    onChange={e => setOfferDetails(p => ({ ...p, workingHours: e.target.value }))} />
+                </div>
+                <div className="form-group">
+                  <label>Probation Period</label>
+                  <select className="form-input" value={offerDetails.probationPeriod}
+                    onChange={e => setOfferDetails(p => ({ ...p, probationPeriod: e.target.value }))}>
+                    <option>1 month</option>
+                    <option>3 months</option>
+                    <option>6 months</option>
+                    <option>None</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Offer Valid For (days)</label>
+                  <input type="number" min={1} max={30} className="form-input" value={offerDetails.offerExpiryDays}
+                    onChange={e => setOfferDetails(p => ({ ...p, offerExpiryDays: Number(e.target.value) }))} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Additional Notes */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Additional Notes</h4>
+              <textarea className="form-input w-full" rows={3} value={offerDetails.additionalNotes}
+                onChange={e => setOfferDetails(p => ({ ...p, additionalNotes: e.target.value }))}
+                placeholder="Any other conditions, instructions, or notes to include in the offer letter…" />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
               <Button variant="outline" onClick={() => setShowOfferModal(false)}>Cancel</Button>
+              <Button variant="primary" onClick={handleSendOffer}>Send Offer Letter</Button>
             </div>
           </div>
         )}

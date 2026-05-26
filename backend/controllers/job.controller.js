@@ -267,8 +267,9 @@ const jobController = {
     try {
       const jobId = req.params.id;
       const applications = await JobApplication.findByJob(jobId);
-      res.json(applications);
+      res.json(applications || []);
     } catch (err) {
+      logger.error('job.getApplications', 'Failed to fetch applications', err);
       res.status(500).json({ msg: 'Failed to fetch applications', error: err.message });
     }
   },
@@ -585,38 +586,161 @@ const jobController = {
 
   async sendOffer(req, res) {
     try {
-      const { offerAmount } = req.body;
+      const {
+        offerAmount,
+        jobTitle,
+        department,
+        employmentType,
+        startDate,
+        reportingTo,
+        workLocation,
+        workingHours = '8:00 AM – 5:00 PM, Monday to Friday',
+        probationPeriod = '3 months',
+        offerExpiryDays = 7,
+        benefits,
+        additionalNotes,
+      } = req.body;
+
+      if (!offerAmount) return res.status(400).json({ msg: 'Salary offer amount is required' });
+
       const applicationId = req.params.appId;
       const application = await JobApplication.findById(applicationId);
       if (!application) return res.status(404).json({ msg: 'Application not found' });
 
+      const job = await Job.findById(application.jobId);
+
       const crypto = require('crypto');
       const offerToken = crypto.randomBytes(32).toString('hex');
       const offerExpiresAt = new Date();
-      offerExpiresAt.setDate(offerExpiresAt.getDate() + 7); // 7 days expiration
+      offerExpiresAt.setDate(offerExpiresAt.getDate() + parseInt(offerExpiryDays));
+      const expiryStr = offerExpiresAt.toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+      const todayStr = new Date().toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const resolvedJobTitle = jobTitle || job?.title || 'the advertised position';
+      const resolvedDept = department || job?.department || '';
+      const offerLink = `${process.env.FRONTEND_URL || 'http://localhost:5177'}/offer-response?token=${offerToken}`;
+      const formattedSalary = `KES ${Number(offerAmount).toLocaleString('en-KE')}`;
 
       const updated = await JobApplication.update(applicationId, {
         status: 'offer_sent',
-        notes: `Offer sent: ${offerAmount}. Token: ${offerToken}. Expires: ${offerExpiresAt.toISOString()}`
+        offer_token: offerToken,
+        offer_token_expires_at: offerExpiresAt,
+        offered_salary: parseFloat(offerAmount),
+        notes: `Offer sent on ${todayStr}. Salary: ${formattedSalary}. Expires: ${expiryStr}`,
       });
 
-      // Send email to applicant
+      // ── Professional HTML offer letter ──────────────────────────────────────
+      const benefitsList = benefits
+        ? benefits.split('\n').filter(Boolean).map(b => `<li style="margin-bottom:4px;">${b.trim()}</li>`).join('')
+        : '<li>As per company policy</li>';
+
+      const offerHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="620" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#CB7246 0%,#b85c30 100%);padding:36px 40px;text-align:center;">
+            <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Offer of Employment</h1>
+            <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Ubuntu HRMS &nbsp;·&nbsp; ${todayStr}</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr><td style="padding:36px 40px;">
+
+          <p style="margin:0 0 20px;font-size:15px;color:#374151;">Dear <strong>${application.applicantName}</strong>,</p>
+          <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;">
+            We are delighted to offer you the position of <strong>${resolvedJobTitle}</strong>${resolvedDept ? ` within the <strong>${resolvedDept}</strong> department` : ''}.
+            This letter sets out the terms and conditions of your employment.
+          </p>
+
+          <!-- Details table -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+            <tr style="background:#f9fafb;">
+              <td colspan="2" style="padding:12px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;">Position Details</td>
+            </tr>
+            ${resolvedJobTitle ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;width:45%;border-top:1px solid #f3f4f6;">Job Title</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${resolvedJobTitle}</td></tr>` : ''}
+            ${resolvedDept ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Department</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${resolvedDept}</td></tr>` : ''}
+            ${employmentType ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Employment Type</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${employmentType}</td></tr>` : ''}
+            ${startDate ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Start Date</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${new Date(startDate).toLocaleDateString('en-KE', { year:'numeric',month:'long',day:'numeric' })}</td></tr>` : ''}
+            ${reportingTo ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Reporting To</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${reportingTo}</td></tr>` : ''}
+            ${workLocation ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Work Location</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${workLocation}</td></tr>` : ''}
+            ${workingHours ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Working Hours</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${workingHours}</td></tr>` : ''}
+            ${probationPeriod ? `<tr><td style="padding:10px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Probation Period</td><td style="padding:10px 18px;font-size:14px;color:#111827;font-weight:600;border-top:1px solid #f3f4f6;">${probationPeriod}</td></tr>` : ''}
+          </table>
+
+          <!-- Compensation -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+            <tr style="background:#f9fafb;">
+              <td colspan="2" style="padding:12px 18px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#9ca3af;">Compensation</td>
+            </tr>
+            <tr>
+              <td style="padding:12px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;width:45%;">Gross Monthly Salary</td>
+              <td style="padding:12px 18px;font-size:20px;color:#CB7246;font-weight:700;border-top:1px solid #f3f4f6;">${formattedSalary}</td>
+            </tr>
+            ${benefits ? `<tr><td style="padding:12px 18px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;vertical-align:top;">Benefits &amp; Allowances</td><td style="padding:12px 18px;font-size:14px;color:#111827;border-top:1px solid #f3f4f6;"><ul style="margin:0;padding-left:18px;">${benefitsList}</ul></td></tr>` : ''}
+          </table>
+
+          ${additionalNotes ? `
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+            <tr><td style="padding:14px 18px;">
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#92400e;">Additional Notes</p>
+              <p style="margin:0;font-size:14px;color:#374151;line-height:1.6;">${additionalNotes.replace(/\n/g, '<br>')}</p>
+            </td></tr>
+          </table>` : ''}
+
+          <p style="margin:0 0 8px;font-size:15px;color:#374151;line-height:1.6;">
+            Please review this offer carefully. You may <strong>accept</strong> or <strong>negotiate</strong> the salary using the link below.
+            This offer expires on <strong>${expiryStr}</strong>.
+          </p>
+
+          <!-- CTA button -->
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${offerLink}" style="display:inline-block;background:#CB7246;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 36px;border-radius:8px;">
+              Review &amp; Respond to Offer
+            </a>
+          </div>
+
+          <p style="margin:0 0 6px;font-size:14px;color:#6b7280;">If the button above does not work, copy and paste this link into your browser:</p>
+          <p style="margin:0 0 24px;font-size:13px;color:#CB7246;word-break:break-all;">${offerLink}</p>
+
+          <p style="margin:0;font-size:14px;color:#374151;">Warm regards,<br><strong>Ubuntu HRMS Recruitment Team</strong></p>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;">This offer is confidential and intended solely for ${application.applicantName}.<br>© ${new Date().getFullYear()} Ubuntu HRMS. All rights reserved.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
       const { sendEmail } = require('../utils/email');
-      const offerLink = `${process.env.FRONTEND_URL || 'http://localhost:5177'}/offer-response?token=${offerToken}`;
       await sendEmail({
         to: application.applicantEmail,
-        subject: 'Job Offer - Ubuntu HRMS',
-        text: `Dear ${application.applicantName},\n\nWe are pleased to offer you the position. Please review the offer details at: ${offerLink}\n\nSalary Offer: ${offerAmount}\n\nOffer expires on: ${offerExpiresAt.toLocaleDateString()}\n\nYou can accept the offer or negotiate the salary through the link above.`,
-        html: `<p>Dear ${application.applicantName},</p><p>We are pleased to offer you the position.</p><p><strong>Salary Offer:</strong> ${offerAmount}</p><p><strong>Offer expires on:</strong> ${offerExpiresAt.toLocaleDateString()}</p><p>Please review the offer details at: <a href="${offerLink}">${offerLink}</a></p><p>You can accept the offer or negotiate the salary through the link above.</p>`,
+        subject: `Offer of Employment — ${resolvedJobTitle} | Ubuntu HRMS`,
+        html: offerHtml,
+        text: `Dear ${application.applicantName},\n\nWe are pleased to offer you the position of ${resolvedJobTitle}${resolvedDept ? ` in the ${resolvedDept} department` : ''}.\n\nGross Monthly Salary: ${formattedSalary}\n${startDate ? `Start Date: ${startDate}\n` : ''}${workLocation ? `Work Location: ${workLocation}\n` : ''}${reportingTo ? `Reporting To: ${reportingTo}\n` : ''}${probationPeriod ? `Probation: ${probationPeriod}\n` : ''}${benefits ? `Benefits: ${benefits}\n` : ''}\nThis offer expires on: ${expiryStr}\n\nReview and respond at: ${offerLink}\n\nWarm regards,\nUbuntu HRMS Recruitment Team`,
       });
 
-      // Send SMS to applicant
+      // SMS notification
       const { sendSMS, normalizePhoneNumber } = require('../utils/sms');
       const normalizedPhone = normalizePhoneNumber(application.applicantPhone);
       if (normalizedPhone) {
         await sendSMS({
           phone: normalizedPhone,
-          message: `Dear ${application.applicantName}, Ubuntu HRMS is pleased to offer you a position. Salary: ${offerAmount}. Offer expires: ${offerExpiresAt.toLocaleDateString()}. Review at: ${offerLink}`,
+          message: `Dear ${application.applicantName}, you have received a job offer for ${resolvedJobTitle} from Ubuntu HRMS. Salary: ${formattedSalary}. Offer expires ${expiryStr}. Review: ${offerLink}`,
         });
       }
 
@@ -1012,60 +1136,187 @@ const jobController = {
   },
 
   async createInterviewInvite(req, res) {
+    console.log('=== createInterviewInvite START ===');
+    console.log('Params:', req.params);
+    console.log('Body:', req.body);
+    console.log('User:', req.user);
+    
     try {
       const applicationId = req.params.appId;
       const { interviewerEmails, customMetrics } = req.body;
+      logger.info('job.createInterviewInvite', 'Request received', { applicationId, interviewerEmails, customMetrics });
+
+      console.log('Finding application with ID:', applicationId);
       const application = await JobApplication.findById(applicationId);
-      if (!application) return res.status(404).json({ msg: 'Application not found' });
-
-      const job = await Job.findById(application.jobId);
-      if (!job) return res.status(404).json({ msg: 'Job not found' });
-
-      const crypto = require('crypto');
-      const interviewToken = crypto.randomBytes(32).toString('hex');
-
-      const invitations = [];
-      if (interviewerEmails && Array.isArray(interviewerEmails)) {
-        interviewerEmails.forEach(email => {
-          invitations.push({
-            email,
-            token: crypto.randomBytes(16).toString('hex'),
-            sentAt: new Date(),
-            responded: false,
-          });
-        });
+      console.log('Application found:', !!application);
+      console.log('Application data keys:', Object.keys(application || {}));
+      console.log('Applicant name:', application?.applicantName);
+      console.log('Applicant email:', application?.applicantEmail);
+      
+      if (!application) {
+        console.log('Application not found - returning 404');
+        return res.status(404).json({ msg: 'Application not found' });
       }
 
+      console.log('Finding job with ID:', application.jobId);
+      const job = await Job.findById(application.jobId);
+      console.log('Job found:', !!job);
+      if (!job) {
+        console.log('Job not found - returning 404');
+        return res.status(404).json({ msg: 'Job not found' });
+      }
+
+      // Generate PDF checklist
+      const { generateInterviewChecklist } = require('../utils/pdfGenerator');
+      const fs = require('fs');
+      const path = require('path');
+      
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(__dirname, '../uploads/interviews');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      
+      // Generate unique filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const applicantName = (application.applicantName || 'unknown').replace(/\s+/g, '-');
+      const filename = `interview-checklist-${applicantName}-${timestamp}.pdf`;
+      const outputPath = path.join(uploadsDir, filename);
+      
+      // Generate the PDF
+      await generateInterviewChecklist(application, job, customMetrics || [], outputPath);
+      console.log('PDF generated at:', outputPath);
+      
+      // Update application with interview invitation info
       const interviewInvitations = application.interviewInvitations || [];
-      interviewInvitations.push({
-        mainToken: interviewToken,
-        invitations,
+      const invitationData = {
+        pdfPath: filename,
+        panelists: interviewerEmails || [],
         customMetrics: customMetrics || [],
-        createdAt: new Date(),
-      });
+        createdAt: new Date().toISOString(),
+      };
+      
+      interviewInvitations.push(invitationData);
 
+      console.log('Interview invitations data:', JSON.stringify(interviewInvitations, null, 2));
+      logger.info('job.createInterviewInvite', 'Updating application', { applicationId, interviewInvitationsCount: interviewInvitations.length });
+      
       const updated = await JobApplication.update(applicationId, {
-        interview_invitations: interviewInvitations,
+        interview_invitations: JSON.stringify(interviewInvitations),
       });
+      logger.info('job.createInterviewInvite', 'Application updated successfully');
 
-      // Send invitation emails
+      // Send simple email with PDF attachment
       const { sendEmail } = require('../utils/email');
-      const interviewLink = `${process.env.FRONTEND_URL || 'http://localhost:5177'}/interview-feedback/${interviewToken}`;
-
+      
       if (interviewerEmails && Array.isArray(interviewerEmails)) {
         for (const email of interviewerEmails) {
-          await sendEmail({
-            to: email,
-            subject: `Interview Feedback Request - ${application.applicantName}`,
-            text: `You have been invited to provide interview feedback for ${application.applicantName} applying for ${job.title}.\n\nPlease provide your feedback at: ${interviewLink}`,
-            html: `<p>You have been invited to provide interview feedback for <strong>${application.applicantName}</strong> applying for <strong>${job.title}</strong>.</p><p>Please provide your feedback at: <a href="${interviewLink}">${interviewLink}</a></p>`,
-          });
+          try {
+            console.log(`Sending email to: ${email}`);
+            const result = await sendEmail({
+              to: email,
+              subject: `Interview Evaluation Checklist - ${application.applicantName}`,
+              text: `Please find attached the interview evaluation checklist for ${application.applicantName} applying for ${job.title}.\n\nComplete the checklist and return it to HR/Manager for score entry.`,
+              html: `<p>Please find attached the interview evaluation checklist for <strong>${application.applicantName}</strong> applying for <strong>${job.title}</strong>.</p><p>Complete the checklist and return it to HR/Manager for score entry.</p>`,
+              attachments: [{
+                filename: filename,
+                path: outputPath
+              }]
+            });
+            
+            if (result.sent) {
+              console.log(`Email successfully sent to: ${email}`);
+              logger.info('job.createInterviewInvite', 'PDF checklist sent', { to: email });
+            } else {
+              console.error(`Email failed to send to: ${email}. Reason: ${result.reason}`);
+              logger.error('job.createInterviewInvite', 'Email send failed', { to: email, reason: result.reason });
+            }
+          } catch (emailErr) {
+            console.error(`Exception sending email to ${email}:`, emailErr);
+            logger.error('job.createInterviewInvite', 'Failed to send email', emailErr);
+          }
         }
       }
 
-      res.json({ interviewToken, interviewLink, updated });
+      console.log('=== createInterviewInvite SUCCESS ===');
+      res.json({ 
+        message: 'Interview checklist generated and sent',
+        pdfPath: filename,
+        panelists: interviewerEmails,
+        updated 
+      });
     } catch (err) {
+      console.error('=== createInterviewInvite ERROR ===', err);
+      logger.error('job.createInterviewInvite', 'Failed to create interview invite', err, { stack: err.stack });
       res.status(500).json({ msg: 'Failed to create interview invite', error: err.message });
+    }
+  },
+
+  async inputPanelistScores(req, res) {
+    try {
+      const applicationId = req.params.appId;
+      const { panelistName, panelistEmail, scores, comments, overallRecommendation, interviewInvitationId } = req.body;
+      
+      logger.info('job.inputPanelistScores', 'Request received', { applicationId, panelistName, panelistEmail, interviewInvitationId });
+
+      const application = await JobApplication.findById(applicationId);
+      if (!application) return res.status(404).json({ msg: 'Application not found' });
+
+      // Find the specific interview invitation
+      let selectedInvitation = null;
+      if (interviewInvitationId && application.interviewInvitations) {
+        selectedInvitation = application.interviewInvitations.find(inv => inv.createdAt === interviewInvitationId);
+      }
+
+      const interviewFeedbacks = application.interviewFeedbacks || [];
+      interviewFeedbacks.push({
+        panelistName,
+        panelistEmail,
+        scores: scores || {},
+        comments: comments || '',
+        overallRecommendation: overallRecommendation || '',
+        interviewInvitationId: interviewInvitationId,
+        interviewRound: selectedInvitation ? `Round ${application.interviewInvitations.indexOf(selectedInvitation) + 1}` : 'Unknown',
+        submittedAt: new Date(),
+        submittedBy: req.user.id,
+      });
+
+      // Calculate average score from all panelists
+      let totalScore = 0;
+      let totalMaxScore = 0;
+      let scoreCount = 0;
+      
+      interviewFeedbacks.forEach(feedback => {
+        if (feedback.scores) {
+          Object.values(feedback.scores).forEach(score => {
+            if (typeof score === 'number') {
+              totalScore += score;
+              scoreCount++;
+            }
+          });
+        }
+      });
+      
+      // Assuming max score of 100 per panelist for now
+      totalMaxScore = scoreCount * 100;
+      const averageScore = scoreCount > 0 ? Math.round((totalScore / scoreCount)) : 0;
+
+      const updated = await JobApplication.update(applicationId, {
+        interview_feedbacks: JSON.stringify(interviewFeedbacks),
+        interview_score: averageScore,
+        interview_status: 'interview_completed',
+      });
+
+      logger.info('job.inputPanelistScores', 'Scores input successfully', { applicationId, averageScore });
+      res.json({ 
+        message: 'Panelist scores recorded successfully',
+        averageScore,
+        totalPanelists: interviewFeedbacks.length,
+        updated 
+      });
+    } catch (err) {
+      logger.error('job.inputPanelistScores', 'Failed to input panelist scores', err);
+      res.status(500).json({ msg: 'Failed to input panelist scores', error: err.message });
     }
   },
 
@@ -1103,7 +1354,7 @@ const jobController = {
       interviewFeedbacks.push(feedback);
 
       const updated = await JobApplication.update(appId, {
-        interview_feedbacks: interviewFeedbacks,
+        interview_feedbacks: JSON.stringify(interviewFeedbacks),
       });
 
       res.json(updated);
@@ -1157,8 +1408,10 @@ const jobController = {
   async getShortlisted(req, res) {
     try {
       const applications = await JobApplication.findShortlisted();
-      res.json(applications);
+      logger.info('job.getShortlisted', `Found ${applications.length} shortlisted applications`);
+      res.json(applications || []);
     } catch (err) {
+      logger.error('job.getShortlisted', 'Failed to get shortlisted applications', err);
       res.status(500).json({ msg: 'Failed to get shortlisted applications', error: err.message });
     }
   },

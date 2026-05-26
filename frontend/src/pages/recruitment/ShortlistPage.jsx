@@ -7,7 +7,7 @@ import Input from '../../components/common/Input'
 import Modal from '../../components/common/Modal'
 import api from '../../services/api'
 import { toast } from 'react-toastify'
-import { BsPerson, BsBriefcase, BsStar, BsEnvelope, BsCalendar, BsListCheck, BsTrophy, BsChat, BsPlus, BsTrash, BsSearch } from 'react-icons/bs'
+import { BsPerson, BsBriefcase, BsStar, BsEnvelope, BsCalendar, BsListCheck, BsTrophy, BsChat, BsPlus, BsTrash, BsSearch, BsClipboardCheck } from 'react-icons/bs'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -334,6 +334,191 @@ function InterviewDetailModal({ appId, onClose }) {
   )
 }
 
+// ─── Score Input Modal ───────────────────────────────────────────────────────
+
+function ScoreInputModal({ app, onClose, onSuccess }) {
+  const [panelistName, setPanelistName] = useState('')
+  const [panelistEmail, setPanelistEmail] = useState('')
+  const [selectedInvitation, setSelectedInvitation] = useState('')
+  const [scores, setScores] = useState({})
+  const [comments, setComments] = useState('')
+  const [overallRecommendation, setOverallRecommendation] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  // Initialize scores when invitation changes
+  useEffect(() => {
+    if (selectedInvitation && app.interviewInvitations) {
+      const invitation = app.interviewInvitations.find(inv => inv.createdAt === selectedInvitation)
+      if (invitation && invitation.customMetrics) {
+        const newScores = {}
+        invitation.customMetrics.forEach(metric => {
+          newScores[metric.name] = ''
+        })
+        setScores(newScores)
+      }
+    }
+  }, [selectedInvitation, app.interviewInvitations])
+
+  const handleSubmit = async () => {
+    if (!panelistName.trim() || !panelistEmail.trim()) {
+      toast.error('Please enter panelist name and email')
+      return
+    }
+    
+    if (!selectedInvitation) {
+      toast.error('Please select an interview round')
+      return
+    }
+    
+    const validScores = {}
+    Object.entries(scores).forEach(([key, value]) => {
+      if (value !== '' && !isNaN(Number(value))) {
+        validScores[key] = Number(value)
+      }
+    })
+    
+    if (Object.keys(validScores).length === 0) {
+      toast.error('Please enter at least one score')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await api.post(`/jobs/applications/${app.id}/input-scores`, {
+        panelistName,
+        panelistEmail,
+        scores: validScores,
+        comments,
+        overallRecommendation,
+        interviewInvitationId: selectedInvitation
+      })
+      toast.success('Panelist scores recorded successfully')
+      onSuccess()
+      onClose()
+    } catch (err) {
+      toast.error(err.response?.data?.msg || 'Failed to record scores')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} title={`Input Panelist Scores - ${app.applicantName}`}>
+      <div className="space-y-4 p-1">
+        {/* Interview Round Selection */}
+        <div>
+          <label className="block text-sm font-semibold mb-1">Interview Round</label>
+          <select
+            className="form-input w-full"
+            value={selectedInvitation}
+            onChange={e => setSelectedInvitation(e.target.value)}
+          >
+            <option value="">Select interview round...</option>
+            {app.interviewInvitations && app.interviewInvitations.map((invitation, index) => (
+              <option key={invitation.createdAt} value={invitation.createdAt}>
+                Round {index + 1} - {new Date(invitation.createdAt).toLocaleDateString()} 
+                {invitation.customMetrics && ` (${invitation.customMetrics.length} criteria)`}
+              </option>
+            ))}
+          </select>
+          {app.interviewInvitations && app.interviewInvitations.length === 0 && (
+            <p className="text-xs text-slate-500 mt-1">No interview invitations found for this applicant</p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1">Panelist Name</label>
+            <input
+              type="text"
+              className="form-input w-full"
+              value={panelistName}
+              onChange={e => setPanelistName(e.target.value)}
+              placeholder="Enter panelist name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Panelist Email</label>
+            <input
+              type="email"
+              className="form-input w-full"
+              value={panelistEmail}
+              onChange={e => setPanelistEmail(e.target.value)}
+              placeholder="Enter panelist email"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2">Evaluation Criteria</label>
+          {selectedInvitation ? (
+            <div className="space-y-2">
+              {Object.entries(scores).map(([criterion, value]) => {
+                const invitation = app.interviewInvitations.find(inv => inv.createdAt === selectedInvitation)
+                const metric = invitation?.customMetrics?.find(m => m.name === criterion)
+                const maxScore = metric?.maxScore || 25
+                
+                return (
+                  <div key={criterion} className="flex items-center gap-3">
+                    <label className="flex-1 text-sm">{criterion}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={maxScore}
+                      className="form-input w-20"
+                      value={value}
+                      onChange={e => setScores({...scores, [criterion]: e.target.value})}
+                      placeholder={`0-${maxScore}`}
+                    />
+                    <span className="text-xs text-slate-500">/ {maxScore}</span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 italic">Select an interview round to see evaluation criteria</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Overall Recommendation</label>
+          <select
+            className="form-input w-full"
+            value={overallRecommendation}
+            onChange={e => setOverallRecommendation(e.target.value)}
+          >
+            <option value="">Select recommendation</option>
+            <option value="Strongly Recommend">Strongly Recommend</option>
+            <option value="Recommend">Recommend</option>
+            <option value="Neutral">Neutral</option>
+            <option value="Do Not Recommend">Do Not Recommend</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-1">Comments</label>
+          <textarea
+            className="form-input w-full"
+            rows="3"
+            value={comments}
+            onChange={e => setComments(e.target.value)}
+            placeholder="Additional comments about the candidate..."
+          />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Saving...' : 'Save Scores'}
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ShortlistPage() {
@@ -348,6 +533,7 @@ export default function ShortlistPage() {
   // Modals
   const [inviteApp, setInviteApp] = useState(null)
   const [scoreApp, setScoreApp] = useState(null)
+  const [scoreInputApp, setScoreInputApp] = useState(null)
   const [detailAppId, setDetailAppId] = useState(null)
 
   const fetchShortlisted = async () => {
@@ -469,7 +655,12 @@ export default function ShortlistPage() {
                       {filtered.map(app => (
                         <tr key={app.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="px-4 py-3">
-                            <div className="font-medium text-slate-800 dark:text-slate-100">{app.applicantName}</div>
+                            <div
+                              className="font-medium text-slate-800 dark:text-slate-100 cursor-pointer hover:text-orange-600"
+                              onClick={() => navigate(`/recruitment/applicants/${app.id}`)}
+                            >
+                              {app.applicantName}
+                            </div>
                             <div className="text-xs text-slate-400">{app.applicantEmail}</div>
                           </td>
                           <td className="px-4 py-3">
@@ -587,6 +778,9 @@ export default function ShortlistPage() {
                         <Button size="sm" variant="outline" onClick={() => setInviteApp(app)}>
                           <BsEnvelope className="inline mr-1" />Resend Invite
                         </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setScoreInputApp(app)}>
+                          <BsClipboardCheck className="inline mr-1" />Input Scores
+                        </Button>
                         <Button size="sm" variant="primary" onClick={() => setDetailAppId(app.id)}>
                           <BsChat className="inline mr-1" />View Feedback
                         </Button>
@@ -642,6 +836,9 @@ export default function ShortlistPage() {
       )}
       {scoreApp && (
         <InterviewScoreModal app={scoreApp} onClose={() => setScoreApp(null)} onSuccess={fetchShortlisted} />
+      )}
+      {scoreInputApp && (
+        <ScoreInputModal app={scoreInputApp} onClose={() => setScoreInputApp(null)} onSuccess={fetchShortlisted} />
       )}
       {detailAppId && (
         <InterviewDetailModal appId={detailAppId} onClose={() => setDetailAppId(null)} />

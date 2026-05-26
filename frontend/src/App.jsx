@@ -25,6 +25,7 @@ import CreateJobAdvertisement from './pages/recruitment/CreateJobAdvertisement';
 import InterviewFeedback from './pages/recruitment/InterviewFeedback';
 import ShortlistPage from './pages/recruitment/ShortlistPage';
 import AllApplicantsPage from './pages/recruitment/AllApplicantsPage';
+import ApplicantDetailPage from './pages/recruitment/ApplicantDetailPage';
 import OnboardingPage from './pages/onboarding/index';
 import DailyLabourPage from './pages/dailyLabour/index';
 import DailyLabourerDashboard from './pages/dailyLabour/Dashboard';
@@ -621,6 +622,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'manager', 'hr']}>
                   <AllApplicantsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/recruitment/applicants/:id"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager', 'hr']}>
+                  <ApplicantDetailPage />
                 </ProtectedRoute>
               }
             />

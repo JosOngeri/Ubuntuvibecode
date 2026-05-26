@@ -8,6 +8,8 @@ async function createAssignment(req, res) {
     const { userId, department, permissions, notes } = req.body;
     const creator = req.user;
 
+    logger.info('deptHead.create', 'Request received', { userId, department, permissions, notes, creator: creator?.id });
+
     if (!userId || !department) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -59,8 +61,8 @@ async function createAssignment(req, res) {
       data: assignment.toJSON()
     });
   } catch (error) {
-    logger.error('deptHead.create', 'Error creating assignment', { error: error.message });
-    res.status(500).json({ error: 'Failed to create assignment' });
+    logger.error('deptHead.create', 'Error creating assignment', error, { stack: error.stack });
+    res.status(500).json({ error: 'Failed to create assignment', details: error.message });
   }
 }
 

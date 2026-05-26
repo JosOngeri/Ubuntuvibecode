@@ -6,9 +6,15 @@ class Message {
     this.id = normalizeId(data.id) ?? data.id ?? null;
     this.senderId = normalizeId(data.senderId) ?? data.sender_id ?? null;
     this.recipientId = normalizeId(data.recipientId) ?? data.recipient_id ?? null;
+    this.senderName = data.senderName ?? data.sender_name ?? null;
+    this.recipientName = data.recipientName ?? data.recipient_name ?? null;
     this.subject = data.subject ?? null;
     this.content = data.content ?? null;
-    this.messageType = data.messageType ?? data.message_type ?? 'general';
+    this.messageType = data.type ?? data.messageType ?? data.message_type ?? 'general';
+    this.type = this.messageType;
+    this.tags = data.tags ?? null;
+    this.conversationId = normalizeId(data.conversationId) ?? data.conversation_id ?? null;
+    this.attachments = data.attachments ?? null;
     this.parentId = normalizeId(data.parentId) ?? data.parent_id ?? null;
     this.isRead = data.isRead ?? data.is_read ?? false;
     this.readAt = data.readAt ?? data.read_at ?? null;

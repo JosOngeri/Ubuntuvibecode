@@ -64,7 +64,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const getMenuGroups = () => {
     const recruitmentItems = [
       { path: '/recruitment/jobs', label: 'Recruitment', icon: BsClipboard },
-      { path: '/recruitment/shortlist', label: 'Shortlist', icon: BsClipboardCheck },
     ];
 
     if (role === 'admin') return [
@@ -162,10 +161,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         ]
       },
       {
-        title: 'Team',
+        title: 'People',
         priority: 2,
         items: [
-          { path: '/admin/employees', label: 'Team', icon: BsPeople },
+          { path: '/admin/people', label: 'People', icon: BsPeople },
         ]
       },
       {
@@ -183,8 +182,15 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         ]
       },
       {
-        title: 'Operations',
+        title: 'Contracts',
         priority: 5,
+        items: [
+          { path: '/admin/contracts', label: 'Contracts', icon: BsFileEarmarkText },
+        ]
+      },
+      {
+        title: 'Operations',
+        priority: 6,
         items: [
           { path: '/admin/onboarding', label: 'Onboarding', icon: BsPersonCheck },
           { path: '/admin/daily-labour', label: 'Daily Labour', icon: BsPeople },
@@ -193,7 +199,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       },
       {
         title: 'Resources',
-        priority: 6,
+        priority: 7,
         items: [
           { path: '/admin/assets', label: 'Assets', icon: BsBox },
           { path: '/admin/contractors', label: 'Contractors', icon: BsBriefcase },
@@ -201,19 +207,19 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       },
       {
         title: 'Reports',
-        priority: 7,
+        priority: 8,
         items: [
           { path: '/admin/reports', label: 'Reports', icon: BsGraphUp },
         ]
       },
       {
         title: 'Hiring',
-        priority: 8,
+        priority: 9,
         items: recruitmentItems,
       },
       {
         title: 'Communications',
-        priority: 9,
+        priority: 10,
         items: [
           { path: '/messages', label: 'Messages', icon: BsChatDots },
         ]

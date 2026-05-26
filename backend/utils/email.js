@@ -48,7 +48,7 @@ const getTransporter = () => {
   return transporter;
 };
 
-const sendEmail = async ({ to, subject, text, html }) => {
+const sendEmail = async ({ to, subject, text, html, attachments }) => {
   const missing = getMissingOrPlaceholderVars();
   if (missing.length > 0) {
     return {
@@ -67,13 +67,20 @@ const sendEmail = async ({ to, subject, text, html }) => {
   }
 
   try {
-    await client.sendMail({
+    const mailOptions = {
       from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'lynnmuthoni00@gmail.com',
       to,
       subject,
       text,
       html,
-    });
+    };
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
+
+    await client.sendMail(mailOptions);
 
     return { sent: true };
   } catch (error) {
