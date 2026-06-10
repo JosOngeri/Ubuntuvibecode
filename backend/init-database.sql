@@ -134,14 +134,17 @@ CREATE TABLE daily_labourers (
 -- ============================================
 CREATE TABLE assets (
     id BIGSERIAL PRIMARY KEY,
-    employee_id BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100),
+    type VARCHAR(100),
+    description TEXT,
     serial_number VARCHAR(255),
+    condition VARCHAR(100) DEFAULT 'new',
+    assigned_to BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     assigned_date DATE,
     return_date DATE,
-    condition VARCHAR(100),
-    status VARCHAR(50) DEFAULT 'active',
+    return_condition VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'available',
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -596,14 +599,48 @@ CREATE TABLE notifications (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ============================================
+-- COMPLAINTS TABLE
+-- ============================================
+CREATE TABLE complaints (
+    id BIGSERIAL PRIMARY KEY,
+    type VARCHAR(100),
+    category VARCHAR(100),
+    sub_category VARCHAR(100),
+    description TEXT,
+    urgency VARCHAR(50) DEFAULT 'medium',
+    status VARCHAR(50) DEFAULT 'open',
+    submitted_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    submitted_on_behalf_of BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    guest_name VARCHAR(255),
+    guest_contact VARCHAR(255),
+    guest_room VARCHAR(100),
+    respondent_id BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+    assigned_to BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    department VARCHAR(100),
+    timeline JSONB DEFAULT '[]',
+    resolution TEXT,
+    resolution_date DATE,
+    complainant_confirmed BOOLEAN DEFAULT FALSE,
+    sla_deadline DATE,
+    attachments JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Messages (Chat/Complaints)
 CREATE TABLE messages (
     id BIGSERIAL PRIMARY KEY,
     sender_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    sender_name VARCHAR(255),
     recipient_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    recipient_name VARCHAR(255),
     subject VARCHAR(255),
     content TEXT NOT NULL,
-    message_type VARCHAR(50) DEFAULT 'general' CHECK (message_type IN ('general', 'complaint', 'recommendation', 'announcement')),
+    type VARCHAR(50) DEFAULT 'general',
+    tags TEXT,
+    conversation_id BIGINT,
+    attachments JSONB,
     parent_id BIGINT REFERENCES messages(id) ON DELETE CASCADE,
     is_read BOOLEAN DEFAULT FALSE,
     read_at TIMESTAMPTZ,
