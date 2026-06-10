@@ -1,26 +1,26 @@
 const { query } = require('../config/db');
-const { normalizeId, toOptionalText, toDate, parseJson } = require('../utils/postgres');
-
-const toJsonb = (value, fallback = null) => JSON.stringify(value ?? fallback);
+const { normalizeId, toOptionalText } = require('../utils/postgres');
 
 const mapRow = (row) => {
   if (!row) return null;
   return new KPI({
     id: row.id,
-    name: row.name,
+    title: row.title,
     description: row.description,
-    target: row.target === null ? null : Number(row.target),
+    maxScore: row.max_score === null ? null : Number(row.max_score),
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   });
 };
 
 class KPI {
   constructor(data = {}) {
     this.id = normalizeId(data.id) ?? data.id ?? null;
-    this.name = data.name ?? null;
+    this.title = data.title ?? null;
     this.description = data.description ?? null;
-    this.target = data.target === null || data.target === undefined ? null : Number(data.target);
+    this.maxScore = data.maxScore === null || data.maxScore === undefined ? null : Number(data.maxScore);
     this.createdAt = data.createdAt ?? data.created_at ?? null;
+    this.updatedAt = data.updatedAt ?? data.updated_at ?? null;
   }
 
   static fromRow(row) {
@@ -32,9 +32,9 @@ class KPI {
     const params = [];
     const conditions = [];
 
-    if (filter.name) {
-      conditions.push('name = $' + (params.length + 1));
-      params.push(filter.name);
+    if (filter.title) {
+      conditions.push('title = $' + (params.length + 1));
+      params.push(filter.title);
     }
 
     if (conditions.length > 0) {
@@ -76,18 +76,18 @@ class KPI {
 
   async save() {
     const now = new Date();
-    const normalizedTarget = this.target === null || this.target === undefined ? null : Number(this.target);
+    const normalizedMaxScore = this.maxScore === null || this.maxScore === undefined ? null : Number(this.maxScore);
 
     if (this.id) {
       const { rows } = await query(
         `UPDATE kpi_definitions
-         SET name = $1, description = $2, target = $3, created_at = $4
+         SET title = $1, description = $2, max_score = $3, updated_at = $4
          WHERE id = $5 RETURNING *`,
         [
-          this.name,
+          this.title,
           this.description,
-          normalizedTarget,
-          this.createdAt || now,
+          normalizedMaxScore,
+          now,
           this.id,
         ]
       );
@@ -96,12 +96,12 @@ class KPI {
     }
 
     const { rows } = await query(
-      `INSERT INTO kpi_definitions (name, description, target, created_at)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
+      `INSERT INTO kpi_definitions (title, description, max_score, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $4) RETURNING *`,
       [
-        this.name,
+        this.title,
         this.description,
-        normalizedTarget,
+        normalizedMaxScore,
         this.createdAt || now,
       ]
     );
@@ -113,10 +113,12 @@ class KPI {
     return {
       _id: String(this.id),
       id: String(this.id),
-      name: this.name,
+      title: this.title,
       description: this.description,
-      target: this.target,
+      maxScore: this.maxScore,
+      max_score: this.maxScore,
       createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     };
   }
 }

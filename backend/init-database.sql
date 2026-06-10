@@ -279,12 +279,28 @@ CREATE TABLE jobs (
     employment_type VARCHAR(50),
     salary_min DECIMAL(12, 2),
     salary_max DECIMAL(12, 2),
+    salary_range VARCHAR(100),
     location VARCHAR(255),
     status VARCHAR(50) DEFAULT 'active',
     created_by BIGINT REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    closing_date DATE
+    closing_date DATE,
+    responsibilities TEXT,
+    benefits TEXT,
+    qualifications JSONB DEFAULT '[]',
+    evaluation_params JSONB DEFAULT '{}',
+    advertisement_data JSONB DEFAULT '{}',
+    advertisement_image_path VARCHAR(255),
+    number_of_positions INTEGER DEFAULT 1,
+    career_level VARCHAR(100),
+    contact_person VARCHAR(255),
+    contact_phone VARCHAR(50),
+    contact_email VARCHAR(255),
+    work_schedule VARCHAR(255),
+    required_languages VARCHAR(255),
+    experience_level VARCHAR(100),
+    education_requirements TEXT
 );
 
 -- ============================================
@@ -332,6 +348,12 @@ CREATE TABLE job_applications (
     owner_notes TEXT,
     owner_reviewed_at TIMESTAMPTZ,
     owner_reviewed_by BIGINT REFERENCES users(id),
+    interview_score INTEGER,
+    interview_notes TEXT,
+    interview_status VARCHAR(50),
+    interview_date TIMESTAMPTZ,
+    interview_invitations JSONB DEFAULT '[]',
+    interview_feedbacks JSONB DEFAULT '[]',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -438,11 +460,25 @@ CREATE TABLE favicons (
 CREATE TABLE onboarding (
     id BIGSERIAL PRIMARY KEY,
     employee_id BIGINT REFERENCES employees(id) ON DELETE CASCADE,
+    application_id BIGINT REFERENCES job_applications(id) ON DELETE SET NULL,
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    department VARCHAR(100),
+    position VARCHAR(100),
+    supervisor_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     start_date DATE,
     end_date DATE,
+    probation_end_date DATE,
     status VARCHAR(50) DEFAULT 'in_progress',
+    steps JSONB DEFAULT '[]',
+    orientation_checklist JSONB DEFAULT '[]',
+    documents JSONB DEFAULT '[]',
+    assets_assigned JSONB DEFAULT '[]',
+    probation_reviews JSONB DEFAULT '[]',
+    offer_letter_generated BOOLEAN DEFAULT FALSE,
+    offer_letter_url TEXT,
     notes TEXT,
+    confirmed_at TIMESTAMPTZ,
+    confirmed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
