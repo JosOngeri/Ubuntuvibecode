@@ -121,7 +121,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
               label: 'Supervisor Allocations',
               icon: BsPersonGear,
             },
-            { path: '/admin/department-head-assignments', label: 'Dept Heads', icon: BsBuilding },
+            { path: '/admin/department-heads', label: 'Dept Heads', icon: BsBuilding },
             { path: '/admin/documents', label: 'Document Vault', icon: BsFileText },
           ],
         },

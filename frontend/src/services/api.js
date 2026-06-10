@@ -92,9 +92,9 @@ export const userAPI = {
 
 // KPIs
 export const kpiAPI = {
-  getEmployeeKPIs: employeeId => api.get(`/api/kpi/employee/${employeeId}`),
-  assignKPI: data => api.post('/api/kpi/assign', data),
-  evaluateKPI: (id, data) => api.put(`/api/kpi/${id}/evaluate`, data),
+  getEmployeeKPIs: employeeId => api.get(`/api/kpis/employee/${employeeId}`),
+  assignKPI: data => api.post('/api/kpis/assign', data),
+  evaluateKPI: (id, data) => api.put(`/api/kpis/${id}/evaluate`, data),
   create: data => api.post('/api/kpis', data),
   update: (id, data) => api.put(`/api/kpis/${id}`, data),
   delete: id => api.delete(`/api/kpis/${id}`),

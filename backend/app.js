@@ -57,8 +57,8 @@ app.use('/api/users', require('./routes/user.routes'));
 
 // Payroll, KPI, Leave, Contract modules
 app.use('/api/payroll', require('./routes/payroll.routes'));
-app.use(['/api/kpi', '/api/kpis'], require('./routes/kpi.routes'));
-app.use(['/api/leave', '/api/leaves'], require('./routes/leave.routes'));
+app.use('/api/kpis', require('./routes/kpi.routes'));
+app.use('/api/leaves', require('./routes/leave.routes'));
 app.use('/api/contracts', require('./routes/contract.routes'));
 app.use('/api/contractors', require('./routes/contractor.routes'));
 

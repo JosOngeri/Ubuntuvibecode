@@ -328,7 +328,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/department-head-assignments"
+              path="/admin/department-heads"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
                   <DepartmentHeadAssignments />
