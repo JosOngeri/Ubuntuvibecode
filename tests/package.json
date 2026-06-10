@@ -1,0 +1,26 @@
+{
+  "name": "ubuntu-hrms-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive testing suite for Ubuntu HRMS",
+  "scripts": {
+    "test:api": "npm test --prefix api",
+    "test:e2e": "npm test --prefix e2e",
+    "test:e2e:headed": "npm run test:headed --prefix e2e",
+    "test:e2e:debug": "npm run test:debug --prefix e2e",
+    "test:e2e:ui": "npm run test:ui --prefix e2e",
+    "test:security": "node security/audit.js && node security/owasp-checks.js",
+    "test:owasp": "node security/owasp-checks.js",
+    "test:audit": "node security/audit.js",
+    "test:performance": "lhci autorun --config=performance/lighthouserc.json",
+    "test:load:auth": "k6 run load/auth-load.js",
+    "test:load:employees": "k6 run load/employees-load.js",
+    "test:load:payroll": "k6 run load/payroll-load.js",
+    "test:load:stress": "k6 run load/stress-test.js",
+    "test:all": "npm run test:security && npm run test:api && npm run test:e2e",
+    "install:all": "npm install --prefix api && npm install --prefix e2e",
+    "report:e2e": "npm run test:report --prefix e2e"
+  },
+  "devDependencies": {
+    "@lhci/cli": "^0.13.0"
+  }
+}

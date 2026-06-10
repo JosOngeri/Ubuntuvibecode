@@ -1,0 +1,41 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:5173/login",
+        "http://localhost:5173/admin/dashboard",
+        "http://localhost:5173/admin/employees",
+        "http://localhost:5173/admin/payroll",
+        "http://localhost:5173/admin/leave"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "chromeFlags": "--no-sandbox --disable-setuid-sandbox --disable-dev-shm-usage",
+        "preset": "desktop",
+        "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.6 }],
+        "categories:accessibility": ["error", { "minScore": 0.85 }],
+        "categories:best-practices": ["warn", { "minScore": 0.75 }],
+        "categories:seo": ["warn", { "minScore": 0.8 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 3000 }],
+        "interactive": ["warn", { "maxNumericValue": 5000 }],
+        "speed-index": ["warn", { "maxNumericValue": 4000 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 500 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 4000 }],
+        "uses-responsive-images": "off",
+        "offscreen-images": "off",
+        "render-blocking-resources": "warn",
+        "unused-javascript": "warn",
+        "uses-text-compression": "warn"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
