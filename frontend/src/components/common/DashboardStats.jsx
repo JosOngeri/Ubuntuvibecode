@@ -1,9 +1,16 @@
-import React from 'react'
-import DashboardCard from './DashboardCard'
-import PayrollCard from './PayrollCard'
-import { BsPeople, BsBriefcase, BsCalendarCheck, BsGraphUp } from 'react-icons/bs'
+import React from 'react';
+import DashboardCard from './DashboardCard';
+import PayrollCard from './PayrollCard';
+import { BsPeople, BsBriefcase, BsCalendarCheck, BsGraphUp } from 'react-icons/bs';
 
-export default function DashboardStats({ stats = {}, onEmployeesClick = null, onProjectsClick = null, onAttendanceClick = null, onTasksClick = null, onPayrollClick = null }) {
+export default function DashboardStats({
+  stats = {},
+  onEmployeesClick = null,
+  onProjectsClick = null,
+  onAttendanceClick = null,
+  onTasksClick = null,
+  onPayrollClick = null,
+}) {
   const defaultStats = {
     totalEmployees: stats.totalEmployees || 25,
     activeProjects: stats.activeProjects || 68,
@@ -12,8 +19,8 @@ export default function DashboardStats({ stats = {}, onEmployeesClick = null, on
     employeesTrend: stats.employeesTrend || 5.2,
     projectsTrend: stats.projectsTrend || 12.5,
     attendanceTrend: stats.attendanceTrend || -2.1,
-    tasksTrend: stats.tasksTrend || 8.7
-  }
+    tasksTrend: stats.tasksTrend || 8.7,
+  };
 
   return (
     <div className="space-y-6">
@@ -33,7 +40,7 @@ export default function DashboardStats({ stats = {}, onEmployeesClick = null, on
           trend={defaultStats.employeesTrend}
           onClick={onEmployeesClick}
         />
-        
+
         <DashboardCard
           title="Active Projects"
           value={defaultStats.activeProjects}
@@ -42,7 +49,7 @@ export default function DashboardStats({ stats = {}, onEmployeesClick = null, on
           trend={defaultStats.projectsTrend}
           onClick={onProjectsClick}
         />
-        
+
         <DashboardCard
           title="Attendance Rate"
           value={`${defaultStats.attendanceRate}%`}
@@ -51,7 +58,7 @@ export default function DashboardStats({ stats = {}, onEmployeesClick = null, on
           trend={defaultStats.attendanceTrend}
           onClick={onAttendanceClick}
         />
-        
+
         <DashboardCard
           title="Pending Tasks"
           value={defaultStats.pendingTasks}
@@ -63,17 +70,17 @@ export default function DashboardStats({ stats = {}, onEmployeesClick = null, on
       </div>
 
       {/* Payroll Card - Spans full width */}
-      <PayrollCard 
+      <PayrollCard
         payrollData={{
           dailyWageBill: stats.dailyWageBill || 1250,
           monthlyWageBill: stats.monthlyWageBill || 28500,
           contractorPayments: stats.contractorPayments || 8750,
           dailyTrend: stats.dailyTrend || 2.5,
           monthlyTrend: stats.monthlyTrend || 8.2,
-          contractorTrend: stats.contractorTrend || -3.1
+          contractorTrend: stats.contractorTrend || -3.1,
         }}
         onClick={onPayrollClick}
       />
     </div>
-  )
+  );
 }

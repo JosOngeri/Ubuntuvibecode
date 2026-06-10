@@ -30,10 +30,10 @@ export const SettingsProvider = ({ children }) => {
       setLoading(true);
       const res = await api.get('/settings');
       const settingsMap = {};
-      
+
       res.data.settings.forEach(setting => {
         let value = setting.setting_value;
-        
+
         // Parse based on data_type
         if (setting.data_type === 'array') {
           try {
@@ -46,10 +46,10 @@ export const SettingsProvider = ({ children }) => {
         } else if (setting.data_type === 'boolean') {
           value = value === 'true';
         }
-        
+
         settingsMap[setting.setting_key] = value;
       });
-      
+
       setSettings(settingsMap);
     } catch (err) {
       if (err.response?.status !== 401) {
@@ -128,7 +128,7 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
-  const updateUserPreferences = async (preferences) => {
+  const updateUserPreferences = async preferences => {
     if (!user?.id) return false;
     try {
       await api.put(`/settings/user/${user.id}`, { preferences });
@@ -152,7 +152,18 @@ export const SettingsProvider = ({ children }) => {
   };
 
   const getDepartments = () => {
-    return getSetting('DEPARTMENTS', ['Engineering', 'Product', 'Sales', 'Marketing', 'Finance', 'HR', 'Operations', 'Support', 'Legal', 'Other']);
+    return getSetting('DEPARTMENTS', [
+      'Engineering',
+      'Product',
+      'Sales',
+      'Marketing',
+      'Finance',
+      'HR',
+      'Operations',
+      'Support',
+      'Legal',
+      'Other',
+    ]);
   };
 
   const getEmploymentTypes = () => {
@@ -172,7 +183,13 @@ export const SettingsProvider = ({ children }) => {
   };
 
   const getComplaintStatuses = () => {
-    return getSetting('COMPLAINT_STATUSES', ['open', 'acknowledged', 'investigating', 'resolved', 'closed']);
+    return getSetting('COMPLAINT_STATUSES', [
+      'open',
+      'acknowledged',
+      'investigating',
+      'resolved',
+      'closed',
+    ]);
   };
 
   const getShiftTypes = () => {
@@ -180,15 +197,35 @@ export const SettingsProvider = ({ children }) => {
   };
 
   const getEmploymentStatus = () => {
-    return getSetting('EMPLOYMENT_STATUS', ['Full-time', 'Part-time', 'Contract', 'Self-employed', 'Intern', 'Freelance']);
+    return getSetting('EMPLOYMENT_STATUS', [
+      'Full-time',
+      'Part-time',
+      'Contract',
+      'Self-employed',
+      'Intern',
+      'Freelance',
+    ]);
   };
 
   const getApplicationStatus = () => {
-    return getSetting('APPLICATION_STATUS', ['pending', 'shortlisted', 'rejected', 'hired', 'withdrawn']);
+    return getSetting('APPLICATION_STATUS', [
+      'pending',
+      'shortlisted',
+      'rejected',
+      'hired',
+      'withdrawn',
+    ]);
   };
 
   const getDailyLabourDepartments = () => {
-    return getSetting('DAILY_LABOUR_DEPARTMENTS', ['farm', 'housekeeping', 'grounds', 'construction', 'kitchen', 'other']);
+    return getSetting('DAILY_LABOUR_DEPARTMENTS', [
+      'farm',
+      'housekeeping',
+      'grounds',
+      'construction',
+      'kitchen',
+      'other',
+    ]);
   };
 
   const getAttendanceLocations = () => {
@@ -200,7 +237,7 @@ export const SettingsProvider = ({ children }) => {
     const compSettings = componentSettings[component] || {};
     const setting = compSettings[key];
     if (setting === undefined) return defaultValue;
-    
+
     // Parse JSON value if needed
     if (typeof setting === 'string') {
       try {
@@ -243,9 +280,5 @@ export const SettingsProvider = ({ children }) => {
     getUserPreference,
   };
 
-  return (
-    <SettingsContext.Provider value={value}>
-      {children}
-    </SettingsContext.Provider>
-  );
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 };

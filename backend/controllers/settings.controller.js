@@ -851,6 +851,113 @@ const resetComponentSettings = async (req, res) => {
   }
 };
 
+/**
+ * Get payroll settings
+ */
+const getPayrollSettings = async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT setting_key, setting_value, description
+       FROM settings
+       WHERE setting_key IN ('PAYE_RATE', 'NSSF_RATE', 'NHIF_RATE', 'OVERTIME_RATE', 'KPI_BONUS_THRESHOLD', 'KPI_BONUS_PERCENTAGE')
+         AND is_active = true`
+    );
+
+    const settings = {
+      payeRate: 30,
+      nssfRate: 6,
+      nhifRate: 2.5,
+      overtimeRate: 1.5,
+      kpiBonusThreshold: 85,
+      kpiBonusPercentage: 10,
+    };
+
+    result.rows.forEach(row => {
+      switch (row.setting_key) {
+        case 'PAYE_RATE':
+          settings.payeRate = parseFloat(row.setting_value);
+          break;
+        case 'NSSF_RATE':
+          settings.nssfRate = parseFloat(row.setting_value);
+          break;
+        case 'NHIF_RATE':
+          settings.nhifRate = parseFloat(row.setting_value);
+          break;
+        case 'OVERTIME_RATE':
+          settings.overtimeRate = parseFloat(row.setting_value);
+          break;
+        case 'KPI_BONUS_THRESHOLD':
+          settings.kpiBonusThreshold = parseInt(row.setting_value);
+          break;
+        case 'KPI_BONUS_PERCENTAGE':
+          settings.kpiBonusPercentage = parseFloat(row.setting_value);
+          break;
+      }
+    });
+
+    res.status(200).json({
+      msg: 'Payroll settings retrieved successfully',
+      settings,
+    });
+  } catch (err) {
+    logger.error('settings.getPayrollSettings', 'Error fetching payroll settings', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
+/**
+ * Update payroll settings
+ */
+const updatePayrollSettings = async (req, res) => {
+  try {
+    const { payeRate, nssfRate, nhifRate, overtimeRate, kpiBonusThreshold, kpiBonusPercentage } = req.body;
+
+    // Role check: only owner and manager can update payroll settings
+    if (!['owner', 'manager'].includes(req.user?.role)) {
+      return res.status(403).json({ msg: 'Only owner and manager can update payroll settings' });
+    }
+
+    const settingsMap = {
+      PAYE_RATE: payeRate,
+      NSSF_RATE: nssfRate,
+      NHIF_RATE: nhifRate,
+      OVERTIME_RATE: overtimeRate,
+      KPI_BONUS_THRESHOLD: kpiBonusThreshold,
+      KPI_BONUS_PERCENTAGE: kpiBonusPercentage,
+    };
+
+    for (const [key, value] of Object.entries(settingsMap)) {
+      if (value === undefined || value === null) continue;
+
+      const existing = await query(
+        `SELECT setting_key, setting_value FROM settings WHERE setting_key = $1`,
+        [key]
+      );
+
+      if (existing.rows.length > 0) {
+        await query(
+          `UPDATE settings SET setting_value = $1, updated_at = NOW(), updated_by = $2 WHERE setting_key = $3`,
+          [String(value), req.user?.id || null, key]
+        );
+      } else {
+        await query(
+          `INSERT INTO settings (setting_key, category, setting_value, description, data_type, updated_by, is_active)
+           VALUES ($1, 'PAYROLL', $2, $3, 'number', $4, true)`,
+          [key, String(value), `${key.replace(/_/g, ' ')} rate`, req.user?.id || null]
+        );
+      }
+    }
+
+    res.status(200).json({
+      msg: 'Payroll settings updated successfully',
+      settings: settingsMap,
+    });
+  } catch (err) {
+    logger.error('settings.updatePayrollSettings', 'Error updating payroll settings', err);
+    res.status(500).json({ msg: 'Server error', error: err.message });
+  }
+};
+
 module.exports = {
   getSettings,
   getSettingsByCategory,
@@ -874,4 +981,6 @@ module.exports = {
   getUserPreferences,
   updateUserPreferences,
   resetComponentSettings,
+  getPayrollSettings,
+  updatePayrollSettings,
 };

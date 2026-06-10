@@ -1,54 +1,59 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { toast } from 'react-toastify'
-import DashboardLayout from '../../components/DashboardLayout'
-import { contractorAPI } from '../../services/api'
-
+import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
+import DashboardLayout from '../../components/DashboardLayout';
+import { contractorAPI } from '../../services/api';
 
 export default function ContractorPortal() {
-  const [stats, setStats] = useState({ activeProjects: 0, pendingInvoices: 0, deliveryRate: 0 })
-  const [projects, setProjects] = useState([])
-  const [invoices, setInvoices] = useState([])
-  const [milestones, setMilestones] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ description: '', proof: null })
+  const [stats, setStats] = useState({ activeProjects: 0, pendingInvoices: 0, deliveryRate: 0 });
+  const [projects, setProjects] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [milestones, setMilestones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ description: '', proof: null });
 
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true)
-        const [statsResponse, projectsResponse, invoicesResponse, milestonesResponse] = await Promise.all([
-          contractorAPI.getStats(),
-          contractorAPI.getProjects(),
-          contractorAPI.getInvoices(),
-          contractorAPI.getMilestones ? contractorAPI.getMilestones() : Promise.resolve({ data: [] }),
-        ])
-        setStats(statsResponse.data || { activeProjects: 0, pendingInvoices: 0, deliveryRate: 0 })
-        setProjects(projectsResponse.data || [])
-        setInvoices(invoicesResponse.data || [])
-        setMilestones(milestonesResponse.data || [])
+        setLoading(true);
+        const [statsResponse, projectsResponse, invoicesResponse, milestonesResponse] =
+          await Promise.all([
+            contractorAPI.getStats(),
+            contractorAPI.getProjects(),
+            contractorAPI.getInvoices(),
+            contractorAPI.getMilestones
+              ? contractorAPI.getMilestones()
+              : Promise.resolve({ data: [] }),
+          ]);
+        setStats(statsResponse.data || { activeProjects: 0, pendingInvoices: 0, deliveryRate: 0 });
+        setProjects(projectsResponse.data || []);
+        setInvoices(invoicesResponse.data || []);
+        setMilestones(milestonesResponse.data || []);
       } catch (loadError) {
-        console.error('Failed to load contractor portal data', loadError)
-        toast.error('Failed to load contractor portal data')
+        console.error('Failed to load contractor portal data', loadError);
+        toast.error('Failed to load contractor portal data');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    load()
-  }, [])
+    load();
+  }, []);
 
-  const activeContracts = useMemo(() => projects.filter((project) => String(project.status).toLowerCase() !== 'completed'), [projects])
+  const activeContracts = useMemo(
+    () => projects.filter(project => String(project.status).toLowerCase() !== 'completed'),
+    [projects]
+  );
 
-  const handleChange = (event) => {
-    const { name, value, files } = event.target
-    setForm((current) => ({ ...current, [name]: files ? files[0] : value }))
-  }
+  const handleChange = event => {
+    const { name, value, files } = event.target;
+    setForm(current => ({ ...current, [name]: files ? files[0] : value }));
+  };
 
-  const submitMilestone = async (event) => {
-    event.preventDefault()
+  const submitMilestone = async event => {
+    event.preventDefault();
     if (!form.description || !form.proof) {
-      toast.error('Add a milestone description and supporting proof/invoice')
-      return
+      toast.error('Add a milestone description and supporting proof/invoice');
+      return;
     }
 
     try {
@@ -58,24 +63,38 @@ export default function ContractorPortal() {
         quoteId: activeContracts[0]?.quoteId || null,
         budget: 0,
         photos: [form.proof.name],
-      }
-      const res = await contractorAPI.submitMilestone
+      };
+      const res = (await contractorAPI.submitMilestone)
         ? await contractorAPI.submitMilestone(payload)
-        : await (await import('../../services/api')).default.post('/contractor-lifecycle/milestones', payload)
-      
-      setMilestones(prev => [res.data || { ...payload, id: Date.now(), status: 'Submitted', createdAt: new Date().toISOString(), proofName: form.proof.name, projectName: payload.title }, ...prev])
-      setForm({ description: '', proof: null })
-      toast.success('Milestone submitted to database')
+        : await (
+            await import('../../services/api')
+          ).default.post('/contractor-lifecycle/milestones', payload);
+
+      setMilestones(prev => [
+        res.data || {
+          ...payload,
+          id: Date.now(),
+          status: 'Submitted',
+          createdAt: new Date().toISOString(),
+          proofName: form.proof.name,
+          projectName: payload.title,
+        },
+        ...prev,
+      ]);
+      setForm({ description: '', proof: null });
+      toast.success('Milestone submitted to database');
     } catch (err) {
-      console.error('Milestone submit error:', err)
-      toast.error('Failed to submit milestone')
+      console.error('Milestone submit error:', err);
+      toast.error('Failed to submit milestone');
     }
-  }
+  };
 
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">Contractor Portal</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+          Contractor Portal
+        </h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
           Track active contracts, deadlines, and submit milestone proof from a single dashboard.
         </p>
@@ -84,7 +103,10 @@ export default function ContractorPortal() {
       {loading ? (
         <div className="grid gap-6 lg:grid-cols-3">
           {[...Array(3)].map((_, index) => (
-            <div key={index} className="h-32 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800" />
+            <div
+              key={index}
+              className="h-32 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800"
+            />
           ))}
         </div>
       ) : (
@@ -95,28 +117,41 @@ export default function ContractorPortal() {
               ['Pending Invoices', stats.pendingInvoices],
               ['Delivery Rate', `${stats.deliveryRate}%`],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</div>
-                <div className="mt-3 text-3xl font-bold text-slate-950 dark:text-white">{value}</div>
+              <div
+                key={label}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  {label}
+                </div>
+                <div className="mt-3 text-3xl font-bold text-slate-950 dark:text-white">
+                  {value}
+                </div>
               </div>
             ))}
           </div>
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Active Contracts & Deadlines</h2>
+              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                Active Contracts & Deadlines
+              </h2>
               <div className="mt-4 space-y-3">
                 {activeContracts.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
                     No active contracts found.
                   </div>
                 ) : (
-                  activeContracts.map((project) => (
+                  activeContracts.map(project => (
                     <div key={project.id} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <div className="text-sm font-semibold text-slate-950 dark:text-white">{project.name}</div>
-                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">Deadline: {project.due || project.due_date || 'TBD'}</div>
+                          <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                            {project.name}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            Deadline: {project.due || project.due_date || 'TBD'}
+                          </div>
                         </div>
                         <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-white dark:text-slate-950">
                           {project.status}
@@ -129,10 +164,14 @@ export default function ContractorPortal() {
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Submit Milestone</h2>
+              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                Submit Milestone
+              </h2>
               <form onSubmit={submitMilestone} className="mt-4 space-y-4">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Description</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Description
+                  </span>
                   <textarea
                     name="description"
                     value={form.description}
@@ -144,7 +183,9 @@ export default function ContractorPortal() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Proof / invoice</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Proof / invoice
+                  </span>
                   <input
                     type="file"
                     name="proof"
@@ -165,8 +206,12 @@ export default function ContractorPortal() {
 
           <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Submitted Milestones</h2>
-              <div className="text-xs text-slate-500 dark:text-slate-400">Synced with the system database</div>
+              <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                Submitted Milestones
+              </h2>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Synced with the system database
+              </div>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {milestones.length === 0 ? (
@@ -174,16 +219,25 @@ export default function ContractorPortal() {
                   No milestone submissions yet.
                 </div>
               ) : (
-                milestones.map((milestone) => (
-                  <article key={milestone.id} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+                milestones.map(milestone => (
+                  <article
+                    key={milestone.id}
+                    className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950"
+                  >
                     <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-semibold text-slate-950 dark:text-white">{milestone.projectName}</div>
+                      <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                        {milestone.projectName}
+                      </div>
                       <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                         {milestone.status}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{milestone.description}</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Proof: {milestone.proofName}</p>
+                    <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                      {milestone.description}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      Proof: {milestone.proofName}
+                    </p>
                   </article>
                 ))
               )}
@@ -199,5 +253,5 @@ export default function ContractorPortal() {
         </>
       )}
     </DashboardLayout>
-  )
+  );
 }

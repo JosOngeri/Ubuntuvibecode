@@ -1,9 +1,0 @@
-1,Street Address,Kiserian
-2,City, Nairobi
-3,Postal Code,00206
-4,Street Address, Kiserian
-5,City,Nairobu
-6,Postal Code,00206
-7,Name *,Jacob OMwoyo
-8,Phone *,0794353511
-9,Relationship,Brother

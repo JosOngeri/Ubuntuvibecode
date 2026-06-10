@@ -1,21 +1,21 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-const toDataUrl = async (url) => {
+const toDataUrl = async url => {
   try {
-    const response = await fetch(url)
-    const blob = await response.blob()
+    const response = await fetch(url);
+    const blob = await response.blob();
 
     return await new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 export const downloadPdfReport = async ({
   fileName,
@@ -26,60 +26,62 @@ export const downloadPdfReport = async ({
   logoUrl = '/ubuntu-header.png',
   footerUrl = '/ubuntu-footer.png',
 }) => {
-  const safeColumns = Array.isArray(columns) ? columns : []
-  const safeRows = Array.isArray(rows) ? rows : []
-  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
 
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const logoDataUrl = await toDataUrl(logoUrl)
-  const footerDataUrl = await toDataUrl(footerUrl)
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const logoDataUrl = await toDataUrl(logoUrl);
+  const footerDataUrl = await toDataUrl(footerUrl);
 
   // Header with Ubuntu header image
   if (logoDataUrl) {
     // Calculate aspect ratio to fit within header area
-    const headerHeight = 100
-    const headerWidth = pageWidth - 72 // margins
-    pdf.addImage(logoDataUrl, 'PNG', 36, 10, headerWidth, headerHeight)
+    const headerHeight = 100;
+    const headerWidth = pageWidth - 72; // margins
+    pdf.addImage(logoDataUrl, 'PNG', 36, 10, headerWidth, headerHeight);
   } else {
     // Fallback background
-    pdf.setFillColor(245, 248, 245)
-    pdf.rect(0, 0, pageWidth, 88, 'F')
+    pdf.setFillColor(245, 248, 245);
+    pdf.rect(0, 0, pageWidth, 88, 'F');
   }
 
   // Title below header image
-  pdf.setTextColor(50, 84, 41)
-  pdf.setFont('helvetica', 'bold')
-  pdf.setFontSize(16)
-  pdf.text(title || 'Report', 36, 130)
+  pdf.setTextColor(50, 84, 41);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(16);
+  pdf.text(title || 'Report', 36, 130);
 
-  pdf.setFont('helvetica', 'normal')
-  pdf.setTextColor(102, 102, 102)
-  pdf.setFontSize(9)
-  pdf.text(`Generated: ${new Date().toLocaleString()}`, 36, 146)
-  pdf.text(`Total records: ${safeRows.length}`, pageWidth - 150, 146)
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(102, 102, 102);
+  pdf.setFontSize(9);
+  pdf.text(`Generated: ${new Date().toLocaleString()}`, 36, 146);
+  pdf.text(`Total records: ${safeRows.length}`, pageWidth - 150, 146);
 
-  let startY = 160
+  let startY = 160;
   if (metadata.length > 0) {
     const metaText = metadata
-      .filter((item) => item && item.label)
-      .map((item) => `${item.label}: ${item.value || 'All'}`)
-      .join('   |   ')
+      .filter(item => item && item.label)
+      .map(item => `${item.label}: ${item.value || 'All'}`)
+      .join('   |   ');
     if (metaText) {
-      pdf.setTextColor(85, 85, 85)
-      pdf.setFontSize(9)
-      pdf.text(metaText, 36, startY)
-      startY += 16
+      pdf.setTextColor(85, 85, 85);
+      pdf.setFontSize(9);
+      pdf.text(metaText, 36, startY);
+      startY += 16;
     }
   }
 
   autoTable(pdf, {
     startY,
-    head: [safeColumns.map((col) => col.label)],
-    body: safeRows.map((row) => safeColumns.map((col) => {
-      const raw = col.getValue(row)
-      return raw === null || raw === undefined ? '' : String(raw)
-    })),
+    head: [safeColumns.map(col => col.label)],
+    body: safeRows.map(row =>
+      safeColumns.map(col => {
+        const raw = col.getValue(row);
+        return raw === null || raw === undefined ? '' : String(raw);
+      })
+    ),
     styles: {
       font: 'helvetica',
       fontSize: 9,
@@ -97,23 +99,23 @@ export const downloadPdfReport = async ({
     },
     margin: { left: 36, right: 36 },
     didDrawPage: () => {
-      const footerY = pdf.internal.pageSize.getHeight() - 80
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      
+      const footerY = pdf.internal.pageSize.getHeight() - 80;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
       // Add letterhead footer image at bottom
       if (footerDataUrl) {
-        const footerHeight = 60
-        const footerWidth = pageWidth - 72
-        pdf.addImage(footerDataUrl, 'PNG', 36, footerY, footerWidth, footerHeight)
+        const footerHeight = 60;
+        const footerWidth = pageWidth - 72;
+        pdf.addImage(footerDataUrl, 'PNG', 36, footerY, footerWidth, footerHeight);
       }
-      
-      // Additional footer text
-      pdf.setFontSize(8)
-      pdf.setTextColor(80, 80, 80)
-      pdf.text('Ubuntu Ecolodge & Safari - HR Management System', 36, pageHeight - 15)
-      pdf.text(`Page ${pdf.getCurrentPageInfo().pageNumber || 1}`, pageWidth - 80, pageHeight - 15)
-    },
-  })
 
-  pdf.save(fileName || 'report.pdf')
-}
+      // Additional footer text
+      pdf.setFontSize(8);
+      pdf.setTextColor(80, 80, 80);
+      pdf.text('Ubuntu Ecolodge & Safari - HR Management System', 36, pageHeight - 15);
+      pdf.text(`Page ${pdf.getCurrentPageInfo().pageNumber || 1}`, pageWidth - 80, pageHeight - 15);
+    },
+  });
+
+  pdf.save(fileName || 'report.pdf');
+};

@@ -1,7 +1,6 @@
 const LEVELS = { INFO: 'INFO ', WARN: 'WARN ', ERROR: 'ERROR' };
 
-const fmt = (level, tag, msg) =>
-  `[${new Date().toISOString()}] ${level} [${tag}] ${msg}`;
+const fmt = (level, tag, msg) => `[${new Date().toISOString()}] ${level} [${tag}] ${msg}`;
 
 const logger = {
   info(tag, msg, ctx) {

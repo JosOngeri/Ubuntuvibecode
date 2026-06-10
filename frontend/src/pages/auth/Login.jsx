@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { ToastContainer, toast } from 'react-toastify'
-import Button from '../../components/common/Button'
-import Input from '../../components/common/Input'
-import { BsPersonCircle, BsEye, BsEyeSlash, BsArrowRepeat } from 'react-icons/bs'
-import './Auth.css'
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { ToastContainer, toast } from 'react-toastify';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import { BsPersonCircle, BsEye, BsEyeSlash, BsArrowRepeat } from 'react-icons/bs';
+import './Auth.css';
 
 const Login = () => {
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [preloading, setPreloading] = useState(false)
-  const [preloadProgress, setPreloadProgress] = useState(0)
-  const { login } = useAuth()
-  const navigate = useNavigate()
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [preloading, setPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let interval;
@@ -24,100 +24,103 @@ const Login = () => {
       interval = setInterval(() => {
         setPreloadProgress(prev => {
           if (prev >= 100) {
-            clearInterval(interval)
-            return 100
+            clearInterval(interval);
+            return 100;
           }
-          return prev + 1
-        })
-      }, 40) // 40ms * 100 = 4000ms total
+          return prev + 1;
+        });
+      }, 40); // 40ms * 100 = 4000ms total
     }
-    return () => clearInterval(interval)
-  }, [preloading])
+    return () => clearInterval(interval);
+  }, [preloading]);
 
   const validateForm = () => {
-    const newErrors = {}
-    
+    const newErrors = {};
+
     if (!username.trim()) {
-      newErrors.username = 'Username is required'
+      newErrors.username = 'Username is required';
     } else if (username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters'
+      newErrors.username = 'Username must be at least 3 characters';
     }
-    
+
     if (!password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = 'Password is required';
     }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const result = await login(username, password)
+      const result = await login(username, password);
 
       if (result.mustChangePassword) {
-        toast.info(result.msg || 'Please change your password to continue')
+        toast.info(result.msg || 'Please change your password to continue');
         setTimeout(() => {
-          navigate(`/reset-password?token=${result.resetToken}`)
-        }, 500)
-        return
+          navigate(`/reset-password?token=${result.resetToken}`);
+        }, 500);
+        return;
       }
 
-      const user = result.user
-      toast.success('Login successful')
-      
-      setLoading(false)
-      setPreloading(true)
+      const user = result.user;
+      toast.success('Login successful');
+
+      setLoading(false);
+      setPreloading(true);
 
       // Preload dashboard and pages one click away based on role
       setTimeout(() => {
-        const dashboardRoute = user.role === 'admin' 
-          ? '/admin/dashboard'
-          : user.role === 'manager' || user.role === 'supervisor'
-          ? '/manager/dashboard'
-          : user.role === 'employee'
-          ? '/employee/dashboard'
-          : user.role === 'daily_labourer'
-          ? '/daily-labour/dashboard'
-          : '/contractor/dashboard'
-        
-        navigate(dashboardRoute)
-      }, 4000)
+        const dashboardRoute =
+          user.role === 'admin'
+            ? '/admin/dashboard'
+            : user.role === 'manager' || user.role === 'supervisor'
+              ? '/manager/dashboard'
+              : user.role === 'employee'
+                ? '/employee/dashboard'
+                : user.role === 'daily_labourer'
+                  ? '/daily-labour/dashboard'
+                  : '/contractor/dashboard';
+
+        navigate(dashboardRoute);
+      }, 4000);
     } catch (error) {
-      toast.error(error)
-      setLoading(false)
+      toast.error(error);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-container">
       <ToastContainer position="top-right" />
-      
+
       <div className="auth-card">
         {preloading ? (
           <div className="auth-header">
             <div className="auth-logo">
-              <img src="/ubuntu-logo-with-tagline.png" alt="Ubuntu HRMS" className="auth-logo-img" />
+              <img
+                src="/ubuntu-logo-with-tagline.png"
+                alt="Ubuntu HRMS"
+                className="auth-logo-img"
+              />
             </div>
             <h1>Loading Dashboard...</h1>
             <p>Preparing your workspace</p>
             <div className="mt-6 w-full">
               <div className="w-full bg-slate-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-orange-500 h-2 rounded-full transition-all duration-40 ease-linear"
                   style={{ width: `${preloadProgress}%` }}
                 />
               </div>
-              <div className="text-center mt-2 text-sm text-slate-600">
-                {preloadProgress}%
-              </div>
+              <div className="text-center mt-2 text-sm text-slate-600">{preloadProgress}%</div>
             </div>
             <div className="mt-4 flex items-center justify-center">
               <BsArrowRepeat className="animate-spin text-orange-500 text-2xl" />
@@ -127,7 +130,11 @@ const Login = () => {
           <>
             <div className="auth-header">
               <div className="auth-logo">
-                <img src="/ubuntu-logo-with-tagline.png" alt="Ubuntu HRMS" className="auth-logo-img" />
+                <img
+                  src="/ubuntu-logo-with-tagline.png"
+                  alt="Ubuntu HRMS"
+                  className="auth-logo-img"
+                />
               </div>
               <h1>UBUNTU HRMS</h1>
               <p>Human Resource Management System</p>
@@ -141,9 +148,9 @@ const Login = () => {
                   type="text"
                   placeholder="Enter your username"
                   value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value)
-                    setErrors(prev => ({ ...prev, username: '' }))
+                  onChange={e => {
+                    setUsername(e.target.value);
+                    setErrors(prev => ({ ...prev, username: '' }));
                   }}
                   disabled={loading}
                   className={errors.username ? 'border-red-500' : ''}
@@ -163,9 +170,9 @@ const Login = () => {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      setErrors(prev => ({ ...prev, password: '' }))
+                    onChange={e => {
+                      setPassword(e.target.value);
+                      setErrors(prev => ({ ...prev, password: '' }));
                     }}
                     disabled={loading}
                     className={errors.password ? 'border-red-500' : ''}
@@ -186,11 +193,7 @@ const Login = () => {
                 )}
               </div>
 
-              <button
-                type="submit"
-                className="auth-button"
-                disabled={loading}
-              >
+              <button type="submit" className="auth-button" disabled={loading}>
                 {loading ? 'SIGNING IN...' : 'SIGN IN'}
               </button>
             </form>
@@ -210,7 +213,7 @@ const Login = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;

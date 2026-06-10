@@ -1,9 +1,0 @@
-1,Surname *,Ongeri
-2,First Name *,Josiah
-3,Other Names,Omesa
-4,Gender,Male
-5,Marital Status,Single
-6,Nationality,Kenyan
-7,National ID Number,33498740
-8,Phone Number *,+254724363290
-9,Email Address *,ongerijosiah@gmail.com

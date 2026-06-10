@@ -60,6 +60,7 @@ function calculateExpiryDate(durationType, quantity) {
 
 function canGrantPermission(granter, permission) {
   if (granter.role === 'admin') return true;
+  if (granter.role === 'manager') return true;
   if (granter.role === 'owner') return true;
   
   const granterPerms = ROLE_PERMISSIONS[granter.role] || [];

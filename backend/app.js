@@ -67,7 +67,7 @@ app.use('/api/reports', require('./routes/report.routes'));
 
 // New modules — Daily Labour, Onboarding, Complaints, Contractor Lifecycle, Assets
 app.use('/api/daily-labourers', require('./routes/dailyLabourer.routes'));
-app.use('/api/onboarding', require('./routes/onboarding.routes'));
+app.use('/api/onboarding', require('./src/features/onboarding/routes/onboarding.routes'));
 app.use('/api/complaints', require('./routes/complaint.routes'));
 app.use('/api/contractor-lifecycle', require('./routes/contractorLifecycle.routes'));
 app.use('/api/assets', require('./routes/asset.routes'));

@@ -942,7 +942,8 @@ VALUES
     ('DAILY_LABOUR_DEPARTMENTS', 'daily_labour', '["farm", "housekeeping", "grounds", "construction", "kitchen", "other"]', 'Department options for daily labour assignments', 'array', true, NOW(), NOW()),
     ('ATTENDANCE_LOCATIONS', 'attendance', '[]', 'Configurable GPS locations for attendance check-in', 'array', true, NOW(), NOW()),
     ('ATTENDANCE_GPS_ENABLED', 'attendance', 'true', 'Enable GPS validation for attendance', 'boolean', true, NOW(), NOW()),
-    ('ATTENDANCE_GPS_RADIUS_METERS', 'attendance', '100', 'Default GPS radius for attendance validation in meters', 'number', true, NOW(), NOW())
+    ('ATTENDANCE_GPS_RADIUS_METERS', 'attendance', '100', 'Default GPS radius for attendance validation in meters', 'number', true, NOW(), NOW()),
+    ('DEPARTMENTS', 'organization', '["Front Office", "Housekeeping", "Kitchen", "Farm", "Grounds", "Admin", "Engineering", "HR", "Finance"]', 'Organization departments available across the system for jobs, employees, reports, and filters', 'array', true, NOW(), NOW())
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- ============================================

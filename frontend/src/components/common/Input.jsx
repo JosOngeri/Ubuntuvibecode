@@ -1,32 +1,21 @@
-import React from 'react'
-import { cn } from '../../lib/utils'
+import React from 'react';
+import { cn } from '../../lib/utils';
 
 const Input = React.forwardRef(
   (
-    {
-      label,
-      error,
-      size = 'md',
-      className = '',
-      type = 'text',
-      autocomplete,
-      id,
-      ...props
-    },
+    { label, error, size = 'md', className = '', type = 'text', autocomplete, id, ...props },
     ref
   ) => {
     const sizeClasses = {
       sm: 'px-2 py-1 text-sm',
       md: 'px-3 py-2 text-base',
       lg: 'px-4 py-3 text-lg',
-    }
+    };
 
     return (
       <div className="flex flex-col gap-1">
         {label && (
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {label}
-          </label>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
         )}
         <input
           ref={ref}
@@ -42,7 +31,7 @@ const Input = React.forwardRef(
             className
           )}
           {...props}
-          onInput={(e) => {
+          onInput={e => {
             // Allow AI form fillers to work by calling onChange if value differs
             if (props.onChange && e.target.value !== props.value) {
               props.onChange(e);
@@ -50,15 +39,13 @@ const Input = React.forwardRef(
           }}
         />
         {error && (
-          <span className="text-sm text-red-600 dark:text-red-400 font-medium">
-            {error}
-          </span>
+          <span className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</span>
         )}
       </div>
-    )
+    );
   }
-)
+);
 
-Input.displayName = 'Input'
+Input.displayName = 'Input';
 
-export default Input
+export default Input;

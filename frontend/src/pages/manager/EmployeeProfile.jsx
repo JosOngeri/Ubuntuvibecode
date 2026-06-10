@@ -4,19 +4,43 @@ import DashboardLayout from '../../components/DashboardLayout';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Table from '../../components/common/Table';
-import { AttendanceEmptyState, PayrollEmptyState, KpiEmptyState, LeaveEmptyState } from '../../components/common/EmptyState';
-import { employeeAPI, attendanceAPI, payrollAPI, leaveAPI, kpiAPI } from '../../services/api';
+import {
+  PayrollEmptyState,
+  KpiEmptyState,
+  LeaveEmptyState,
+} from '../../components/common/EmptyState';
+import { AttendanceEmptyState } from '../../features/attendance/components/EmptyState';
+import { kpiAPI } from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
+import { leaveAPI } from '../../features/leave/services/leave.api';
+import { payrollAPI } from '../../features/payroll/services/payroll.api';
+import { attendanceAPI } from '../../features/attendance/services/attendance.api';
 import { toast } from 'react-toastify';
-import { BsPerson, BsEnvelope, BsPhone, BsBriefcase, BsGeoAlt, BsClock, BsChevronDown, BsChevronUp, BsClipboardCheck, BsFileText, BsGraphUp, BsCalendarCheck, BsArrowLeft } from 'react-icons/bs';
+import {
+  BsPerson,
+  BsEnvelope,
+  BsPhone,
+  BsBriefcase,
+  BsGeoAlt,
+  BsClock,
+  BsChevronDown,
+  BsChevronUp,
+  BsClipboardCheck,
+  BsFileText,
+  BsGraphUp,
+  BsCalendarCheck,
+  BsArrowLeft,
+} from 'react-icons/bs';
 
-const formatMoney = (value) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(Number(value || 0));
+const formatMoney = value =>
+  new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(Number(value || 0));
 
 export default function ManagerEmployeeProfile() {
   const { employeeId } = useParams();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Section expansion states
   const [expandedSections, setExpandedSections] = useState({
     profile: true,
@@ -32,7 +56,7 @@ export default function ManagerEmployeeProfile() {
   const [kpis, setKpis] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [sectionLoading, setSectionLoading] = useState({});
-  
+
   // Sorting states
   const [attendanceSort, setAttendanceSort] = useState({ field: 'date', direction: 'desc' });
   const [payslipSort, setPayslipSort] = useState({ field: 'period', direction: 'desc' });
@@ -56,12 +80,12 @@ export default function ManagerEmployeeProfile() {
     }
   };
 
-  const toggleSection = (section) => {
+  const toggleSection = section => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-    
+
     // Fetch data when expanding
     if (!expandedSections[section]) {
-      switch(section) {
+      switch (section) {
         case 'attendance':
           fetchAttendance();
           break;
@@ -127,14 +151,24 @@ export default function ManagerEmployeeProfile() {
   };
 
   const handleSort = (section, field) => {
-    const sortState = section === 'attendance' ? attendanceSort :
-                      section === 'payslip' ? payslipSort :
-                      section === 'kpi' ? kpiSort : leaveSort;
-    
-    const setSort = section === 'attendance' ? setAttendanceSort :
-                    section === 'payslip' ? setPayslipSort :
-                    section === 'kpi' ? setKpiSort : setLeaveSort;
-    
+    const sortState =
+      section === 'attendance'
+        ? attendanceSort
+        : section === 'payslip'
+          ? payslipSort
+          : section === 'kpi'
+            ? kpiSort
+            : leaveSort;
+
+    const setSort =
+      section === 'attendance'
+        ? setAttendanceSort
+        : section === 'payslip'
+          ? setPayslipSort
+          : section === 'kpi'
+            ? setKpiSort
+            : setLeaveSort;
+
     if (sortState.field === field) {
       setSort({ field, direction: sortState.direction === 'asc' ? 'desc' : 'asc' });
     } else {
@@ -143,10 +177,15 @@ export default function ManagerEmployeeProfile() {
   };
 
   const getSortedData = (section, data) => {
-    const sortState = section === 'attendance' ? attendanceSort :
-                      section === 'payslip' ? payslipSort :
-                      section === 'kpi' ? kpiSort : leaveSort;
-    
+    const sortState =
+      section === 'attendance'
+        ? attendanceSort
+        : section === 'payslip'
+          ? payslipSort
+          : section === 'kpi'
+            ? kpiSort
+            : leaveSort;
+
     return [...data].sort((a, b) => {
       let aVal, bVal;
       if (section === 'attendance' && sortState.field === 'date') {
@@ -154,7 +193,10 @@ export default function ManagerEmployeeProfile() {
         bVal = b.attendanceDate || b.date || '';
         const comparison = new Date(aVal) - new Date(bVal);
         return sortState.direction === 'asc' ? comparison : -comparison;
-      } else if (section === 'leave' && (sortState.field === 'startDate' || sortState.field === 'endDate')) {
+      } else if (
+        section === 'leave' &&
+        (sortState.field === 'startDate' || sortState.field === 'endDate')
+      ) {
         aVal = a[sortState.field] || a.start_date || a.end_date || '';
         bVal = b[sortState.field] || b.start_date || b.end_date || '';
         const comparison = new Date(aVal) - new Date(bVal);
@@ -163,31 +205,65 @@ export default function ManagerEmployeeProfile() {
         aVal = a[sortState.field] || '';
         bVal = b[sortState.field] || '';
       }
-      const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
       return sortState.direction === 'asc' ? comparison : -comparison;
     });
   };
 
   const attendanceColumns = [
-    { key: 'attendanceDate', label: 'Date', sortable: true, render: (date) => new Date(date).toLocaleDateString() },
+    {
+      key: 'attendanceDate',
+      label: 'Date',
+      sortable: true,
+      render: date => new Date(date).toLocaleDateString(),
+    },
     { key: 'status', label: 'Status', sortable: true },
     { key: 'shift', label: 'Shift', sortable: true },
-    { key: 'checkIn', label: 'Check In', sortable: true, render: (time) => time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-' },
-    { key: 'checkOut', label: 'Check Out', sortable: true, render: (time) => time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-' },
-    { key: 'totalHoursWorked', label: 'Hours', sortable: true, render: (hours) => hours ? hours.toFixed(2) + ' hrs' : '-' },
+    {
+      key: 'checkIn',
+      label: 'Check In',
+      sortable: true,
+      render: time => (time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-'),
+    },
+    {
+      key: 'checkOut',
+      label: 'Check Out',
+      sortable: true,
+      render: time => (time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-'),
+    },
+    {
+      key: 'totalHoursWorked',
+      label: 'Hours',
+      sortable: true,
+      render: hours => (hours ? hours.toFixed(2) + ' hrs' : '-'),
+    },
   ];
 
   const payslipColumns = [
     { key: 'period', label: 'Period', sortable: true },
-    { key: 'gross_pay', label: 'Gross Pay', sortable: true, render: (val) => formatMoney(val) },
-    { key: 'net_pay', label: 'Net Pay', sortable: true, render: (val) => formatMoney(val) },
-    { key: 'status', label: 'Status', sortable: true, render: (status) => (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-        status === 'Draft' ? 'bg-slate-200 text-slate-800' : 
-        status === 'Approved' ? 'bg-blue-100 text-blue-800' : 
-        'bg-green-100 text-green-800'
-      }`}>{status}</span>
-    )},
+    { key: 'gross_pay', label: 'Gross Pay', sortable: true, render: val => formatMoney(val) },
+    { key: 'net_pay', label: 'Net Pay', sortable: true, render: val => formatMoney(val) },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: status => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+            status === 'Draft'
+              ? 'bg-slate-200 text-slate-800'
+              : status === 'Approved'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-green-100 text-green-800'
+          }`}
+        >
+          {status}
+        </span>
+      ),
+    },
     { key: 'payment_method', label: 'Payment Method', sortable: true },
   ];
 
@@ -196,7 +272,7 @@ export default function ManagerEmployeeProfile() {
     { key: 'period', label: 'Period', sortable: true },
     { key: 'target_value', label: 'Target', sortable: true },
     { key: 'achieved_value', label: 'Achieved', sortable: true },
-    { key: 'final_score', label: 'Score', sortable: true, render: (score) => `${score}%` },
+    { key: 'final_score', label: 'Score', sortable: true, render: score => `${score}%` },
     { key: 'status', label: 'Status', sortable: true },
   ];
 
@@ -209,7 +285,7 @@ export default function ManagerEmployeeProfile() {
   ];
 
   const SectionHeader = ({ title, icon: Icon, section, count }) => (
-    <div 
+    <div
       className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
       onClick={() => toggleSection(section)}
     >
@@ -268,11 +344,15 @@ export default function ManagerEmployeeProfile() {
           {expandedSections.profile && (
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">First Name</label>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  First Name
+                </label>
                 <p className="text-lg font-semibold mt-1">{employee.firstName || 'N/A'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Last Name</label>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Last Name
+                </label>
                 <p className="text-lg font-semibold mt-1">{employee.lastName || 'N/A'}</p>
               </div>
               <div>
@@ -294,13 +374,19 @@ export default function ManagerEmployeeProfile() {
                 <p className="text-lg font-semibold mt-1">{employee.department || 'N/A'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Employment Type</label>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Employment Type
+                </label>
                 <p className="text-lg font-semibold mt-1">{employee.employmentType || 'N/A'}</p>
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Wage Rate</label>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Wage Rate
+                </label>
                 <p className="text-lg font-semibold mt-1">
-                  {employee.wageRate ? `KES ${parseFloat(employee.wageRate).toLocaleString()}` : 'N/A'}
+                  {employee.wageRate
+                    ? `KES ${parseFloat(employee.wageRate).toLocaleString()}`
+                    : 'N/A'}
                 </p>
               </div>
               <div>
@@ -317,7 +403,12 @@ export default function ManagerEmployeeProfile() {
 
         {/* Attendance Section */}
         <Card>
-          <SectionHeader title="Attendance Records" icon={BsClipboardCheck} section="attendance" count={attendance.length} />
+          <SectionHeader
+            title="Attendance Records"
+            icon={BsClipboardCheck}
+            section="attendance"
+            count={attendance.length}
+          />
           {expandedSections.attendance && (
             <div className="p-6">
               {sectionLoading.attendance ? (
@@ -325,7 +416,13 @@ export default function ManagerEmployeeProfile() {
               ) : attendance.length === 0 ? (
                 <AttendanceEmptyState />
               ) : (
-                <Table columns={attendanceColumns} data={getSortedData('attendance', attendance)} sortField={attendanceSort.field} sortDirection={attendanceSort.direction} onSort={(field) => handleSort('attendance', field)} />
+                <Table
+                  columns={attendanceColumns}
+                  data={getSortedData('attendance', attendance)}
+                  sortField={attendanceSort.field}
+                  sortDirection={attendanceSort.direction}
+                  onSort={field => handleSort('attendance', field)}
+                />
               )}
             </div>
           )}
@@ -333,7 +430,12 @@ export default function ManagerEmployeeProfile() {
 
         {/* Payslips Section */}
         <Card>
-          <SectionHeader title="Payslip History" icon={BsFileText} section="payslips" count={payslips.length} />
+          <SectionHeader
+            title="Payslip History"
+            icon={BsFileText}
+            section="payslips"
+            count={payslips.length}
+          />
           {expandedSections.payslips && (
             <div className="p-6">
               {sectionLoading.payslips ? (
@@ -341,7 +443,13 @@ export default function ManagerEmployeeProfile() {
               ) : payslips.length === 0 ? (
                 <PayrollEmptyState />
               ) : (
-                <Table columns={payslipColumns} data={getSortedData('payslip', payslips)} sortField={payslipSort.field} sortDirection={payslipSort.direction} onSort={(field) => handleSort('payslip', field)} />
+                <Table
+                  columns={payslipColumns}
+                  data={getSortedData('payslip', payslips)}
+                  sortField={payslipSort.field}
+                  sortDirection={payslipSort.direction}
+                  onSort={field => handleSort('payslip', field)}
+                />
               )}
             </div>
           )}
@@ -349,7 +457,12 @@ export default function ManagerEmployeeProfile() {
 
         {/* KPI Section */}
         <Card>
-          <SectionHeader title="KPI Performance" icon={BsGraphUp} section="kpi" count={kpis.length} />
+          <SectionHeader
+            title="KPI Performance"
+            icon={BsGraphUp}
+            section="kpi"
+            count={kpis.length}
+          />
           {expandedSections.kpi && (
             <div className="p-6">
               {sectionLoading.kpi ? (
@@ -357,7 +470,13 @@ export default function ManagerEmployeeProfile() {
               ) : kpis.length === 0 ? (
                 <KpiEmptyState />
               ) : (
-                <Table columns={kpiColumns} data={getSortedData('kpi', kpis)} sortField={kpiSort.field} sortDirection={kpiSort.direction} onSort={(field) => handleSort('kpi', field)} />
+                <Table
+                  columns={kpiColumns}
+                  data={getSortedData('kpi', kpis)}
+                  sortField={kpiSort.field}
+                  sortDirection={kpiSort.direction}
+                  onSort={field => handleSort('kpi', field)}
+                />
               )}
             </div>
           )}
@@ -365,7 +484,12 @@ export default function ManagerEmployeeProfile() {
 
         {/* Leave Section */}
         <Card>
-          <SectionHeader title="Leave History" icon={BsCalendarCheck} section="leave" count={leaves.length} />
+          <SectionHeader
+            title="Leave History"
+            icon={BsCalendarCheck}
+            section="leave"
+            count={leaves.length}
+          />
           {expandedSections.leave && (
             <div className="p-6">
               {sectionLoading.leave ? (
@@ -373,7 +497,13 @@ export default function ManagerEmployeeProfile() {
               ) : leaves.length === 0 ? (
                 <LeaveEmptyState />
               ) : (
-                <Table columns={leaveColumns} data={getSortedData('leave', leaves)} sortField={leaveSort.field} sortDirection={leaveSort.direction} onSort={(field) => handleSort('leave', field)} />
+                <Table
+                  columns={leaveColumns}
+                  data={getSortedData('leave', leaves)}
+                  sortField={leaveSort.field}
+                  sortDirection={leaveSort.direction}
+                  onSort={field => handleSort('leave', field)}
+                />
               )}
             </div>
           )}

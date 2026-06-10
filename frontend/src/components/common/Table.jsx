@@ -1,7 +1,15 @@
-import React, { useState } from 'react'
-import { cn } from '../../lib/utils'
+import React, { useState } from 'react';
+import { cn } from '../../lib/utils';
 
-const Table = ({ columns, data, loading = false, className = '', sortField, sortDirection, onSort }) => {
+const Table = ({
+  columns,
+  data,
+  loading = false,
+  className = '',
+  sortField,
+  sortDirection,
+  onSort,
+}) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -12,7 +20,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
           Loading...
         </div>
       </div>
-    )
+    );
   }
 
   if (!data || data.length === 0) {
@@ -22,7 +30,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
           No data available
         </div>
       </div>
-    )
+    );
   }
 
   const indexOfLastRow = currentPage * rowsPerPage;
@@ -30,11 +38,11 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
   const currentRows = data.slice(indexOfFirstRow, indexOfLastRow);
   const totalPages = Math.ceil(data.length / rowsPerPage);
 
-  const handlePageChange = (pageNumber) => {
+  const handlePageChange = pageNumber => {
     setCurrentPage(pageNumber);
   };
 
-  const handleRowsPerPageChange = (e) => {
+  const handleRowsPerPageChange = e => {
     setRowsPerPage(Number(e.target.value));
     setCurrentPage(1);
   };
@@ -44,12 +52,14 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
       <table className="w-full border-collapse">
         <thead className="bg-slate-100 dark:bg-slate-800">
           <tr>
-            {columns.map((col) => (
-              <th 
-                key={col.key} 
+            {columns.map(col => (
+              <th
+                key={col.key}
                 style={{ width: col.width }}
                 className={`px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 ${
-                  col.sortable ? 'cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors' : ''
+                  col.sortable
+                    ? 'cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors'
+                    : ''
                 }`}
                 onClick={() => col.sortable && onSort && onSort(col.key)}
               >
@@ -57,11 +67,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
                   {col.label}
                   {col.sortable && (
                     <span className="text-slate-400">
-                      {sortField === col.key ? (
-                        sortDirection === 'asc' ? '↑' : '↓'
-                      ) : (
-                        '↕'
-                      )}
+                      {sortField === col.key ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}
                     </span>
                   )}
                 </div>
@@ -71,12 +77,12 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
         </thead>
         <tbody>
           {currentRows.map((row, rowIdx) => (
-            <tr 
+            <tr
               key={rowIdx}
               className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors duration-150"
             >
-              {columns.map((col) => (
-                <td 
+              {columns.map(col => (
+                <td
                   key={col.key}
                   className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
                 >
@@ -92,8 +98,8 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
       <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t border-slate-200 dark:border-slate-700 gap-4">
         <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
           <span>Show</span>
-          <select 
-            value={rowsPerPage} 
+          <select
+            value={rowsPerPage}
             onChange={handleRowsPerPageChange}
             className="mx-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -104,9 +110,9 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
           </select>
           <span>entries</span>
         </div>
-        
+
         <div className="flex items-center space-x-2 text-sm">
-          <button 
+          <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -116,7 +122,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
           <span className="text-slate-600 dark:text-slate-400">
             Page {currentPage} of {totalPages || 1}
           </span>
-          <button 
+          <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages || totalPages === 0}
             className="px-3 py-1 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
@@ -126,7 +132,7 @@ const Table = ({ columns, data, loading = false, className = '', sortField, sort
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Table
+export default Table;

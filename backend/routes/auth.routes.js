@@ -9,6 +9,6 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.post('/admin/reset-password', auth, role(['admin']), adminResetPassword);
+router.post('/admin/reset-password', auth, role(['admin', 'manager']), adminResetPassword);
 
 module.exports = router;

@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
-import { ToastContainer, toast } from 'react-toastify'
-import { BsPersonPlusFill, BsCheckCircle } from 'react-icons/bs'
-import './Auth.css'
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { ToastContainer, toast } from 'react-toastify';
+import { BsPersonPlusFill, BsCheckCircle } from 'react-icons/bs';
+import './Auth.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -11,73 +11,77 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     role: 'employee',
-  })
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const { register } = useAuth()
-  const navigate = useNavigate()
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
+  const handleChange = e => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
-    }))
-    setErrors(prev => ({ ...prev, [name]: '' }))
-  }
+      [name]: value,
+    }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  };
 
   const validateForm = () => {
-    const newErrors = {}
-    
+    const newErrors = {};
+
     if (!formData.username.trim()) {
-      newErrors.username = 'Username is required'
+      newErrors.username = 'Username is required';
     } else if (formData.username.length < 3) {
-      newErrors.username = 'Username must be at least 3 characters'
+      newErrors.username = 'Username must be at least 3 characters';
     }
-    
+
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+      newErrors.password = 'Password must be at least 6 characters';
     }
-    
+
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
+      newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = 'Passwords do not match';
     }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+
     if (!validateForm()) {
-      return
+      return;
     }
 
-   setLoading(true)
-        try {
-        await register(formData.username, formData.password, formData.role)
-        toast.success('Registration successful! Redirecting...')
+    setLoading(true);
+    try {
+      await register(formData.username, formData.password, formData.role);
+      toast.success('Registration successful! Redirecting...');
 
-        setTimeout(() => {
-        navigate('/login')
-        }, 500)
-        } catch (error) {
-      toast.error(typeof error === 'string' ? error : (error?.message || 'Registration failed. Please try again.'))
-        } finally {
-        setLoading(false)
-        }
-  }
+      setTimeout(() => {
+        navigate('/login');
+      }, 500);
+    } catch (error) {
+      toast.error(
+        typeof error === 'string'
+          ? error
+          : error?.message || 'Registration failed. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="auth-container">
       <ToastContainer position="top-right" />
-      
+
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-icon">
@@ -191,11 +195,7 @@ const Register = () => {
             {showPassword ? '🙈 Hide Passwords' : '👁️ Show Passwords'}
           </button>
 
-          <button
-            type="submit"
-            className="auth-button"
-            disabled={loading}
-          >
+          <button type="submit" className="auth-button" disabled={loading}>
             {loading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
           </button>
         </form>
@@ -211,14 +211,16 @@ const Register = () => {
 
         <div className="auth-footer">
           <p style={{ marginBottom: '12px' }}>✓ Password Requirements:</p>
-          <ul style={{ 
-            listStyle: 'none', 
-            padding: 0, 
-            margin: 0,
-            textAlign: 'left',
-            fontSize: '12px',
-            lineHeight: '1.6'
-          }}>
+          <ul
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              textAlign: 'left',
+              fontSize: '12px',
+              lineHeight: '1.6',
+            }}
+          >
             <li>✓ At least 6 characters</li>
             <li>✓ Uppercase & lowercase letters</li>
             <li>✓ At least one number</li>
@@ -226,7 +228,7 @@ const Register = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Register
+export default Register;

@@ -3,7 +3,7 @@ import DashboardLayout from '../../components/DashboardLayout';
 import TabNavigation from '../../components/common/TabNavigation';
 import { BsCreditCard, BsFileText } from 'react-icons/bs';
 import AdminPayroll from './Payroll';
-import PayrollDisburse from '../payroll/Disburse';
+// import PayrollDisburse from '../payroll/Disburse';
 
 export default function AdminPayrollPage() {
   const tabs = [
@@ -13,12 +13,12 @@ export default function AdminPayrollPage() {
       icon: BsCreditCard,
       render: () => <AdminPayroll standalone={false} />,
     },
-    {
-      id: 'disburse',
-      label: 'Disburse Payroll',
-      icon: BsFileText,
-      render: () => <PayrollDisburse standalone={false} />,
-    },
+    // {
+    //   id: 'disburse',
+    //   label: 'Disburse Payroll',
+    //   icon: BsFileText,
+    //   render: () => <PayrollDisburse standalone={false} />,
+    // },
   ];
 
   return (

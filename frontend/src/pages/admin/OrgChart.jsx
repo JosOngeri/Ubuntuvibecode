@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../../components/DashboardLayout';
-import { employeeAPI } from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
 import { cn } from '../../lib/utils';
 import { Users, ChevronDown, ChevronRight, Building2, User } from 'lucide-react';
 
@@ -24,7 +24,9 @@ const EmployeeCard = ({ emp, colorClass }) => (
       <p className="font-semibold text-slate-800 dark:text-slate-200 truncate">
         {emp.first_name} {emp.last_name}
       </p>
-      <p className="text-slate-500 dark:text-slate-400 truncate capitalize">{emp.role || emp.employment_type}</p>
+      <p className="text-slate-500 dark:text-slate-400 truncate capitalize">
+        {emp.role || emp.employment_type}
+      </p>
     </div>
   </div>
 );
@@ -54,7 +56,11 @@ const DeptColumn = ({ dept, employees, colorClass, index }) => {
       {!collapsed && (
         <div className="flex flex-col gap-2 pl-2 border-l-2 border-dashed border-slate-200 dark:border-slate-700">
           {employees.map(emp => (
-            <EmployeeCard key={emp.id || emp._id} emp={emp} colorClass={cn('border', colorClass.split(' ')[0])} />
+            <EmployeeCard
+              key={emp.id || emp._id}
+              emp={emp}
+              colorClass={cn('border', colorClass.split(' ')[0])}
+            />
           ))}
         </div>
       )}
@@ -68,7 +74,8 @@ export default function OrgChart({ standalone = true }) {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    employeeAPI.getAll()
+    employeeAPI
+      .getAll()
       .then(res => setEmployees(res.data || []))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -76,7 +83,9 @@ export default function OrgChart({ standalone = true }) {
 
   const filtered = search
     ? employees.filter(e =>
-        `${e.first_name} ${e.last_name} ${e.department} ${e.role}`.toLowerCase().includes(search.toLowerCase())
+        `${e.first_name} ${e.last_name} ${e.department} ${e.role}`
+          .toLowerCase()
+          .includes(search.toLowerCase())
       )
     : employees;
 
@@ -95,7 +104,8 @@ export default function OrgChart({ standalone = true }) {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Org Chart</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Organisation structure by department — {employees.length} employees across {depts.length} departments
+          Organisation structure by department — {employees.length} employees across {depts.length}{' '}
+          departments
         </p>
       </div>
 
@@ -107,7 +117,10 @@ export default function OrgChart({ standalone = true }) {
           { label: 'Active', value: totalActive, icon: User },
           { label: 'Unassigned', value: (byDept['Unassigned'] || []).length, icon: User },
         ].map((s, i) => (
-          <div key={i} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3">
+          <div
+            key={i}
+            className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-3"
+          >
             <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
               <s.icon size={18} className="text-orange-500" />
             </div>

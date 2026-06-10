@@ -1,0 +1,702 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import DashboardLayout from '../../../components/DashboardLayout';
+import Card from '../../../components/common/Card';
+import Button from '../../../components/common/Button';
+import Table from '../../../components/common/Table';
+import {
+  PayrollEmptyState,
+  KpiEmptyState,
+  LeaveEmptyState,
+} from '../../../components/common/EmptyState';
+import { AttendanceEmptyState } from '../../attendance/components/EmptyState';
+import { employeeAPI } from '../services/employee.api';
+import { kpiAPI } from '../../../services/api';
+import { leaveAPI } from '../../leave/services/leave.api';
+import { payrollAPI } from '../../payroll/services/payroll.api';
+import { attendanceAPI } from '../../attendance/services/attendance.api';
+import { toast } from 'react-toastify';
+import {
+  BsPerson,
+  BsEnvelope,
+  BsPhone,
+  BsBriefcase,
+  BsGeoAlt,
+  BsClock,
+  BsChevronDown,
+  BsChevronUp,
+  BsClipboardCheck,
+  BsFileText,
+  BsGraphUp,
+  BsCalendarCheck,
+  BsArrowLeft,
+  BsBoxSeam,
+  BsCheckCircle,
+} from 'react-icons/bs';
+
+const formatMoney = value =>
+  new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(Number(value || 0));
+
+export default function ManagerEmployeeProfile() {
+  const { employeeId } = useParams();
+  const navigate = useNavigate();
+  const [employee, setEmployee] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Section expansion states
+  const [expandedSections, setExpandedSections] = useState({
+    profile: true,
+    attendance: false,
+    payslips: false,
+    kpi: false,
+    leave: false,
+    assets: false,
+    orientation: false,
+  });
+
+  // Data states
+  const [attendance, setAttendance] = useState([]);
+  const [payslips, setPayslips] = useState([]);
+  const [kpis, setKpis] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [orientation, setOrientation] = useState(null);
+  const [sectionLoading, setSectionLoading] = useState({});
+
+  // Sorting states
+  const [attendanceSort, setAttendanceSort] = useState({ field: 'date', direction: 'desc' });
+  const [payslipSort, setPayslipSort] = useState({ field: 'period', direction: 'desc' });
+  const [kpiSort, setKpiSort] = useState({ field: 'title', direction: 'asc' });
+  const [leaveSort, setLeaveSort] = useState({ field: 'startDate', direction: 'desc' });
+
+  useEffect(() => {
+    fetchEmployee();
+  }, [employeeId]);
+
+  const fetchEmployee = async () => {
+    try {
+      setLoading(true);
+      const res = await employeeAPI.getById(employeeId);
+      setEmployee(res.data);
+    } catch (err) {
+      toast.error('Failed to fetch employee details');
+      navigate(-1);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleSection = section => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+
+    // Fetch data when expanding
+    if (!expandedSections[section]) {
+      switch (section) {
+        case 'attendance':
+          fetchAttendance();
+          break;
+        case 'payslips':
+          fetchPayslips();
+          break;
+        case 'kpi':
+          fetchKPIs();
+          break;
+        case 'leave':
+          fetchLeaves();
+          break;
+        case 'assets':
+          fetchAssets();
+          break;
+        case 'orientation':
+          fetchOrientation();
+          break;
+      }
+    }
+  };
+
+  const fetchAttendance = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, attendance: true }));
+      const res = await attendanceAPI.getByEmployeeId(employeeId);
+      setAttendance(res.data || []);
+    } catch (err) {
+      toast.error('Failed to fetch attendance');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, attendance: false }));
+    }
+  };
+
+  const fetchPayslips = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, payslips: true }));
+      const res = await payrollAPI.getPayslips();
+      setPayslips((res.data || []).filter(p => p.employee_id === employeeId));
+    } catch (err) {
+      toast.error('Failed to fetch payslips');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, payslips: false }));
+    }
+  };
+
+  const fetchKPIs = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, kpi: true }));
+      const res = await kpiAPI.getEmployeeKPIs(employeeId);
+      setKpis(res.data || []);
+    } catch (err) {
+      toast.error('Failed to fetch KPIs');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, kpi: false }));
+    }
+  };
+
+  const fetchLeaves = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, leave: true }));
+      const res = await leaveAPI.getAll();
+      setLeaves((res.data || []).filter(l => l.employee_id === employeeId));
+    } catch (err) {
+      toast.error('Failed to fetch leaves');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, leave: false }));
+    }
+  };
+
+  const fetchAssets = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, assets: true }));
+      const res = await employeeAPI.getEmployeeAssets(employeeId);
+      setAssets(res.data || []);
+    } catch (err) {
+      toast.error('Failed to fetch assets');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, assets: false }));
+    }
+  };
+
+  const fetchOrientation = async () => {
+    try {
+      setSectionLoading(prev => ({ ...prev, orientation: true }));
+      const res = await employeeAPI.getOrientationProgress(employeeId);
+      setOrientation(res.data);
+    } catch (err) {
+      toast.error('Failed to fetch orientation progress');
+    } finally {
+      setSectionLoading(prev => ({ ...prev, orientation: false }));
+    }
+  };
+
+  const handleSort = (section, field) => {
+    const sortState =
+      section === 'attendance'
+        ? attendanceSort
+        : section === 'payslip'
+          ? payslipSort
+          : section === 'kpi'
+            ? kpiSort
+            : leaveSort;
+
+    const setSort =
+      section === 'attendance'
+        ? setAttendanceSort
+        : section === 'payslip'
+          ? setPayslipSort
+          : section === 'kpi'
+            ? setKpiSort
+            : setLeaveSort;
+
+    if (sortState.field === field) {
+      setSort({ field, direction: sortState.direction === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setSort({ field, direction: 'asc' });
+    }
+  };
+
+  const getSortedData = (section, data) => {
+    const sortState =
+      section === 'attendance'
+        ? attendanceSort
+        : section === 'payslip'
+          ? payslipSort
+          : section === 'kpi'
+            ? kpiSort
+            : leaveSort;
+
+    return [...data].sort((a, b) => {
+      let aVal, bVal;
+      if (section === 'attendance' && sortState.field === 'date') {
+        aVal = a.attendanceDate || a.date || '';
+        bVal = b.attendanceDate || b.date || '';
+        const comparison = new Date(aVal) - new Date(bVal);
+        return sortState.direction === 'asc' ? comparison : -comparison;
+      } else if (
+        section === 'leave' &&
+        (sortState.field === 'startDate' || sortState.field === 'endDate')
+      ) {
+        aVal = a[sortState.field] || a.start_date || a.end_date || '';
+        bVal = b[sortState.field] || b.start_date || b.end_date || '';
+        const comparison = new Date(aVal) - new Date(bVal);
+        return sortState.direction === 'asc' ? comparison : -comparison;
+      } else {
+        aVal = a[sortState.field] || '';
+        bVal = b[sortState.field] || '';
+      }
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+      return sortState.direction === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const attendanceColumns = [
+    {
+      key: 'attendanceDate',
+      label: 'Date',
+      sortable: true,
+      render: date => new Date(date).toLocaleDateString(),
+    },
+    { key: 'status', label: 'Status', sortable: true },
+    { key: 'shift', label: 'Shift', sortable: true },
+    {
+      key: 'checkIn',
+      label: 'Check In',
+      sortable: true,
+      render: time => (time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-'),
+    },
+    {
+      key: 'checkOut',
+      label: 'Check Out',
+      sortable: true,
+      render: time => (time ? new Date(time).toLocaleTimeString('en-US', { hour12: true }) : '-'),
+    },
+    {
+      key: 'totalHoursWorked',
+      label: 'Hours',
+      sortable: true,
+      render: hours => (hours ? hours.toFixed(2) + ' hrs' : '-'),
+    },
+  ];
+
+  const payslipColumns = [
+    { key: 'period', label: 'Period', sortable: true },
+    { key: 'gross_pay', label: 'Gross Pay', sortable: true, render: val => formatMoney(val) },
+    { key: 'net_pay', label: 'Net Pay', sortable: true, render: val => formatMoney(val) },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: status => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+            status === 'Draft'
+              ? 'bg-slate-200 text-slate-800'
+              : status === 'Approved'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-green-100 text-green-800'
+          }`}
+        >
+          {status}
+        </span>
+      ),
+    },
+    { key: 'payment_method', label: 'Payment Method', sortable: true },
+  ];
+
+  const kpiColumns = [
+    { key: 'definition_title', label: 'KPI Title', sortable: true },
+    { key: 'period', label: 'Period', sortable: true },
+    { key: 'target_value', label: 'Target', sortable: true },
+    { key: 'achieved_value', label: 'Achieved', sortable: true },
+    { key: 'final_score', label: 'Score', sortable: true, render: score => `${score}%` },
+    { key: 'status', label: 'Status', sortable: true },
+  ];
+
+  const leaveColumns = [
+    { key: 'type', label: 'Type', sortable: true },
+    { key: 'start_date', label: 'Start Date', sortable: true },
+    { key: 'end_date', label: 'End Date', sortable: true },
+    { key: 'status', label: 'Status', sortable: true },
+    { key: 'reason', label: 'Reason', sortable: true },
+  ];
+
+  const SectionHeader = ({ title, icon: Icon, section, count }) => (
+    <div
+      className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      onClick={() => toggleSection(section)}
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
+          <Icon size={20} className="text-slate-600 dark:text-slate-300" />
+        </div>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+        {count !== undefined && <span className="text-sm text-slate-500">({count})</span>}
+      </div>
+      {expandedSections[section] ? <BsChevronUp size={20} /> : <BsChevronDown size={20} />}
+    </div>
+  );
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="p-8 text-center">Loading...</div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <DashboardLayout>
+        <div className="p-8">
+          <Card>
+            <p className="text-center text-slate-500">Employee not found</p>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto py-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition"
+            >
+              <BsArrowLeft size={20} />
+            </button>
+            <h1 className="text-3xl font-bold">Employee Profile</h1>
+          </div>
+        </div>
+
+        {/* Profile Section */}
+        <Card>
+          <SectionHeader title="Profile Information" icon={BsPerson} section="profile" />
+          {expandedSections.profile && (
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  First Name
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.firstName || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Last Name
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.lastName || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <BsEnvelope size={14} /> Email
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.email || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <BsPhone size={14} /> Phone
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <BsBriefcase size={14} /> Department
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.department || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Employment Type
+                </label>
+                <p className="text-lg font-semibold mt-1">{employee.employmentType || 'N/A'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Wage Rate
+                </label>
+                <p className="text-lg font-semibold mt-1">
+                  {employee.wageRate
+                    ? `KES ${parseFloat(employee.wageRate).toLocaleString()}`
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <BsClock size={14} /> Created At
+                </label>
+                <p className="text-lg font-semibold mt-1">
+                  {employee.createdAt ? new Date(employee.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Attendance Section */}
+        <Card>
+          <SectionHeader
+            title="Attendance Records"
+            icon={BsClipboardCheck}
+            section="attendance"
+            count={attendance.length}
+          />
+          {expandedSections.attendance && (
+            <div className="p-6">
+              {sectionLoading.attendance ? (
+                <div className="text-center py-8">Loading attendance...</div>
+              ) : attendance.length === 0 ? (
+                <AttendanceEmptyState />
+              ) : (
+                <Table
+                  columns={attendanceColumns}
+                  data={getSortedData('attendance', attendance)}
+                  sortField={attendanceSort.field}
+                  sortDirection={attendanceSort.direction}
+                  onSort={field => handleSort('attendance', field)}
+                />
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Payslips Section */}
+        <Card>
+          <SectionHeader
+            title="Payslip History"
+            icon={BsFileText}
+            section="payslips"
+            count={payslips.length}
+          />
+          {expandedSections.payslips && (
+            <div className="p-6">
+              {sectionLoading.payslips ? (
+                <div className="text-center py-8">Loading payslips...</div>
+              ) : payslips.length === 0 ? (
+                <PayrollEmptyState />
+              ) : (
+                <Table
+                  columns={payslipColumns}
+                  data={getSortedData('payslip', payslips)}
+                  sortField={payslipSort.field}
+                  sortDirection={payslipSort.direction}
+                  onSort={field => handleSort('payslip', field)}
+                />
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* KPI Section */}
+        <Card>
+          <SectionHeader
+            title="KPI Performance"
+            icon={BsGraphUp}
+            section="kpi"
+            count={kpis.length}
+          />
+          {expandedSections.kpi && (
+            <div className="p-6">
+              {sectionLoading.kpi ? (
+                <div className="text-center py-8">Loading KPIs...</div>
+              ) : kpis.length === 0 ? (
+                <KpiEmptyState />
+              ) : (
+                <Table
+                  columns={kpiColumns}
+                  data={getSortedData('kpi', kpis)}
+                  sortField={kpiSort.field}
+                  sortDirection={kpiSort.direction}
+                  onSort={field => handleSort('kpi', field)}
+                />
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Leave Section */}
+        <Card>
+          <SectionHeader
+            title="Leave History"
+            icon={BsCalendarCheck}
+            section="leave"
+            count={leaves.length}
+          />
+          {expandedSections.leave && (
+            <div className="p-6">
+              {sectionLoading.leave ? (
+                <div className="text-center py-8">Loading leaves...</div>
+              ) : leaves.length === 0 ? (
+                <LeaveEmptyState />
+              ) : (
+                <Table
+                  columns={leaveColumns}
+                  data={getSortedData('leave', leaves)}
+                  sortField={leaveSort.field}
+                  sortDirection={leaveSort.direction}
+                  onSort={field => handleSort('leave', field)}
+                />
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Assets Section */}
+        <Card>
+          <SectionHeader
+            title="Assigned Assets"
+            icon={BsBoxSeam}
+            section="assets"
+            count={assets.length}
+          />
+          {expandedSections.assets && (
+            <div className="p-6">
+              {sectionLoading.assets ? (
+                <div className="text-center py-8">Loading assets...</div>
+              ) : assets.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">No assets assigned</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assets.map(asset => (
+                    <div
+                      key={asset.id}
+                      className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">
+                            {asset.name}
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{asset.type}</p>
+                          {asset.serialNumber && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              Serial: {asset.serialNumber}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            asset.return_status === 'returned'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : asset.return_status === 'pending_return'
+                              ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                              : asset.return_status === 'lost'
+                              ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                              : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
+                          }`}
+                        >
+                          {asset.return_status === 'not_returned'
+                            ? 'Not Returned'
+                            : asset.return_status === 'pending_return'
+                            ? 'Pending Return'
+                            : asset.return_status === 'returned'
+                            ? 'Returned'
+                            : asset.return_status || 'Assigned'}
+                        </span>
+                      </div>
+                      {asset.assignedDate && (
+                        <p className="text-xs text-slate-500 mt-2">
+                          Assigned: {new Date(asset.assignedDate).toLocaleDateString()}
+                        </p>
+                      )}
+                      {asset.return_status === 'returned' && asset.returnDate && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          Returned: {new Date(asset.returnDate).toLocaleDateString()}
+                        </p>
+                      )}
+                      {asset.return_status === 'returned' && asset.return_condition && (
+                        <p className="text-xs text-slate-500 mt-1">
+                          Return Condition: {asset.return_condition}
+                        </p>
+                      )}
+                      {asset.return_notes && (
+                        <p className="text-xs text-slate-500 mt-1 italic">
+                          Note: {asset.return_notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+
+        {/* Orientation Section */}
+        <Card>
+          <SectionHeader
+            title="Orientation Progress"
+            icon={BsCheckCircle}
+            section="orientation"
+          />
+          {expandedSections.orientation && (
+            <div className="p-6">
+              {sectionLoading.orientation ? (
+                <div className="text-center py-8">Loading orientation...</div>
+              ) : !orientation ? (
+                <div className="text-center py-8 text-slate-500">No orientation data</div>
+              ) : (
+                <div>
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-2">
+                      <span>Progress</span>
+                      <span>
+                        {orientation.completedItems?.length || 0} of {orientation.templateItems?.length || 0} completed
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                      <div
+                        className="bg-orange-500 h-2 rounded-full"
+                        style={{
+                          width: `${((orientation.completedItems?.length || 0) / (orientation.templateItems?.length || 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {orientation.templateItems && (
+                    <div className="space-y-2">
+                      {orientation.templateItems.map(item => (
+                        <div
+                          key={item.id}
+                          className={`p-3 border rounded-md ${
+                            orientation.completedItems?.includes(item.id)
+                              ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                              : 'border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-5 h-5 rounded flex items-center justify-center ${
+                                orientation.completedItems?.includes(item.id)
+                                  ? 'bg-green-500 text-white'
+                                  : 'bg-slate-200 dark:bg-slate-700'
+                              }`}
+                            >
+                              {orientation.completedItems?.includes(item.id) && '✓'}
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-900 dark:text-white">
+                                {item.title}
+                              </div>
+                              <div className="text-sm text-slate-600 dark:text-slate-400">
+                                {item.description}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}

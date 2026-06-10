@@ -9,7 +9,7 @@ const QuickActions = ({ actions, layout = 'grid' }) => {
   // Get configurable settings
   const showBadges = getComponentSetting('QuickActions', 'showBadges', true);
 
-  const handleActionClick = (action) => {
+  const handleActionClick = action => {
     if (action.onClick) {
       action.onClick();
     } else if (action.route) {
@@ -28,51 +28,61 @@ const QuickActions = ({ actions, layout = 'grid' }) => {
     <div className={layoutClasses[layout] || layoutClasses.grid}>
       {actions.map((action, index) => {
         const Icon = action.icon;
-        
+
         return (
           <button
             key={action.key || index}
             onClick={() => handleActionClick(action)}
             disabled={action.disabled}
-            className={layout === 'row'
-              ? `relative flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-sm transition-all group flex-1 min-w-[140px] ${
-                  action.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`
-              : `relative p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-md transition-all group ${
-                  action.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-                }`}
+            className={
+              layout === 'row'
+                ? `relative flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-sm transition-all group flex-1 min-w-[140px] ${
+                    action.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`
+                : `relative p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-md transition-all group ${
+                    action.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                  }`
+            }
           >
             {/* Badge */}
             {showBadges && action.badge && action.badge > 0 && (
-              <span className={`absolute bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold ${
-                layout === 'row' ? '-top-1.5 -right-1.5' : '-top-2 -right-2'
-              }`}>
+              <span
+                className={`absolute bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold ${
+                  layout === 'row' ? '-top-1.5 -right-1.5' : '-top-2 -right-2'
+                }`}
+              >
                 {action.badge}
               </span>
             )}
 
             {/* Icon */}
             {Icon && (
-              <div className={`text-orange-500 group-hover:scale-110 transition-transform ${
-                layout === 'row' ? '' : 'mx-auto mb-2'
-              }`}>
+              <div
+                className={`text-orange-500 group-hover:scale-110 transition-transform ${
+                  layout === 'row' ? '' : 'mx-auto mb-2'
+                }`}
+              >
                 <Icon size={layout === 'row' ? 18 : 24} />
               </div>
             )}
 
             <div className={layout === 'row' ? 'flex flex-col items-start text-left' : ''}>
               {/* Label */}
-              <div className={`font-medium text-slate-700 dark:text-slate-300 ${
-                layout === 'row' ? 'text-xs' : 'text-sm text-center'
-              }`}>
+              <div
+                className={`font-medium text-slate-700 dark:text-slate-300 ${
+                  layout === 'row' ? 'text-xs' : 'text-sm text-center'
+                }`}
+              >
                 {action.label}
               </div>
 
               {/* Description */}
               {action.description && (
-                <div className={`text-slate-500 dark:text-slate-500 ${
-                  layout === 'row' ? 'text-[10px] leading-tight' : 'text-xs text-center mt-1'
-                }`}>
+                <div
+                  className={`text-slate-500 dark:text-slate-500 ${
+                    layout === 'row' ? 'text-[10px] leading-tight' : 'text-xs text-center mt-1'
+                  }`}
+                >
                   {action.description}
                 </div>
               )}

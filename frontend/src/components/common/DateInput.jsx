@@ -14,7 +14,7 @@ export default function DateInput({
   showValidation = false,
   disablePastDates = false,
   minAge = null,
-  showCalendar = true
+  showCalendar = true,
 }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [displayValue, setDisplayValue] = useState('');
@@ -22,14 +22,20 @@ export default function DateInput({
 
   // Sync external value → display
   useEffect(() => {
-    if (isInternalChange.current) { isInternalChange.current = false; return; }
-    if (!value) { setDisplayValue(''); return; }
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+    if (!value) {
+      setDisplayValue('');
+      return;
+    }
     const formatted = formatForDisplay(value);
     if (formatted) setDisplayValue(formatted);
   }, [value]);
 
   // Convert YYYY-MM-DD to DD/MM/YYYY for display
-  const formatForDisplay = (dateStr) => {
+  const formatForDisplay = dateStr => {
     if (!dateStr || typeof dateStr !== 'string') return '';
     const parts = dateStr.split('-');
     if (parts.length === 3 && parts.every(p => /^\d+$/.test(p))) {
@@ -40,7 +46,7 @@ export default function DateInput({
   };
 
   // Convert DD/MM/YYYY to YYYY-MM-DD for storage
-  const parseFromDisplay = (displayStr) => {
+  const parseFromDisplay = displayStr => {
     if (!displayStr || displayStr.length < 10) return '';
     const parts = displayStr.split('/');
     if (parts.length === 3) {
@@ -53,7 +59,7 @@ export default function DateInput({
   };
 
   // Convert YYYY-MM-DD to Date object for DatePicker
-  const parseToDate = (dateStr) => {
+  const parseToDate = dateStr => {
     if (!dateStr || typeof dateStr !== 'string') return null;
     const parts = dateStr.split('-');
     if (parts.length === 3 && parts.every(p => /^\d+$/.test(p))) {
@@ -64,7 +70,7 @@ export default function DateInput({
     return null;
   };
 
-  const validateDate = (dateStr) => {
+  const validateDate = dateStr => {
     if (!dateStr) return required ? 'Date is required' : null;
 
     // Parse YYYY-MM-DD format
@@ -104,9 +110,8 @@ export default function DateInput({
       const age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
 
-      const adjustedAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) 
-        ? age - 1 
-        : age;
+      const adjustedAge =
+        monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()) ? age - 1 : age;
 
       if (adjustedAge < minAge) return `Must be at least ${minAge} years old`;
     }
@@ -114,7 +119,7 @@ export default function DateInput({
     return null;
   };
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     let rawValue = e.target.value;
 
     // Allow clearing completely
@@ -152,7 +157,7 @@ export default function DateInput({
     }
   };
 
-  const handleBlur = (e) => {
+  const handleBlur = e => {
     const rawValue = e.target.value;
     const storageValue = parseFromDisplay(rawValue);
 
@@ -172,7 +177,7 @@ export default function DateInput({
     }
   };
 
-  const handleDateSelect = (date) => {
+  const handleDateSelect = date => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -186,7 +191,12 @@ export default function DateInput({
 
   return (
     <div className="relative">
-      {label && <label className="block text-sm font-medium mb-2">{label}{required && ' *'}</label>}
+      {label && (
+        <label className="block text-sm font-medium mb-2">
+          {label}
+          {required && ' *'}
+        </label>
+      )}
       <div className="relative">
         <input
           type="text"
@@ -208,12 +218,17 @@ export default function DateInput({
             title="Open calendar"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
             </svg>
           </button>
         )}
       </div>
-      
+
       {showDatePicker && showCalendar && (
         <div className="absolute z-50 mt-1">
           <DatePicker
@@ -226,7 +241,7 @@ export default function DateInput({
           />
         </div>
       )}
-      
+
       {storedError && (
         <span className="text-sm text-red-600 dark:text-red-400 font-medium mt-1 block">
           {storedError}

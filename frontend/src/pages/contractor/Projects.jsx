@@ -1,34 +1,34 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import { BsCalendarCheck, BsCheckCircle, BsClock } from 'react-icons/bs'
-import Card from '../../components/common/Card'
-import DashboardLayout from '../../components/DashboardLayout'
-import Table from '../../components/common/Table'
-import { contractorAPI } from '../../services/api'
-import { toast } from 'react-toastify'
+import React, { useEffect, useState, useMemo } from 'react';
+import { BsCalendarCheck, BsCheckCircle, BsClock } from 'react-icons/bs';
+import Card from '../../components/common/Card';
+import DashboardLayout from '../../components/DashboardLayout';
+import Table from '../../components/common/Table';
+import { contractorAPI } from '../../services/api';
+import { toast } from 'react-toastify';
 
 const ContractorProjects = () => {
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [sortField, setSortField] = useState('name')
-  const [sortDirection, setSortDirection] = useState('asc')
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await contractorAPI.getProjects()
-        setProjects(response.data)
+        const response = await contractorAPI.getProjects();
+        setProjects(response.data);
       } catch (error) {
-        console.error('Failed to fetch contractor projects', error)
-        toast.error('Failed to load projects')
+        console.error('Failed to fetch contractor projects', error);
+        toast.error('Failed to load projects');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchProjects()
-  }, [])
+    fetchProjects();
+  }, []);
 
-  const handleSort = (field) => {
+  const handleSort = field => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -41,7 +41,7 @@ const ContractorProjects = () => {
     return [...projects].sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
-      
+
       if (sortField === 'due_date') {
         aVal = aVal ? new Date(aVal).getTime() : 0;
         bVal = bVal ? new Date(bVal).getTime() : 0;
@@ -49,8 +49,11 @@ const ContractorProjects = () => {
         aVal = String(aVal || '').toLowerCase();
         bVal = String(bVal || '').toLowerCase();
       }
-      
-      const comparison = aVal.localeCompare(bVal, undefined, { numeric: true, sensitivity: 'base' });
+
+      const comparison = aVal.localeCompare(bVal, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
       return sortDirection === 'asc' ? comparison : -comparison;
     });
   }, [projects, sortField, sortDirection]);
@@ -58,7 +61,12 @@ const ContractorProjects = () => {
   const columns = [
     { key: 'name', label: 'Project', sortable: true },
     { key: 'status', label: 'Status', sortable: true },
-    { key: 'due_date', label: 'Due Date', sortable: true, render: (date) => date ? new Date(date).toLocaleDateString() : 'N/A' },
+    {
+      key: 'due_date',
+      label: 'Due Date',
+      sortable: true,
+      render: date => (date ? new Date(date).toLocaleDateString() : 'N/A'),
+    },
   ];
 
   if (loading) {
@@ -68,7 +76,7 @@ const ContractorProjects = () => {
           <div className="text-lg">Loading...</div>
         </div>
       </DashboardLayout>
-    )
+    );
   }
 
   return (
@@ -83,30 +91,43 @@ const ContractorProjects = () => {
           <div className="project-card">
             <BsCalendarCheck size={28} />
             <h3 className="text-lg font-bold">Deadline Tracking</h3>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">Stay on top of each contract milestone with clear due dates.</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Stay on top of each contract milestone with clear due dates.
+            </p>
           </div>
         </Card>
         <Card>
           <div className="project-card">
             <BsCheckCircle size={28} />
             <h3 className="text-lg font-bold">Milestone Status</h3>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">Easily see what is ready for review and what needs attention.</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Easily see what is ready for review and what needs attention.
+            </p>
           </div>
         </Card>
         <Card>
           <div className="project-card">
             <BsClock size={28} />
             <h3 className="text-lg font-bold">Time Estimates</h3>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">Manage deliveries and time commitments for each contract.</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Manage deliveries and time commitments for each contract.
+            </p>
           </div>
         </Card>
       </div>
 
       <div className="mt-8">
-        <Table columns={columns} data={sortedProjects} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+        <Table
+          columns={columns}
+          data={sortedProjects}
+          loading={loading}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+        />
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default ContractorProjects
+export default ContractorProjects;

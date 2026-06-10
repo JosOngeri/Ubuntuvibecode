@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 
@@ -80,39 +80,44 @@ const TEMPLATE = {
 };
 
 // Generate Excel template
-function generateTemplate(outputPath) {
-  const workbook = XLSX.utils.book_new();
+async function generateTemplate(outputPath) {
+  const workbook = new ExcelJS.Workbook();
 
   for (const [sheetName, columns] of Object.entries(TEMPLATE)) {
+    const worksheet = workbook.addWorksheet(sheetName);
+
     // Create header row with descriptions
     const headerRow = columns.map(col => `${col.header} (${col.description})`);
-    const data = [headerRow];
-    
+    worksheet.addRow(headerRow);
+
     // Add a few empty rows for data entry
     for (let i = 0; i < 5; i++) {
-      data.push(columns.map(() => ''));
+      worksheet.addRow(columns.map(() => ''));
     }
-
-    const worksheet = XLSX.utils.aoa_to_sheet(data);
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   }
 
-  XLSX.writeFile(workbook, outputPath);
+  await workbook.xlsx.writeFile(outputPath);
   console.log(`Template generated: ${outputPath}`);
 }
 
 // Convert Excel to SQL INSERT statements
-function excelToSql(inputPath, outputPath) {
-  const workbook = XLSX.readFile(inputPath);
+async function excelToSql(inputPath, outputPath) {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(inputPath);
   const sqlStatements = [];
 
   sqlStatements.push('-- Generated SQL INSERT statements from Excel data');
   sqlStatements.push('-- Generated at: ' + new Date().toISOString());
   sqlStatements.push('');
 
-  for (const sheetName of workbook.SheetNames) {
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+  for (const sheet of workbook.worksheets) {
+    const sheetName = sheet.name;
+    const data = [];
+
+    sheet.eachRow((row, rowNumber) => {
+      const values = row.values;
+      data.push(values);
+    });
 
     if (data.length < 2) {
       console.log(`Skipping ${sheetName}: no data rows`);
@@ -148,7 +153,7 @@ function excelToSql(inputPath, outputPath) {
         const value = row[index];
         if (value !== '' && value !== null && value !== undefined) {
           columns.push(header);
-          
+
           // Handle different data types
           if (typeof value === 'number') {
             values.push(value);
@@ -181,23 +186,29 @@ const command = args[0];
 
 if (command === 'generate') {
   const outputPath = args[1] || path.join(__dirname, '../data-import-template.xlsx');
-  generateTemplate(outputPath);
+  generateTemplate(outputPath).catch(err => {
+    console.error('Error generating template:', err);
+    process.exit(1);
+  });
 } else if (command === 'convert') {
   const inputPath = args[1];
   const outputPath = args[2] || path.join(__dirname, '../data-import.sql');
-  
+
   if (!inputPath) {
     console.error('Please provide input Excel file path');
     console.log('Usage: node excel-to-sql-generator.js convert <input.xlsx> [output.sql]');
     process.exit(1);
   }
-  
+
   if (!fs.existsSync(inputPath)) {
     console.error(`File not found: ${inputPath}`);
     process.exit(1);
   }
-  
-  excelToSql(inputPath, outputPath);
+
+  excelToSql(inputPath, outputPath).catch(err => {
+    console.error('Error converting Excel:', err);
+    process.exit(1);
+  });
 } else {
   console.log('Usage:');
   console.log('  Generate template: node excel-to-sql-generator.js generate [output.xlsx]');

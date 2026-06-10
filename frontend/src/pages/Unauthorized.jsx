@@ -1,23 +1,23 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BsExclamationTriangle } from 'react-icons/bs'
-import Button from '../components/common/Button'
-import DashboardLayout from '../components/DashboardLayout'
-import { useAuth } from '../contexts/AuthContext'
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { BsExclamationTriangle } from 'react-icons/bs';
+import Button from '../components/common/Button';
+import DashboardLayout from '../components/DashboardLayout';
+import { useAuth } from '../contexts/AuthContext';
 
 const Unauthorized = () => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleGoBack = () => {
     if (window.history.length > 1) {
-      navigate(-1)
+      navigate(-1);
     } else if (user) {
-      navigate('/dashboard')
+      navigate('/dashboard');
     } else {
-      navigate('/')
+      navigate('/');
     }
-  }
+  };
 
   return (
     <DashboardLayout>
@@ -32,7 +32,7 @@ const Unauthorized = () => {
         </div>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default Unauthorized
+export default Unauthorized;

@@ -5,10 +5,19 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { messagesAPI } from '../../services/messages.api';
-import { employeeAPI, userAPI } from '../../services/api';
+import { userAPI } from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
-import { BsEnvelope, BsEnvelopeOpen, BsSend, BsChat, BsPerson, BsTrash, BsArrowLeft } from 'react-icons/bs';
+import {
+  BsEnvelope,
+  BsEnvelopeOpen,
+  BsSend,
+  BsChat,
+  BsPerson,
+  BsTrash,
+  BsArrowLeft,
+} from 'react-icons/bs';
 
 export default function MessagesPage() {
   const navigate = useNavigate();
@@ -81,7 +90,7 @@ export default function MessagesPage() {
         name: `${emp.firstName || emp.first_name} ${emp.lastName || emp.last_name}`,
         email: emp.email,
         role: emp.role || 'Employee',
-        type: 'employee'
+        type: 'employee',
       })),
       ...users
         .filter(u => u.role === 'admin' || u.role === 'owner')
@@ -90,13 +99,13 @@ export default function MessagesPage() {
           name: `${u.firstName || u.first_name} ${u.lastName || u.last_name}`,
           email: u.email,
           role: u.role,
-          type: 'user'
-        }))
+          type: 'user',
+        })),
     ];
     setAllRecipients(combined);
   }, [employees, users]);
 
-  const handleSend = async (e) => {
+  const handleSend = async e => {
     e.preventDefault();
     if (!recipientId || !content) {
       toast.error('Recipient and message content are required');
@@ -122,7 +131,7 @@ export default function MessagesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     if (!window.confirm('Delete this message?')) return;
     try {
       await messagesAPI.deleteMessage(id);
@@ -133,7 +142,7 @@ export default function MessagesPage() {
     }
   };
 
-  const openConversation = async (conversationId) => {
+  const openConversation = async conversationId => {
     setSelectedConversation(conversationId);
     try {
       const res = await messagesAPI.getConversation(conversationId).catch(() => ({ data: [] }));
@@ -143,27 +152,34 @@ export default function MessagesPage() {
     }
   };
 
-  const getSenderName = (msg) => {
+  const getSenderName = msg => {
     if (msg.senderName) return msg.senderName;
     if (msg.sender_id && user?.id && String(msg.sender_id) === String(user.id)) return 'Me';
     const emp = employees.find(e => String(e.id) === String(msg.senderId || msg.sender_id));
-    return emp ? `${emp.firstName || emp.first_name} ${emp.lastName || emp.last_name}` : `User #${msg.senderId || msg.sender_id}`;
+    return emp
+      ? `${emp.firstName || emp.first_name} ${emp.lastName || emp.last_name}`
+      : `User #${msg.senderId || msg.sender_id}`;
   };
 
-  const getRecipientName = (msg) => {
+  const getRecipientName = msg => {
     if (msg.recipientName) return msg.recipientName;
     const emp = employees.find(e => String(e.id) === String(msg.recipientId || msg.recipient_id));
-    return emp ? `${emp.firstName || emp.first_name} ${emp.lastName || emp.last_name}` : `User #${msg.recipientId || msg.recipient_id}`;
+    return emp
+      ? `${emp.firstName || emp.first_name} ${emp.lastName || emp.last_name}`
+      : `User #${msg.recipientId || msg.recipient_id}`;
   };
 
-  const renderMessageRow = (msg) => {
+  const renderMessageRow = msg => {
     const isInbox = activeTab === 'inbox';
     const isUnread = !msg.isRead && isInbox;
     const otherParty = isInbox ? getSenderName(msg) : getRecipientName(msg);
-    const otherPartyId = isInbox ? (msg.senderId || msg.sender_id) : (msg.recipientId || msg.recipient_id);
-    const dateStr = msg.createdAt || msg.created_at
-      ? new Date(msg.createdAt || msg.created_at).toLocaleString()
-      : '';
+    const otherPartyId = isInbox
+      ? msg.senderId || msg.sender_id
+      : msg.recipientId || msg.recipient_id;
+    const dateStr =
+      msg.createdAt || msg.created_at
+        ? new Date(msg.createdAt || msg.created_at).toLocaleString()
+        : '';
 
     const handleReply = () => {
       setRecipientId(otherPartyId);
@@ -190,20 +206,25 @@ export default function MessagesPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className={`text-sm font-medium truncate ${isUnread ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-slate-200'}`}>
+            <span
+              className={`text-sm font-medium truncate ${isUnread ? 'text-blue-700 dark:text-blue-300' : 'text-slate-800 dark:text-slate-200'}`}
+            >
               {msg.subject || 'No subject'}
             </span>
             <span className="text-xs text-slate-400 whitespace-nowrap">{dateStr}</span>
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
-            {isInbox ? 'From' : 'To'}: <button 
+            {isInbox ? 'From' : 'To'}:{' '}
+            <button
               onClick={handleReply}
               className="font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
             >
               {otherParty}
             </button>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{msg.content}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
+            {msg.content}
+          </p>
         </div>
         <div className="flex flex-col gap-1">
           <button
@@ -233,7 +254,13 @@ export default function MessagesPage() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Messages</h1>
             <p className="text-sm text-slate-500">Communicate with your team and supervisors</p>
           </div>
-          <Button variant="primary" onClick={() => { setActiveTab('compose'); setSelectedConversation(null); }}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setActiveTab('compose');
+              setSelectedConversation(null);
+            }}
+          >
             <BsSend className="inline mr-1" size={14} /> New Message
           </Button>
         </div>
@@ -243,10 +270,13 @@ export default function MessagesPage() {
             { key: 'inbox', label: 'Inbox', icon: BsEnvelope },
             { key: 'sent', label: 'Sent', icon: BsSend },
             { key: 'compose', label: 'Compose', icon: BsChat },
-          ].map((tab) => (
+          ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setSelectedConversation(null); }}
+              onClick={() => {
+                setActiveTab(tab.key);
+                setSelectedConversation(null);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.key
                   ? 'bg-orange-500 text-white'
@@ -263,15 +293,17 @@ export default function MessagesPage() {
           <Card>
             <form onSubmit={handleSend} className="space-y-4 max-w-xl">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recipient</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Recipient
+                </label>
                 <select
                   className="form-select w-full"
                   value={recipientId}
-                  onChange={(e) => setRecipientId(e.target.value)}
+                  onChange={e => setRecipientId(e.target.value)}
                   required
                 >
                   <option value="">Select recipient...</option>
-                  {allRecipients.map((recipient) => (
+                  {allRecipients.map(recipient => (
                     <option key={`${recipient.type}-${recipient.id}`} value={recipient.id}>
                       {recipient.name} ({recipient.email || recipient.role})
                     </option>
@@ -281,16 +313,18 @@ export default function MessagesPage() {
               <Input
                 label="Subject"
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
+                onChange={e => setSubject(e.target.value)}
                 placeholder="Message subject"
               />
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Message</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Message
+                </label>
                 <textarea
                   className="form-input w-full"
                   rows={5}
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={e => setContent(e.target.value)}
                   placeholder="Write your message here..."
                   required
                 />
@@ -318,7 +352,11 @@ export default function MessagesPage() {
                   <p className="text-slate-500">
                     {activeTab === 'inbox' ? 'Your inbox is empty.' : 'No sent messages yet.'}
                   </p>
-                  <Button variant="outline" className="mt-4" onClick={() => setActiveTab('compose')}>
+                  <Button
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => setActiveTab('compose')}
+                  >
                     Send a message
                   </Button>
                 </div>

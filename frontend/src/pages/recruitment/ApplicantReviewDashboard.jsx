@@ -6,7 +6,7 @@ import  Button  from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
 import api from '../../services/api';
-import { verificationAPI } from '../../services/api';
+import { verificationAPI } from '../../features/recruitment/services/recruitment.api';
 import { toast } from 'react-toastify';
 import DashboardLayout from '../../components/DashboardLayout';
 import { downloadPdfReport } from '../../utils/reportExport';

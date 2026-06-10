@@ -23,6 +23,8 @@ const {
   getUserPreferences,
   updateUserPreferences,
   resetComponentSettings,
+  getPayrollSettings,
+  updatePayrollSettings,
 } = require('../controllers/settings.controller');
 const auth = require('../middleware/auth');
 const roleMiddleware = require('../middleware/role');
@@ -53,21 +55,21 @@ router.get('/audit/all', roleMiddleware(['owner', 'manager', 'admin']), getAllAu
  * Office Location endpoints (admin only)
  */
 router.get('/location/office', getOfficeLocation);
-router.put('/location/office', roleMiddleware(['admin']), updateOfficeLocation);
+router.put('/location/office', roleMiddleware(['admin', 'manager']), updateOfficeLocation);
 
 /**
  * Employee Attendance Permission endpoints (admin only)
  */
-router.get('/attendance/employees', roleMiddleware(['admin']), getEmployeesAttendanceStatus);
-router.put('/attendance/employee/:employeeId', roleMiddleware(['admin']), updateEmployeeAttendancePermission);
+router.get('/attendance/employees', roleMiddleware(['admin', 'manager']), getEmployeesAttendanceStatus);
+router.put('/attendance/employee/:employeeId', roleMiddleware(['admin', 'manager']), updateEmployeeAttendancePermission);
 
 /**
  * Shift Settings endpoints (admin only)
  */
-router.get('/shifts', roleMiddleware(['admin']), getShiftSettings);
-router.post('/shifts', roleMiddleware(['admin']), createShiftSetting);
-router.put('/shifts/:id', roleMiddleware(['admin']), updateShiftSetting);
-router.delete('/shifts/:id', roleMiddleware(['admin']), deleteShiftSetting);
+router.get('/shifts', roleMiddleware(['admin', 'manager']), getShiftSettings);
+router.post('/shifts', roleMiddleware(['admin', 'manager']), createShiftSetting);
+router.put('/shifts/:id', roleMiddleware(['admin', 'manager']), updateShiftSetting);
+router.delete('/shifts/:id', roleMiddleware(['admin', 'manager']), deleteShiftSetting);
 
 /**
  * Component Settings endpoints (admin/owner only)
@@ -80,5 +82,11 @@ router.post('/components/:component/reset', roleMiddleware(['admin', 'owner']), 
  */
 router.get('/user/:userId', getUserPreferences);
 router.put('/user/:userId', updateUserPreferences);
+
+/**
+ * Payroll Settings endpoints (owner/manager only)
+ */
+router.get('/payroll', roleMiddleware(['owner', 'manager']), getPayrollSettings);
+router.put('/payroll', roleMiddleware(['owner', 'manager']), updatePayrollSettings);
 
 module.exports = router;

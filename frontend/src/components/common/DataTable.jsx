@@ -2,16 +2,16 @@ import React, { useState, useMemo } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { BsArrowDownUp, BsChevronDown, BsChevronUp, BsThreeDotsVertical } from 'react-icons/bs';
 
-const DataTable = ({ 
-  columns, 
-  data, 
-  loading = false, 
+const DataTable = ({
+  columns,
+  data,
+  loading = false,
   onRowClick = null,
   selectable = false,
   onSelectionChange = null,
   pageSize = 10,
   exportFormats = ['csv'],
-  onExport = null 
+  onExport = null,
 }) => {
   const { getComponentSetting } = useSettings();
 
@@ -65,7 +65,7 @@ const DataTable = ({
     return filteredData.slice(start, end);
   }, [filteredData, currentPage, actualPageSize]);
 
-  const handleSort = (key) => {
+  const handleSort = key => {
     let direction = 'asc';
     if (sortConfig.key === key) {
       direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
@@ -73,7 +73,7 @@ const DataTable = ({
     setSortConfig({ key, direction });
   };
 
-  const handleRowSelect = (rowId) => {
+  const handleRowSelect = rowId => {
     const newSelection = new Set(selectedRows);
     if (newSelection.has(rowId)) {
       newSelection.delete(rowId);
@@ -93,18 +93,20 @@ const DataTable = ({
       setSelectedRows(new Set(paginatedData.map(row => row.id)));
     }
     if (onSelectionChange) {
-      onSelectionChange(selectedRows.size === paginatedData.length ? [] : paginatedData.map(row => row.id));
+      onSelectionChange(
+        selectedRows.size === paginatedData.length ? [] : paginatedData.map(row => row.id)
+      );
     }
   };
 
-  const handleExport = (format) => {
+  const handleExport = format => {
     if (onExport) {
       onExport(format, filteredData);
     } else {
       // Default CSV export
       if (format === 'csv') {
         const headers = columns.map(col => col.label).join(',');
-        const rows = filteredData.map(row => 
+        const rows = filteredData.map(row =>
           columns.map(col => `"${row[col.key] || ''}"`).join(',')
         );
         const csv = [headers, ...rows].join('\n');
@@ -129,9 +131,7 @@ const DataTable = ({
 
   if (loading) {
     return (
-      <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-        Loading data...
-      </div>
+      <div className="text-center py-12 text-slate-500 dark:text-slate-400">Loading data...</div>
     );
   }
 
@@ -144,7 +144,7 @@ const DataTable = ({
           type="text"
           placeholder="Search..."
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={e => setFilter(e.target.value)}
           className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
 
@@ -210,7 +210,10 @@ const DataTable = ({
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
             {paginatedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-4 py-12 text-center text-slate-500 dark:text-slate-400">
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-12 text-center text-slate-500 dark:text-slate-400"
+                >
                   No data available
                 </td>
               </tr>
@@ -232,7 +235,10 @@ const DataTable = ({
                     </td>
                   )}
                   {columns.map(column => (
-                    <td key={column.key} className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">
+                    <td
+                      key={column.key}
+                      className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300"
+                    >
                       {renderCellValue(row, column)}
                     </td>
                   ))}
@@ -247,7 +253,9 @@ const DataTable = ({
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-4">
           <div className="text-sm text-slate-600 dark:text-slate-400">
-            Showing {(currentPage - 1) * actualPageSize + 1} to {Math.min(currentPage * actualPageSize, filteredData.length)} of {filteredData.length} entries
+            Showing {(currentPage - 1) * actualPageSize + 1} to{' '}
+            {Math.min(currentPage * actualPageSize, filteredData.length)} of {filteredData.length}{' '}
+            entries
           </div>
           <div className="flex gap-2">
             <button

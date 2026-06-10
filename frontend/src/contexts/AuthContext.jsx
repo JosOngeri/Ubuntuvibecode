@@ -1,189 +1,194 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
-import axios from 'axios'
-import api from '../services/api'
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import axios from 'axios';
+import api from '../services/api';
 
-const AuthContext = createContext()
+const AuthContext = createContext();
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const normalizeProfileName = (raw = {}) => {
-  const full = raw.fullName ?? raw.fullname
-  return typeof full === 'string' ? full.trim() : ''
-}
+  const full = raw.fullName ?? raw.fullname;
+  return typeof full === 'string' ? full.trim() : '';
+};
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null)
-  const [token, setToken] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [portalDisplayName, setPortalDisplayName] = useState('')
-  const [additionalRoles, setAdditionalRoles] = useState([])
-  const [supervisorAllocations, setSupervisorAllocations] = useState([])
-  const [departmentHeadAssignment, setDepartmentHeadAssignment] = useState(null)
-  const [isAdminMode, setIsAdminMode] = useState(false)
-  const [adminModeExpiresAt, setAdminModeExpiresAt] = useState(null)
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [portalDisplayName, setPortalDisplayName] = useState('');
+  const [additionalRoles, setAdditionalRoles] = useState([]);
+  const [supervisorAllocations, setSupervisorAllocations] = useState([]);
+  const [departmentHeadAssignment, setDepartmentHeadAssignment] = useState(null);
+  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [adminModeExpiresAt, setAdminModeExpiresAt] = useState(null);
 
   const refreshPortalProfile = useCallback(async () => {
-    const t = localStorage.getItem('authToken')
+    const t = localStorage.getItem('authToken');
     if (!t) {
-      setPortalDisplayName('')
-      return
+      setPortalDisplayName('');
+      return;
     }
     try {
-      const res = await api.get('/profile/me').catch(() => ({ data: null }))
-      const name = normalizeProfileName(res.data || {})
-      setPortalDisplayName(name)
+      const res = await api.get('/profile/me').catch(() => ({ data: null }));
+      const name = normalizeProfileName(res.data || {});
+      setPortalDisplayName(name);
     } catch {
-      setPortalDisplayName('')
+      setPortalDisplayName('');
     }
-  }, [])
+  }, []);
 
-  const decodeToken = (jwtToken) => {
+  const decodeToken = jwtToken => {
     try {
-      const payload = jwtToken.split('.')[1]
-      if (!payload) return null
+      const payload = jwtToken.split('.')[1];
+      if (!payload) return null;
 
-      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
-      const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
-      const decoded = JSON.parse(atob(padded))
-      return decoded
+      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+      const decoded = JSON.parse(atob(padded));
+      return decoded;
     } catch {
-      return null
+      return null;
     }
-  }
+  };
 
   // Fetch additional roles and allocations from backend
-  const fetchUserRolesAndAllocations = useCallback(async (userId) => {
-    if (!userId) return
+  const fetchUserRolesAndAllocations = useCallback(async userId => {
+    if (!userId) return;
     try {
       // Fetch supervisor allocations
-      const superRes = await api.get('/supervisor-allocations/me/supervisees').catch(() => ({ data: { data: [] } }))
-      setSupervisorAllocations(superRes.data?.data || [])
+      const superRes = await api
+        .get('/supervisor-allocations/me/supervisees')
+        .catch(() => ({ data: { data: [] } }));
+      setSupervisorAllocations(superRes.data?.data || []);
 
       // Fetch department head assignment
-      const deptRes = await api.get('/department-heads/me').catch(() => ({ data: { data: null } }))
-      setDepartmentHeadAssignment(deptRes.data?.data || null)
+      const deptRes = await api.get('/department-heads/me').catch(() => ({ data: { data: null } }));
+      setDepartmentHeadAssignment(deptRes.data?.data || null);
 
       // Determine additional roles
-      const roles = []
-      if (superRes.data?.data?.length > 0) roles.push('supervisor')
-      if (deptRes.data?.data) roles.push('department_head')
-      setAdditionalRoles(roles)
+      const roles = [];
+      if (superRes.data?.data?.length > 0) roles.push('supervisor');
+      if (deptRes.data?.data) roles.push('department_head');
+      setAdditionalRoles(roles);
     } catch (error) {
-      console.error('Error fetching roles:', error)
+      console.error('Error fetching roles:', error);
     }
-  }, [])
+  }, []);
 
   // Admin mode functions for Owner role
-  const enableAdminMode = useCallback((durationMinutes = 10) => {
-    if (user?.role !== 'owner') return false
-    
-    const expiresAt = new Date(Date.now() + durationMinutes * 60000)
-    setIsAdminMode(true)
-    setAdminModeExpiresAt(expiresAt)
-    
-    // Set timeout to auto-disable
-    setTimeout(() => {
-      setIsAdminMode(false)
-      setAdminModeExpiresAt(null)
-    }, durationMinutes * 60000)
-    
-    return true
-  }, [user])
+  const enableAdminMode = useCallback(
+    (durationMinutes = 10) => {
+      if (user?.role !== 'owner') return false;
+
+      const expiresAt = new Date(Date.now() + durationMinutes * 60000);
+      setIsAdminMode(true);
+      setAdminModeExpiresAt(expiresAt);
+
+      // Set timeout to auto-disable
+      setTimeout(() => {
+        setIsAdminMode(false);
+        setAdminModeExpiresAt(null);
+      }, durationMinutes * 60000);
+
+      return true;
+    },
+    [user]
+  );
 
   const disableAdminMode = useCallback(() => {
-    setIsAdminMode(false)
-    setAdminModeExpiresAt(null)
-  }, [])
+    setIsAdminMode(false);
+    setAdminModeExpiresAt(null);
+  }, []);
 
   const isAdminModeActive = useCallback(() => {
-    if (!isAdminMode || !adminModeExpiresAt) return false
-    return new Date() < new Date(adminModeExpiresAt)
-  }, [isAdminMode, adminModeExpiresAt])
+    if (!isAdminMode || !adminModeExpiresAt) return false;
+    return new Date() < new Date(adminModeExpiresAt);
+  }, [isAdminMode, adminModeExpiresAt]);
 
   // Helper functions for checking roles
   const isSupervisor = useCallback(() => {
-    return additionalRoles.includes('supervisor') || supervisorAllocations.length > 0
-  }, [additionalRoles, supervisorAllocations])
+    return additionalRoles.includes('supervisor') || supervisorAllocations.length > 0;
+  }, [additionalRoles, supervisorAllocations]);
 
   const isDepartmentHead = useCallback(() => {
-    return additionalRoles.includes('department_head') || !!departmentHeadAssignment
-  }, [additionalRoles, departmentHeadAssignment])
+    return additionalRoles.includes('department_head') || !!departmentHeadAssignment;
+  }, [additionalRoles, departmentHeadAssignment]);
 
   const getSupervisedEmployees = useCallback(() => {
-    return supervisorAllocations.map(a => a.superviseeId)
-  }, [supervisorAllocations])
+    return supervisorAllocations.map(a => a.superviseeId);
+  }, [supervisorAllocations]);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('authToken')
+    const savedToken = localStorage.getItem('authToken');
     if (savedToken) {
-      const decoded = decodeToken(savedToken)
-      console.log('[AuthContext] Decoded token on load:', decoded)
+      const decoded = decodeToken(savedToken);
+      console.log('[AuthContext] Decoded token on load:', decoded);
       if (decoded) {
-        setToken(savedToken)
-        setUser(decoded)
-        axios.defaults.headers.common['x-auth-token'] = savedToken
-        refreshPortalProfile()
-        fetchUserRolesAndAllocations(decoded.id)
+        setToken(savedToken);
+        setUser(decoded);
+        axios.defaults.headers.common['x-auth-token'] = savedToken;
+        refreshPortalProfile();
+        fetchUserRolesAndAllocations(decoded.id);
       } else {
-        localStorage.removeItem('authToken')
-        delete axios.defaults.headers.common['x-auth-token']
+        localStorage.removeItem('authToken');
+        delete axios.defaults.headers.common['x-auth-token'];
       }
     }
-    setLoading(false)
-  }, [refreshPortalProfile, fetchUserRolesAndAllocations])
+    setLoading(false);
+  }, [refreshPortalProfile, fetchUserRolesAndAllocations]);
 
   // Check admin mode expiry periodically
   useEffect(() => {
-    if (!isAdminMode || !adminModeExpiresAt) return
-    
+    if (!isAdminMode || !adminModeExpiresAt) return;
+
     const interval = setInterval(() => {
       if (new Date() >= new Date(adminModeExpiresAt)) {
-        setIsAdminMode(false)
-        setAdminModeExpiresAt(null)
+        setIsAdminMode(false);
+        setAdminModeExpiresAt(null);
       }
-    }, 30000) // Check every 30 seconds
-    
-    return () => clearInterval(interval)
-  }, [isAdminMode, adminModeExpiresAt])
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isAdminMode, adminModeExpiresAt]);
 
   const login = async (username, password) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
         username,
         password,
-      })
-      const { token, mustChangePassword, resetToken, msg } = response.data
+      });
+      const { token, mustChangePassword, resetToken, msg } = response.data;
 
       if (mustChangePassword) {
         return {
           mustChangePassword: true,
           resetToken,
           msg,
-        }
+        };
       }
 
-      setToken(token)
-      axios.defaults.headers.common['x-auth-token'] = token
-      localStorage.setItem('authToken', token)
-      
+      setToken(token);
+      axios.defaults.headers.common['x-auth-token'] = token;
+      localStorage.setItem('authToken', token);
+
       // Decode token to get user info
-      const decoded = decodeToken(token)
+      const decoded = decodeToken(token);
       if (!decoded) {
-        throw new Error('Invalid auth token received')
+        throw new Error('Invalid auth token received');
       }
-      setUser(decoded)
-      console.log('[AuthContext] Decoded token after login:', decoded)
-      await refreshPortalProfile()
-      await fetchUserRolesAndAllocations(decoded.id)
-      
+      setUser(decoded);
+      console.log('[AuthContext] Decoded token after login:', decoded);
+      await refreshPortalProfile();
+      await fetchUserRolesAndAllocations(decoded.id);
+
       return {
         mustChangePassword: false,
         user: decoded,
-      }
+      };
     } catch (error) {
-      throw error.response?.data?.msg || 'Login failed'
+      throw error.response?.data?.msg || 'Login failed';
     }
-  }
+  };
 
   const register = async (username, password, role) => {
     try {
@@ -191,102 +196,104 @@ export const AuthProvider = ({ children }) => {
         username,
         password,
         role,
-      })
-      const { token } = response.data
-      setToken(token)
-      axios.defaults.headers.common['x-auth-token'] = token
-      localStorage.setItem('authToken', token)
-      
-      const decoded = decodeToken(token)
-      if (!decoded) {
-        throw new Error('Invalid auth token received')
-      }
-      setUser(decoded)
-      await refreshPortalProfile()
-      await fetchUserRolesAndAllocations(decoded.id)
-      
-      return decoded
-    } catch (error) {
-      throw error.response?.data?.msg || 'Registration failed'
-    }
-  }
+      });
+      const { token } = response.data;
+      setToken(token);
+      axios.defaults.headers.common['x-auth-token'] = token;
+      localStorage.setItem('authToken', token);
 
-  const forgotPassword = async (email) => {
+      const decoded = decodeToken(token);
+      if (!decoded) {
+        throw new Error('Invalid auth token received');
+      }
+      setUser(decoded);
+      await refreshPortalProfile();
+      await fetchUserRolesAndAllocations(decoded.id);
+
+      return decoded;
+    } catch (error) {
+      throw error.response?.data?.msg || 'Registration failed';
+    }
+  };
+
+  const forgotPassword = async email => {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, {
         email,
-      })
-      return response.data
+      });
+      return response.data;
     } catch (error) {
-      throw error.response?.data?.msg || 'Failed to process forgot password request'
+      throw error.response?.data?.msg || 'Failed to process forgot password request';
     }
-  }
+  };
 
   const resetPassword = async (token, newPassword) => {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
         token,
         newPassword,
-      })
-      return response.data
+      });
+      return response.data;
     } catch (error) {
-      throw error.response?.data?.msg || 'Failed to reset password'
+      throw error.response?.data?.msg || 'Failed to reset password';
     }
-  }
+  };
 
   const logout = () => {
-    setUser(null)
-    setToken(null)
-    setPortalDisplayName('')
-    setAdditionalRoles([])
-    setSupervisorAllocations([])
-    setDepartmentHeadAssignment(null)
-    setIsAdminMode(false)
-    setAdminModeExpiresAt(null)
-    localStorage.removeItem('authToken')
-    delete axios.defaults.headers.common['x-auth-token']
-  }
+    setUser(null);
+    setToken(null);
+    setPortalDisplayName('');
+    setAdditionalRoles([]);
+    setSupervisorAllocations([]);
+    setDepartmentHeadAssignment(null);
+    setIsAdminMode(false);
+    setAdminModeExpiresAt(null);
+    localStorage.removeItem('authToken');
+    delete axios.defaults.headers.common['x-auth-token'];
+  };
 
   const displayName = useMemo(
     () => portalDisplayName || user?.name || user?.username || 'Guest',
     [portalDisplayName, user]
-  )
+  );
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      loading, 
-      login, 
-      register,
-      forgotPassword,
-      resetPassword,
-      logout,
-      portalDisplayName,
-      refreshPortalProfile,
-      displayName,
-      additionalRoles,
-      supervisorAllocations,
-      departmentHeadAssignment,
-      isAdminMode,
-      adminModeExpiresAt,
-      enableAdminMode,
-      disableAdminMode,
-      isAdminModeActive,
-      isSupervisor,
-      isDepartmentHead,
-      getSupervisedEmployees,
-      fetchUserRolesAndAllocations,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        login,
+        register,
+        forgotPassword,
+        resetPassword,
+        logout,
+        portalDisplayName,
+        refreshPortalProfile,
+        displayName,
+        additionalRoles,
+        supervisorAllocations,
+        departmentHeadAssignment,
+        isAdminMode,
+        adminModeExpiresAt,
+        enableAdminMode,
+        disableAdminMode,
+        isAdminModeActive,
+        isSupervisor,
+        isDepartmentHead,
+        getSupervisedEmployees,
+        fetchUserRolesAndAllocations,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
+    throw new Error('useAuth must be used within AuthProvider');
   }
-  return context
-}
+  return context;
+};

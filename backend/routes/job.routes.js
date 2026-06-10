@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jobController = require('../controllers/job.controller');
+const jobController = require('../src/features/recruitment/controllers/job.controller');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const upload = require('../middleware/cvUpload');
@@ -36,6 +36,9 @@ router.post('/applications/reallocate-rating', auth, role(['admin', 'manager', '
 // Cross-job views — MUST be before :appId wildcard routes
 router.get('/applications/shortlisted/all', auth, role(['admin', 'manager', 'hr']), jobController.getShortlisted);
 router.get('/applications/all', auth, role(['admin', 'manager', 'hr']), jobController.getAllApplications);
+
+// Get single application by ID — static segment, before :appId wildcards
+router.get('/applications/:appId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationById);
 
 // Get applications by employee/applicant — static segments, before :appId wildcards
 router.get('/applications/employee/:employeeId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByEmployee);

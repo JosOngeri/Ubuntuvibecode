@@ -8,6 +8,8 @@ const {
   kpiReport,
   employeeReport,
   recruitmentReport,
+  complaintsReport,
+  dailyLabourReport,
   dashboardSummary,
   generatePdfReport,
 } = require('../controllers/report.controller');
@@ -20,6 +22,8 @@ router.get('/payroll', payrollReport);
 router.get('/kpi', kpiReport);
 router.get('/employee', employeeReport);
 router.get('/recruitment', recruitmentReport);
+router.get('/complaints', complaintsReport);
+router.get('/daily-labour', dailyLabourReport);
 router.get('/dashboard-summary', dashboardSummary);
 router.get('/pdf', generatePdfReport);
 

@@ -8,10 +8,27 @@ import TabNavigation from '../../components/common/TabNavigation';
 import StatsCards from '../../components/common/StatsCards';
 import DataTable from '../../components/common/DataTable';
 import api from '../../services/api';
-import { 
-  BsGeoAlt, BsShieldCheck, BsGear, BsClockHistory, BsPalette, BsBuilding, BsPeople, 
-  BsFileText, BsBriefcase, BsSun, BsClipboardCheck, BsHammer, BsPersonBadge,
-  BsBell, BsLock, BsPlug, BsGrid, BsDatabase, BsImage
+import {
+  BsGeoAlt,
+  BsShieldCheck,
+  BsGear,
+  BsClockHistory,
+  BsPalette,
+  BsBuilding,
+  BsPeople,
+  BsFileText,
+  BsBriefcase,
+  BsSun,
+  BsClipboardCheck,
+  BsHammer,
+  BsPersonBadge,
+  BsBell,
+  BsLock,
+  BsPlug,
+  BsGrid,
+  BsDatabase,
+  BsImage,
+  BsCash,
 } from 'react-icons/bs';
 
 const AdminSettings = () => {
@@ -69,13 +86,17 @@ const AdminSettings = () => {
       setLoading(true);
 
       // Fetch office location
-      const locResponse = await api.get('/api/settings/location/office').catch(() => ({ data: {} }));
+      const locResponse = await api
+        .get('/api/settings/location/office')
+        .catch(() => ({ data: {} }));
       if (locResponse.data.location) {
         setOfficeLocation(locResponse.data.location);
       }
 
       // Fetch employees
-      const empResponse = await api.get('/api/settings/attendance/employees').catch(() => ({ data: {} }));
+      const empResponse = await api
+        .get('/api/settings/attendance/employees')
+        .catch(() => ({ data: {} }));
       if (empResponse.data.employees) {
         setEmployees(empResponse.data.employees);
       }
@@ -99,7 +120,9 @@ const AdminSettings = () => {
       }
 
       // Fetch component settings
-      const compResponse = await api.get('/settings/components').catch(() => ({ data: { settings: {} } }));
+      const compResponse = await api
+        .get('/settings/components')
+        .catch(() => ({ data: { settings: {} } }));
       if (compResponse.data.settings) {
         setComponentSettings(compResponse.data.settings);
       }
@@ -128,12 +151,13 @@ const AdminSettings = () => {
     try {
       const response = await api.get('/api/system-logs').catch(() => ({ data: { logs: [] } }));
       // Filter for audit-relevant events only
-      const filteredLogs = (response.data.logs || []).filter(log => 
-        log.module === 'auth' || 
-        log.module === 'settings' || 
-        log.module === 'employees' || 
-        log.module === 'users' ||
-        ['POST', 'PUT', 'PATCH', 'DELETE'].includes(log.metadata?.method)
+      const filteredLogs = (response.data.logs || []).filter(
+        log =>
+          log.module === 'auth' ||
+          log.module === 'settings' ||
+          log.module === 'employees' ||
+          log.module === 'users' ||
+          ['POST', 'PUT', 'PATCH', 'DELETE'].includes(log.metadata?.method)
       );
       setAuditLogs(filteredLogs);
       setAuditLogsLoaded(true);
@@ -158,14 +182,16 @@ const AdminSettings = () => {
   const fetchSystemLogStats = async () => {
     if (systemLogsLoaded) return;
     try {
-      const response = await api.get('/api/system-logs/stats').catch(() => ({ data: { stats: [] } }));
+      const response = await api
+        .get('/api/system-logs/stats')
+        .catch(() => ({ data: { stats: [] } }));
       setSystemLogStats(response.data.stats || []);
     } catch (err) {
       console.error('Error fetching system log stats:', err);
     }
   };
 
-  const handleUpdateLocation = async (e) => {
+  const handleUpdateLocation = async e => {
     e.preventDefault();
     try {
       setUpdating(true);
@@ -179,7 +205,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleUpdateSetting = async (e) => {
+  const handleUpdateSetting = async e => {
     e.preventDefault();
     if (!editingSetting) return;
 
@@ -213,7 +239,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleUploadFavicon = async (e) => {
+  const handleUploadFavicon = async e => {
     e.preventDefault();
     const file = e.target.files[0];
     if (!file) return;
@@ -224,7 +250,7 @@ const AdminSettings = () => {
     try {
       setUploadingFavicon(true);
       const response = await api.post('/favicons/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       toast.success('Favicon uploaded successfully');
       fetchData();
@@ -237,7 +263,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSetDefaultFavicon = async (variant) => {
+  const handleSetDefaultFavicon = async variant => {
     try {
       setUpdating(true);
       await api.post('/favicons/default', { variant });
@@ -251,7 +277,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSetActiveFavicon = async (id) => {
+  const handleSetActiveFavicon = async id => {
     try {
       setUpdating(true);
       await api.put(`/favicons/${id}/activate`);
@@ -265,7 +291,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleDeleteFavicon = async (id) => {
+  const handleDeleteFavicon = async id => {
     if (!confirm('Are you sure you want to delete this favicon?')) return;
 
     try {
@@ -324,7 +350,10 @@ const AdminSettings = () => {
       id: 'system-logs',
       label: 'System Logs',
       icon: BsDatabase,
-      onLoad: () => { fetchSystemLogs(); fetchSystemLogStats(); },
+      onLoad: () => {
+        fetchSystemLogs();
+        fetchSystemLogStats();
+      },
       render: () => renderSystemLogsTab(),
     },
     {
@@ -337,9 +366,25 @@ const AdminSettings = () => {
 
   const renderOverviewTab = () => {
     const stats = [
-      { key: 'employees', label: 'Total Employees', value: employees.length, icon: BsPeople, trend: 5 },
-      { key: 'settings', label: 'System Settings', value: Object.keys(systemSettings).length, icon: BsGear },
-      { key: 'components', label: 'Component Settings', value: Object.keys(componentSettings).length, icon: BsGrid },
+      {
+        key: 'employees',
+        label: 'Total Employees',
+        value: employees.length,
+        icon: BsPeople,
+        trend: 5,
+      },
+      {
+        key: 'settings',
+        label: 'System Settings',
+        value: Object.keys(systemSettings).length,
+        icon: BsGear,
+      },
+      {
+        key: 'components',
+        label: 'Component Settings',
+        value: Object.keys(componentSettings).length,
+        icon: BsGrid,
+      },
       { key: 'audit', label: 'Recent Changes', value: auditLogs.length, icon: BsClockHistory },
     ];
 
@@ -354,28 +399,42 @@ const AdminSettings = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Actions</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Quick Actions
+            </h3>
             <div className="space-y-3">
-              <button onClick={() => navigate('/employees')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+              <button
+                onClick={() => navigate('/admin/employees')}
+                className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+              >
                 Manage Employees
               </button>
-              <button onClick={() => navigate('/attendance')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+              <button
+                onClick={() => navigate('/admin/attendance')}
+                className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+              >
                 View Attendance
               </button>
-              <button onClick={() => navigate('/payroll')} className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition">
+              <button
+                onClick={() => navigate('/admin/payroll')}
+                className="w-full text-left px-4 py-3 bg-slate-50 dark:bg-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"
+              >
                 Process Payroll
               </button>
             </div>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Office Location</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Office Location
+            </h3>
             <div className="space-y-2">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 <span className="font-medium">Name:</span> {officeLocation.name}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                <span className="font-medium">Coordinates:</span> {officeLocation.latitude}, {officeLocation.longitude}
+                <span className="font-medium">Coordinates:</span> {officeLocation.latitude},{' '}
+                {officeLocation.longitude}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 <span className="font-medium">Radius:</span> {officeLocation.radius_meters}m
@@ -401,12 +460,17 @@ const AdminSettings = () => {
     return (
       <div className="space-y-6">
         {settingGroups.map(group => (
-          <div key={group.key} className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+          <div
+            key={group.key}
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700"
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                 <group.icon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{group.label}</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {group.label}
+              </h3>
             </div>
             {renderSystemSettingsContent(group.key)}
           </div>
@@ -417,7 +481,11 @@ const AdminSettings = () => {
 
   const renderComponentsTab = () => {
     const components = [
-      { id: 'CalendarHeatmap', label: 'Calendar Heatmap', description: 'Attendance visualization settings' },
+      {
+        id: 'CalendarHeatmap',
+        label: 'Calendar Heatmap',
+        description: 'Attendance visualization settings',
+      },
       { id: 'TabNavigation', label: 'Tab Navigation', description: 'Dashboard tab behavior' },
       { id: 'StatsCards', label: 'Stats Cards', description: 'Statistics card appearance' },
       { id: 'DataTable', label: 'Data Table', description: 'Table display and pagination' },
@@ -433,10 +501,15 @@ const AdminSettings = () => {
         </div>
 
         {components.map(comp => (
-          <div key={comp.id} className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700">
+          <div
+            key={comp.id}
+            className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-slate-200 dark:border-slate-700"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{comp.label}</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                  {comp.label}
+                </h3>
                 <p className="text-sm text-slate-500">{comp.description}</p>
               </div>
               <button className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition">
@@ -444,7 +517,8 @@ const AdminSettings = () => {
               </button>
             </div>
             <div className="text-sm text-slate-500">
-              Component ID: <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{comp.id}</code>
+              Component ID:{' '}
+              <code className="bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{comp.id}</code>
             </div>
           </div>
         ))}
@@ -463,14 +537,16 @@ const AdminSettings = () => {
           <p className="text-sm text-slate-500">Configure office location and attendance radius</p>
         </div>
       </div>
-      
+
       <form onSubmit={handleUpdateLocation} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Office Name</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Office Name
+          </label>
           <input
             type="text"
             value={officeLocation.name}
-            onChange={(e) => setOfficeLocation({ ...officeLocation, name: e.target.value })}
+            onChange={e => setOfficeLocation({ ...officeLocation, name: e.target.value })}
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
             placeholder="e.g., Main Office"
           />
@@ -478,23 +554,31 @@ const AdminSettings = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Latitude</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Latitude
+            </label>
             <input
               type="number"
               step="0.00001"
               value={officeLocation.latitude}
-              onChange={(e) => setOfficeLocation({ ...officeLocation, latitude: parseFloat(e.target.value) })}
+              onChange={e =>
+                setOfficeLocation({ ...officeLocation, latitude: parseFloat(e.target.value) })
+              }
               className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
               placeholder="-1.19293"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Longitude</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Longitude
+            </label>
             <input
               type="number"
               step="0.00001"
               value={officeLocation.longitude}
-              onChange={(e) => setOfficeLocation({ ...officeLocation, longitude: parseFloat(e.target.value) })}
+              onChange={e =>
+                setOfficeLocation({ ...officeLocation, longitude: parseFloat(e.target.value) })
+              }
               className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
               placeholder="36.93057"
             />
@@ -502,17 +586,25 @@ const AdminSettings = () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Allowed Radius (meters)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            Allowed Radius (meters)
+          </label>
           <input
             type="number"
             value={officeLocation.radius_meters}
-            onChange={(e) => setOfficeLocation({ ...officeLocation, radius_meters: parseInt(e.target.value) })}
+            onChange={e =>
+              setOfficeLocation({ ...officeLocation, radius_meters: parseInt(e.target.value) })
+            }
             className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-lg"
             placeholder="1000"
           />
         </div>
 
-        <button type="submit" disabled={updating} className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={updating}
+          className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+        >
           {updating ? 'Updating...' : 'Update Location Settings'}
         </button>
       </form>
@@ -527,8 +619,12 @@ const AdminSettings = () => {
             <BsShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Employee Permissions</h2>
-            <p className="text-sm text-slate-500">Manage employee attendance recording permissions</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Employee Permissions
+            </h2>
+            <p className="text-sm text-slate-500">
+              Manage employee attendance recording permissions
+            </p>
           </div>
         </div>
 
@@ -537,11 +633,18 @@ const AdminSettings = () => {
             { key: 'name', label: 'Name', sortable: true },
             { key: 'type', label: 'Type', sortable: true },
             { key: 'department', label: 'Department', sortable: true },
-            { key: 'permission', label: 'Can Self-Record', sortable: true, render: (val) => (
-              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${val ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {val ? '✓ Yes' : '✗ No'}
-              </span>
-            )},
+            {
+              key: 'permission',
+              label: 'Can Self-Record',
+              sortable: true,
+              render: val => (
+                <span
+                  className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${val ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                >
+                  {val ? '✓ Yes' : '✗ No'}
+                </span>
+              ),
+            },
           ]}
           data={employees.map(emp => ({
             id: emp.id,
@@ -580,27 +683,33 @@ const AdminSettings = () => {
         data={auditLogs.map(log => {
           const metadata = log.metadata || {};
           const body = metadata.body || {};
-          
+
           // Show old/new values if available, otherwise show body changes
           let changes = '-';
           if (metadata.old_value !== undefined || metadata.new_value !== undefined) {
             changes = `Before: ${JSON.stringify(metadata.old_value)} → After: ${JSON.stringify(metadata.new_value)}`;
           } else {
-            changes = Object.entries(body)
-              .filter(([key]) => key !== 'password' && key !== 'confirmPassword')
-              .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-              .join(', ') || '-';
+            changes =
+              Object.entries(body)
+                .filter(([key]) => key !== 'password' && key !== 'confirmPassword')
+                .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+                .join(', ') || '-';
           }
-          
+
           return {
             id: log.id,
             level: (
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                log.level === 'error' ? 'bg-red-100 text-red-700' :
-                log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                log.level === 'info' ? 'bg-blue-100 text-blue-700' :
-                'bg-slate-100 text-slate-700'
-              }`}>
+              <span
+                className={`px-2 py-1 rounded text-xs font-medium ${
+                  log.level === 'error'
+                    ? 'bg-red-100 text-red-700'
+                    : log.level === 'warning'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : log.level === 'info'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-slate-100 text-slate-700'
+                }`}
+              >
                 {log.level}
               </span>
             ),
@@ -656,12 +765,17 @@ const AdminSettings = () => {
           data={systemLogs.map(log => ({
             id: log.id,
             level: (
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                log.level === 'error' ? 'bg-red-100 text-red-700' :
-                log.level === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                log.level === 'info' ? 'bg-blue-100 text-blue-700' :
-                'bg-slate-100 text-slate-700'
-              }`}>
+              <span
+                className={`px-2 py-1 rounded text-xs font-medium ${
+                  log.level === 'error'
+                    ? 'bg-red-100 text-red-700'
+                    : log.level === 'warning'
+                      ? 'bg-yellow-100 text-yellow-700'
+                      : log.level === 'info'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-slate-100 text-slate-700'
+                }`}
+              >
                 {log.level}
               </span>
             ),
@@ -692,11 +806,17 @@ const AdminSettings = () => {
 
         {/* Current Active Favicon */}
         <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg">
-          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Current Active Favicon</h3>
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
+            Current Active Favicon
+          </h3>
           {activeFavicon && (
             <div className="flex items-center gap-4">
-              <img 
-                src={activeFavicon.type === 'default' ? activeFavicon.path : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${activeFavicon.path}`}
+              <img
+                src={
+                  activeFavicon.type === 'default'
+                    ? activeFavicon.path
+                    : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${activeFavicon.path}`
+                }
                 alt="Current Favicon"
                 className="w-16 h-16 object-contain border border-slate-300 dark:border-slate-600 rounded"
               />
@@ -714,16 +834,20 @@ const AdminSettings = () => {
         <div className="mb-6">
           <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Default Favicons</h3>
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
-                 onClick={() => handleSetDefaultFavicon('1')}>
+            <div
+              className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
+              onClick={() => handleSetDefaultFavicon('1')}
+            >
               <img src="/favicon-1.png" alt="Favicon 1" className="w-12 h-12 mx-auto mb-2" />
               <p className="text-sm text-center text-slate-600 dark:text-slate-400">Favicon 1</p>
               {activeFavicon?.filename === 'favicon-1.png' && (
                 <p className="text-xs text-center text-green-600 mt-1">Active</p>
               )}
             </div>
-            <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
-                 onClick={() => handleSetDefaultFavicon('2')}>
+            <div
+              className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-orange-500 transition cursor-pointer"
+              onClick={() => handleSetDefaultFavicon('2')}
+            >
               <img src="/favicon-2.png" alt="Favicon 2" className="w-12 h-12 mx-auto mb-2" />
               <p className="text-sm text-center text-slate-600 dark:text-slate-400">Favicon 2</p>
               {activeFavicon?.filename === 'favicon-2.png' && (
@@ -735,7 +859,9 @@ const AdminSettings = () => {
 
         {/* Upload Custom Favicon */}
         <div className="mb-6">
-          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Upload Custom Favicon</h3>
+          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">
+            Upload Custom Favicon
+          </h3>
           <div className="p-4 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
             <input
               type="file"
@@ -744,7 +870,9 @@ const AdminSettings = () => {
               disabled={uploadingFavicon}
               className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
             />
-            <p className="text-xs text-slate-500 mt-2">Supported formats: PNG, ICO. Maximum size: 1MB</p>
+            <p className="text-xs text-slate-500 mt-2">
+              Supported formats: PNG, ICO. Maximum size: 1MB
+            </p>
           </div>
         </div>
 
@@ -753,41 +881,50 @@ const AdminSettings = () => {
           <div>
             <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-3">Custom Favicons</h3>
             <div className="space-y-3">
-              {favicons.filter(f => f.type === 'custom').map(favicon => (
-                <div key={favicon.id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <img 
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${favicon.path}`}
-                      alt={favicon.originalName}
-                      className="w-12 h-12 object-contain border border-slate-300 dark:border-slate-600 rounded"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{favicon.originalName}</p>
-                      <p className="text-xs text-slate-500">Uploaded: {new Date(favicon.createdAt).toLocaleDateString()}</p>
+              {favicons
+                .filter(f => f.type === 'custom')
+                .map(favicon => (
+                  <div
+                    key={favicon.id}
+                    className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${favicon.path}`}
+                        alt={favicon.originalName}
+                        className="w-12 h-12 object-contain border border-slate-300 dark:border-slate-600 rounded"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {favicon.originalName}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Uploaded: {new Date(favicon.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {favicon.isActive ? (
+                        <span className="text-xs text-green-600 font-medium">Active</span>
+                      ) : (
+                        <button
+                          onClick={() => handleSetActiveFavicon(favicon.id)}
+                          disabled={updating}
+                          className="px-3 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition disabled:opacity-50"
+                        >
+                          Set Active
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteFavicon(favicon.id)}
+                        disabled={updating || favicon.isActive}
+                        className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {favicon.isActive ? (
-                      <span className="text-xs text-green-600 font-medium">Active</span>
-                    ) : (
-                      <button
-                        onClick={() => handleSetActiveFavicon(favicon.id)}
-                        disabled={updating}
-                        className="px-3 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition disabled:opacity-50"
-                      >
-                        Set Active
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteFavicon(favicon.id)}
-                      disabled={updating || favicon.isActive}
-                      className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}
@@ -795,7 +932,7 @@ const AdminSettings = () => {
     </div>
   );
 
-  const renderSystemSettingsContent = (settingKey) => {
+  const renderSystemSettingsContent = settingKey => {
     const setting = systemSettings[settingKey];
     if (!setting) {
       return <p className="text-slate-500 dark:text-slate-400">No settings found</p>;
@@ -808,7 +945,9 @@ const AdminSettings = () => {
             <p className="font-medium text-slate-900 dark:text-slate-100">{setting.setting_key}</p>
             <p className="text-sm text-slate-500">{setting.description}</p>
             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              {Array.isArray(setting.parsedValue) ? setting.parsedValue.join(', ') : setting.parsedValue}
+              {Array.isArray(setting.parsedValue)
+                ? setting.parsedValue.join(', ')
+                : setting.parsedValue}
             </p>
           </div>
           <button
@@ -821,14 +960,20 @@ const AdminSettings = () => {
 
         {editingSetting && editingSetting.setting_key === settingKey && (
           <div className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-900">
-            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4">Edit Setting: {editingSetting.setting_key}</h3>
+            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4">
+              Edit Setting: {editingSetting.setting_key}
+            </h3>
             <form onSubmit={handleUpdateSetting} className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Value</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Value
+                </label>
                 {editingSetting.data_type === 'array' ? (
                   <textarea
                     value={editingSetting.setting_value}
-                    onChange={(e) => setEditingSetting({ ...editingSetting, setting_value: e.target.value })}
+                    onChange={e =>
+                      setEditingSetting({ ...editingSetting, setting_value: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                     rows="4"
                     placeholder='["value1", "value2", "value3"]'
@@ -837,26 +982,38 @@ const AdminSettings = () => {
                   <input
                     type="text"
                     value={editingSetting.setting_value}
-                    onChange={(e) => setEditingSetting({ ...editingSetting, setting_value: e.target.value })}
+                    onChange={e =>
+                      setEditingSetting({ ...editingSetting, setting_value: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                   />
                 )}
               </div>
               <div>
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Reason for change</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Reason for change
+                </label>
                 <input
                   type="text"
                   value={editingSetting.reason || ''}
-                  onChange={(e) => setEditingSetting({ ...editingSetting, reason: e.target.value })}
+                  onChange={e => setEditingSetting({ ...editingSetting, reason: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 rounded-lg mt-1"
                   placeholder="Why are you changing this value?"
                 />
               </div>
               <div className="flex gap-2">
-                <button type="submit" disabled={updating} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50"
+                >
                   {updating ? 'Saving...' : 'Save Changes'}
                 </button>
-                <button type="button" onClick={() => setEditingSetting(null)} className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                <button
+                  type="button"
+                  onClick={() => setEditingSetting(null)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                >
                   Cancel
                 </button>
               </div>

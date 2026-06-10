@@ -7,7 +7,7 @@ const TabNavigation = ({ tabs, defaultTab = null, persistKey = null, onTabChange
   const [loadingStates, setLoadingStates] = useState({});
   const [preloadedTabs, setPreloadedTabs] = useState(new Set());
   const preloadTimeoutRef = useRef({});
-  
+
   const { getComponentSetting, getUserPreference } = useSettings();
 
   // Get configurable settings
@@ -29,17 +29,17 @@ const TabNavigation = ({ tabs, defaultTab = null, persistKey = null, onTabChange
     if (activeTab) {
       // Load active tab immediately
       loadTabData(activeTab, true);
-      
+
       // Preload other tabs after a short delay
       const preloadDelay = 500; // 500ms delay before preloading
-      
+
       tabs.forEach(tab => {
         if (tab.id !== activeTab && !preloadedTabs.has(tab.id)) {
           const timeoutId = setTimeout(() => {
             loadTabData(tab.id, false);
             setPreloadedTabs(prev => new Set([...prev, tab.id]));
           }, preloadDelay);
-          
+
           preloadTimeoutRef.current[tab.id] = timeoutId;
         }
       });
@@ -53,26 +53,29 @@ const TabNavigation = ({ tabs, defaultTab = null, persistKey = null, onTabChange
     }
   }, [activeTab, tabs]);
 
-  const loadTabData = useCallback(async (tabId, isActive = false) => {
-    if (tabData[tabId] && !isActive) return; // Already loaded
-    
-    try {
-      setLoadingStates(prev => ({ ...prev, [tabId]: true }));
-      
-      if (tabs.find(t => t.id === tabId)?.onLoad) {
-        const data = await tabs.find(t => t.id === tabId).onLoad();
-        setTabData(prev => ({ ...prev, [tabId]: data }));
-      }
-    } catch (error) {
-      console.error(`Failed to load tab ${tabId}:`, error);
-    } finally {
-      setLoadingStates(prev => ({ ...prev, [tabId]: false }));
-    }
-  }, [tabs, tabData]);
+  const loadTabData = useCallback(
+    async (tabId, isActive = false) => {
+      if (tabData[tabId] && !isActive) return; // Already loaded
 
-  const handleTabChange = (tabId) => {
+      try {
+        setLoadingStates(prev => ({ ...prev, [tabId]: true }));
+
+        if (tabs.find(t => t.id === tabId)?.onLoad) {
+          const data = await tabs.find(t => t.id === tabId).onLoad();
+          setTabData(prev => ({ ...prev, [tabId]: data }));
+        }
+      } catch (error) {
+        console.error(`Failed to load tab ${tabId}:`, error);
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [tabId]: false }));
+      }
+    },
+    [tabs, tabData]
+  );
+
+  const handleTabChange = tabId => {
     setActiveTab(tabId);
-    
+
     // Save preference if persistence is enabled
     if (persistKey && persistActiveTab) {
       // Note: This would need to be integrated with user preferences API
@@ -96,7 +99,7 @@ const TabNavigation = ({ tabs, defaultTab = null, persistKey = null, onTabChange
           const isActive = activeTab === tab.id;
           const isLoading = loadingStates[tab.id];
           const badge = tab.badge;
-          
+
           return (
             <button
               key={tab.id}
@@ -126,7 +129,7 @@ const TabNavigation = ({ tabs, defaultTab = null, persistKey = null, onTabChange
       {/* Tab Content */}
       <div className="relative min-h-[400px]">
         {activeTabData ? (
-          <div 
+          <div
             key={activeTab}
             className="animate-in fade-in slide-in-from-bottom-2 duration-300"
             style={{ animationDuration: `${animationSpeed}ms` }}

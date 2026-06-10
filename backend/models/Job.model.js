@@ -25,6 +25,10 @@ const createTable = async () => {
   `);
 };
 
+// DEPRECATED: ensureColumns() removed to prevent schema drift
+// All columns now managed via proper migration files in backend/migrations/
+// See migration: 20240602000001_add_job_columns.sql
+/*
 const ensureColumns = async () => {
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS responsibilities TEXT`);
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS benefits TEXT`);
@@ -43,6 +47,7 @@ const ensureColumns = async () => {
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS experience_level VARCHAR(100)`);
   await pool.query(`ALTER TABLE ${JOB_TABLE} ADD COLUMN IF NOT EXISTS education_requirements TEXT`);
 };
+*/
 
 const JOB_SELECT_COLUMNS = `
   id,
@@ -183,7 +188,7 @@ const Job = {
   },
   async init() {
     await createTable();
-    await ensureColumns();
+    // ensureColumns() removed - columns managed via migrations
   },
 };
 
