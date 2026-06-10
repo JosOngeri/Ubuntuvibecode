@@ -94,6 +94,8 @@ import Training from './pages/admin/Training';
 import DocumentVault from './pages/admin/DocumentVault';
 import SupervisorAllocations from './pages/admin/SupervisorAllocations';
 import DepartmentHeadAssignments from './pages/admin/DepartmentHeadAssignments';
+import OrientationChecklists from './pages/admin/OrientationChecklists';
+import ContractorLifecycle from './pages/admin/ContractorLifecycle';
 
 // Wrapper Pages
 import DashboardPage from './pages/admin/DashboardPage';
@@ -339,6 +341,22 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager', 'hr']}>
                   <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/orientation-checklists"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'hr']}>
+                  <OrientationChecklists />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/contractor-lifecycle"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+                  <ContractorLifecycle />
                 </ProtectedRoute>
               }
             />

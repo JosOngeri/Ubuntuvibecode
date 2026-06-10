@@ -249,7 +249,7 @@ const RoleDashboard = ({ role = 'employee', standalone = true }) => {
         } else if (role === 'daily_labourer') {
           if (!user?.id) throw new Error('User not authenticated');
           const labourerRes = await api
-            .get(`/daily-labourers/by-user/${user.id}`)
+            .get(`/daily-labour/by-user/${user.id}`)
             .catch(() => ({ data: null }));
           const labourerData = labourerRes.data;
           setLabourer(labourerData);
@@ -257,8 +257,8 @@ const RoleDashboard = ({ role = 'employee', standalone = true }) => {
           if (labourerData?.id) {
             const labourerId = labourerData.id;
             const [attRes, payRes] = await Promise.all([
-              api.get(`/daily-labourers/${labourerId}/attendance`).catch(() => ({ data: [] })),
-              api.get(`/daily-labourers/${labourerId}/payments`).catch(() => ({ data: [] })),
+              api.get(`/daily-labour/${labourerId}/attendance`).catch(() => ({ data: [] })),
+              api.get(`/daily-labour/${labourerId}/payments`).catch(() => ({ data: [] })),
             ]);
             setAttendanceData(attRes.data || []);
             setPaymentData(payRes.data || []);

@@ -50,9 +50,9 @@ export default function DailyLabourPage({ standalone = true }) {
     setLoading(true);
     try {
       const [lRes, aRes, wRes] = await Promise.all([
-        api.get('/daily-labourers').catch(() => ({ data: [] })),
-        api.get('/daily-labourers/attendance').catch(() => ({ data: [] })),
-        api.get('/daily-labourers/wages').catch(() => ({ data: [] })),
+        api.get('/daily-labour').catch(() => ({ data: [] })),
+        api.get('/daily-labour/attendance').catch(() => ({ data: [] })),
+        api.get('/daily-labour/wages').catch(() => ({ data: [] })),
       ]);
       setLabourers(lRes.data || []);
       setAttendance(aRes.data || []);
@@ -70,7 +70,7 @@ export default function DailyLabourPage({ standalone = true }) {
 
   const create = async () => {
     try {
-      await api.post('/daily-labourers', {
+      await api.post('/daily-labour', {
         ...form,
         skills: form.skills
           .split(',')
@@ -88,7 +88,7 @@ export default function DailyLabourPage({ standalone = true }) {
 
   const markPresent = async (labourerId, assignedTo) => {
     try {
-      await api.post('/daily-labourers/attendance', { labourerId, assignedTo });
+      await api.post('/daily-labour/attendance', { labourerId, assignedTo });
       toast.success('Recorded');
       fetchAll();
     } catch {
@@ -107,7 +107,7 @@ export default function DailyLabourPage({ standalone = true }) {
       return;
     }
     try {
-      await api.post('/daily-labourers/' + convertId + '/convert', convertForm);
+      await api.post('/daily-labour/' + convertId + '/convert', convertForm);
       toast.success('Converted to employee');
       setShowConvertModal(false);
       setConvertId(null);
@@ -120,7 +120,7 @@ export default function DailyLabourPage({ standalone = true }) {
   const remove = async id => {
     if (!confirm('Remove?')) return;
     try {
-      await api.delete('/daily-labourers/' + id);
+      await api.delete('/daily-labour/' + id);
       toast.success('Removed');
       fetchAll();
     } catch {

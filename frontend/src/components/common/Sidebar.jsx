@@ -105,6 +105,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           priority: 7,
           items: [
             { path: '/admin/hr-ops', label: 'HR Operations', icon: BsPersonCheck },
+            { path: '/admin/onboarding', label: 'Onboarding', icon: BsPersonCheck },
+            { path: '/admin/orientation-checklists', label: 'Orientation Checklists', icon: BsClipboardCheck },
             { path: '/recruitment/shortlist', label: 'Shortlist', icon: BsClipboardCheck },
             { path: '/recruitment/applicants', label: 'All Applicants', icon: BsPeople },
           ],
@@ -126,7 +128,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         {
           title: 'Resources',
           priority: 9,
-          items: [{ path: '/admin/resources', label: 'Resources', icon: BsBox }],
+          items: [
+            { path: '/admin/resources', label: 'Resources', icon: BsBox },
+            { path: '/admin/contractors', label: 'Contractors', icon: BsBriefcase },
+            { path: '/admin/contractor-lifecycle', label: 'Contractor Lifecycle', icon: BsBullseye },
+          ],
         },
         {
           title: 'Communications',
@@ -172,6 +178,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           priority: 6,
           items: [
             { path: '/admin/onboarding', label: 'Onboarding', icon: BsPersonCheck },
+            { path: '/admin/orientation-checklists', label: 'Orientation Checklists', icon: BsClipboardCheck },
             { path: '/admin/daily-labour', label: 'Daily Labour', icon: BsPeople },
             { path: '/admin/complaints', label: 'Complaints', icon: BsHandThumbsUp },
           ],
@@ -182,6 +189,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           items: [
             { path: '/admin/assets', label: 'Assets', icon: BsBox },
             { path: '/admin/contractors', label: 'Contractors', icon: BsBriefcase },
+            { path: '/admin/contractor-lifecycle', label: 'Contractor Lifecycle', icon: BsBullseye },
           ],
         },
         {
