@@ -131,4 +131,13 @@ export const complaintAPI = {
   getByEmployee: employeeId => api.get(`/api/complaints/employee/${employeeId}`),
 };
 
+// Jobs (Verification)
+export const jobVerificationAPI = {
+  verifyApplication: (jobId, appId) => api.post(`/api/jobs/${jobId}/applications/${appId}/verify`),
+  getVerificationResults: (jobId, appId) => api.get(`/api/jobs/${jobId}/applications/${appId}/verification`),
+  verifyBatch: jobId => api.post(`/api/jobs/${jobId}/applications/verify-batch`),
+  updateManagerRanking: (jobId, appId, ranking) => api.put(`/api/jobs/${jobId}/applications/${appId}/manager-ranking`, { manager_ranking: ranking }),
+  updateOwnerApproval: (jobId, appId, approved) => api.put(`/api/jobs/${jobId}/applications/${appId}/owner-approval`, { owner_approved: approved }),
+};
+
 export default api;
