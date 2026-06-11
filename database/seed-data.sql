@@ -54,7 +54,7 @@ BEGIN
   SELECT id INTO daily2_id FROM users WHERE username = 'daily2';
 
   -- Insert employees
-  INSERT INTO employees (user_id, status, first_name, last_name, email, phone, mpesa_phone_number, employment_type, wage_rate, department, date_joined, can_self_record_attendance)
+  INSERT INTO employees (user_id, status, first_name, surname, email, phone, mpesa_phone_number, employment_type, wage_rate, department, date_joined, can_self_record_attendance)
   VALUES
     (employee1_id, 'active', 'John', 'Doe', 'john.doe@example.com', '+254712345678', '+254712345678', 'Permanent', 50000.00, 'IT', NOW() - INTERVAL '6 months', TRUE),
     (employee2_id, 'active', 'Jane', 'Smith', 'jane.smith@example.com', '+254712345679', '+254712345679', 'Permanent', 45000.00, 'HR', NOW() - INTERVAL '3 months', TRUE),
@@ -73,7 +73,7 @@ BEGIN
 END $$;
 
 -- Insert jobs
-INSERT INTO jobs (title, description, department, employmenttype, location, status, salaryrange, requirements, responsibilities, benefits, applicationdeadline)
+INSERT INTO jobs (title, description, department, employment_type, location, status, salary_range, requirements, responsibilities, benefits, application_deadline)
 VALUES
   ('Software Developer', 'Develop and maintain web applications', 'IT', 'Permanent', 'Nairobi', 'open', '60000-80000', 'JavaScript, React, Node.js', 'Full-stack development', 'Health insurance, 20 days leave', NOW() + INTERVAL '30 days'),
   ('HR Manager', 'Manage human resources operations', 'HR', 'Permanent', 'Nairobi', 'open', '55000-70000', '5 years HR experience', 'Recruitment, payroll, employee relations', 'Health insurance, 20 days leave', NOW() + INTERVAL '30 days'),
@@ -86,7 +86,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insert job applications
-INSERT INTO job_applications (jobid, applicantname, applicantemail, applicantphone, cvpath, coverletter, applicationdata, recruiterannouncement, status, appliedat)
+INSERT INTO job_applications (job_id, applicant_name, applicant_email, applicant_phone, cv_path, cover_letter, application_data, recruiter_announcement, status, applied_at)
 VALUES
   (1, 'Peter Parker', 'peter.parker@example.com', '+254711122233', 'https://example.com/resume/peter.pdf', 'I am a passionate developer', '{"experience":"5 years","skills":["React","Node.js"]}'::jsonb, NULL, 'pending', NOW()),
   (1, 'Tony Stark', 'tony.stark@example.com', '+254711122234', 'https://example.com/resume/tony.pdf', 'I have extensive experience', '{"experience":"10 years","skills":["React","Node.js","Python"]}'::jsonb, NULL, 'pending', NOW()),
@@ -100,7 +100,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insert daily labourers
-INSERT INTO daily_labourers (first_name, last_name, phone, id_number, daily_rate, skills, status, registered_by, created_at, updated_at)
+INSERT INTO daily_labourers (first_name, surname, phone, national_id, daily_rate, skills, status, registered_by, created_at, updated_at)
 VALUES
   ('Tom', 'Mboya', '+254720000001', '12345678', 1500.00, ARRAY['Farming', 'Grounds'], 'active', 2, NOW(), NOW()),
   ('Mary', 'Wanjiku', '+254720000002', '12345679', 1500.00, ARRAY['Housekeeping', 'Cleaning'], 'active', 2, NOW(), NOW()),
@@ -312,13 +312,13 @@ DECLARE
 BEGIN
   SELECT id INTO user_id FROM users WHERE username = 'employee1' LIMIT 1;
 
-  INSERT INTO profiles (userId, fullName, skills, certifications, createdAt, updatedAt)
+  INSERT INTO profiles (user_id, full_name, skills, certifications, created_at, updated_at)
   VALUES
     (user_id, 'John Doe', ARRAY['JavaScript', 'React', 'Node.js', 'PostgreSQL'], ARRAY['AWS Certified Developer', 'Google Cloud Professional'], NOW(), NOW());
 
   SELECT id INTO user_id FROM users WHERE username = 'employee2' LIMIT 1;
 
-  INSERT INTO profiles (userId, fullName, skills, certifications, createdAt, updatedAt)
+  INSERT INTO profiles (user_id, full_name, skills, certifications, created_at, updated_at)
   VALUES
     (user_id, 'Jane Smith', ARRAY['Recruitment', 'Payroll', 'Employee Relations'], ARRAY['SHRM Certified', 'HR Management'], NOW(), NOW());
 END $$;
