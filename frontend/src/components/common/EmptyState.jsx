@@ -1,9 +1,18 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 import {
-  Users, Clock, DollarSign, Target, CalendarOff,
-  Briefcase, FileText, AlertCircle, Search, Inbox,
-  ClipboardList, HardHat, BookOpen
+  Users,
+  DollarSign,
+  Target,
+  CalendarOff,
+  Briefcase,
+  FileText,
+  AlertCircle,
+  Search,
+  Inbox,
+  ClipboardList,
+  HardHat,
+  BookOpen,
 } from 'lucide-react';
 
 const EmptyState = ({
@@ -22,11 +31,15 @@ const EmptyState = ({
   const s = sizes[size] || sizes.md;
 
   return (
-    <div className={cn('flex flex-col items-center justify-center text-center', s.wrapper, className)}>
+    <div
+      className={cn('flex flex-col items-center justify-center text-center', s.wrapper, className)}
+    >
       <div className="mb-4 rounded-full bg-slate-100 dark:bg-slate-800 p-4">
         <Icon size={s.icon} className="text-slate-400 dark:text-slate-500" />
       </div>
-      <p className={cn('font-semibold text-slate-700 dark:text-slate-300 mb-1', s.title)}>{title}</p>
+      <p className={cn('font-semibold text-slate-700 dark:text-slate-300 mb-1', s.title)}>
+        {title}
+      </p>
       {description && (
         <p className={cn('text-slate-500 dark:text-slate-400 max-w-sm', s.desc)}>{description}</p>
       )}
@@ -43,7 +56,7 @@ const EmptyState = ({
   );
 };
 
-export const EmployeesEmptyState = (props) => (
+export const EmployeesEmptyState = props => (
   <EmptyState
     icon={Users}
     title="No employees found"
@@ -52,16 +65,7 @@ export const EmployeesEmptyState = (props) => (
   />
 );
 
-export const AttendanceEmptyState = (props) => (
-  <EmptyState
-    icon={Clock}
-    title="No attendance records"
-    description="No attendance data for the selected employee or date range."
-    {...props}
-  />
-);
-
-export const PayrollEmptyState = (props) => (
+export const PayrollEmptyState = props => (
   <EmptyState
     icon={DollarSign}
     title="No payslips yet"
@@ -70,7 +74,7 @@ export const PayrollEmptyState = (props) => (
   />
 );
 
-export const KpiEmptyState = (props) => (
+export const KpiEmptyState = props => (
   <EmptyState
     icon={Target}
     title="No KPIs found"
@@ -79,7 +83,7 @@ export const KpiEmptyState = (props) => (
   />
 );
 
-export const LeaveEmptyState = (props) => (
+export const LeaveEmptyState = props => (
   <EmptyState
     icon={CalendarOff}
     title="No leave requests"
@@ -88,7 +92,7 @@ export const LeaveEmptyState = (props) => (
   />
 );
 
-export const RecruitmentEmptyState = (props) => (
+export const RecruitmentEmptyState = props => (
   <EmptyState
     icon={Briefcase}
     title="No job postings"
@@ -97,7 +101,7 @@ export const RecruitmentEmptyState = (props) => (
   />
 );
 
-export const ReportsEmptyState = (props) => (
+export const ReportsEmptyState = props => (
   <EmptyState
     icon={FileText}
     title="No report data"
@@ -106,7 +110,7 @@ export const ReportsEmptyState = (props) => (
   />
 );
 
-export const OnboardingEmptyState = (props) => (
+export const OnboardingEmptyState = props => (
   <EmptyState
     icon={ClipboardList}
     title="No onboarding records"
@@ -115,7 +119,7 @@ export const OnboardingEmptyState = (props) => (
   />
 );
 
-export const TrainingEmptyState = (props) => (
+export const TrainingEmptyState = props => (
   <EmptyState
     icon={BookOpen}
     title="No training records"
@@ -124,7 +128,7 @@ export const TrainingEmptyState = (props) => (
   />
 );
 
-export const DailyLabourEmptyState = (props) => (
+export const DailyLabourEmptyState = props => (
   <EmptyState
     icon={HardHat}
     title="No daily labourers"

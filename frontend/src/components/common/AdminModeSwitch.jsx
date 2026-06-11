@@ -7,33 +7,33 @@ import Input from './Input';
 import { toast } from 'react-toastify';
 
 const AdminModeSwitch = () => {
-  const { 
-    user, 
-    isAdminMode, 
-    adminModeExpiresAt, 
-    enableAdminMode, 
+  const {
+    user,
+    isAdminMode,
+    adminModeExpiresAt,
+    enableAdminMode,
     disableAdminMode,
-    isAdminModeActive 
+    isAdminModeActive,
   } = useAuth();
-  
+
   const [showModal, setShowModal] = useState(false);
   const [password, setPassword] = useState('');
   const [duration, setDuration] = useState(10);
   const [loading, setLoading] = useState(false);
   const [remainingTime, setRemainingTime] = useState(null);
-  
+
   // Only show for Owner role
   if (user?.role !== 'owner') {
     return null;
   }
-  
+
   // Calculate remaining time
   useEffect(() => {
     if (!isAdminMode || !adminModeExpiresAt) {
       setRemainingTime(null);
       return;
     }
-    
+
     const updateRemaining = () => {
       const remaining = new Date(adminModeExpiresAt) - new Date();
       if (remaining <= 0) {
@@ -44,25 +44,25 @@ const AdminModeSwitch = () => {
         setRemainingTime(`${minutes}:${seconds.toString().padStart(2, '0')}`);
       }
     };
-    
+
     updateRemaining();
     const interval = setInterval(updateRemaining, 1000);
-    
+
     return () => clearInterval(interval);
   }, [isAdminMode, adminModeExpiresAt]);
-  
+
   const handleEnable = async () => {
     if (!password) {
       toast.error('Please enter your password');
       return;
     }
-    
+
     setLoading(true);
-    
+
     // Simulate password verification (in real app, verify with backend)
     // For now, we just enable admin mode
     const success = enableAdminMode(duration);
-    
+
     if (success) {
       toast.success(`Admin mode enabled for ${duration} minutes`);
       setShowModal(false);
@@ -70,24 +70,26 @@ const AdminModeSwitch = () => {
     } else {
       toast.error('Failed to enable admin mode');
     }
-    
+
     setLoading(false);
   };
-  
+
   const handleDisable = () => {
     disableAdminMode();
     toast.info('Admin mode disabled');
   };
-  
+
   const isActive = isAdminModeActive();
-  
+
   return (
     <>
-      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
-        isActive 
-          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-          : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-      }`}>
+      <div
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+          isActive
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+            : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+        }`}
+      >
         {isActive ? (
           <>
             <Shield className="w-4 h-4" />
@@ -98,10 +100,7 @@ const AdminModeSwitch = () => {
                 {remainingTime}
               </span>
             )}
-            <button
-              onClick={handleDisable}
-              className="ml-2 text-xs underline hover:no-underline"
-            >
+            <button onClick={handleDisable} className="ml-2 text-xs underline hover:no-underline">
               Disable
             </button>
           </>
@@ -118,7 +117,7 @@ const AdminModeSwitch = () => {
           </>
         )}
       </div>
-      
+
       <Modal
         isOpen={showModal}
         onClose={() => {
@@ -131,23 +130,24 @@ const AdminModeSwitch = () => {
           <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg flex gap-3">
             <Lock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Admin mode grants temporary access to delete operations and other sensitive actions. 
-              This requires password verification and will automatically expire after the selected duration.
+              Admin mode grants temporary access to delete operations and other sensitive actions.
+              This requires password verification and will automatically expire after the selected
+              duration.
             </p>
           </div>
-          
+
           <Input
             type="password"
             label="Confirm Password"
             placeholder="Enter your password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={e => setPassword(e.target.value)}
           />
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Duration</label>
             <div className="flex gap-2">
-              {[5, 10, 30].map((mins) => (
+              {[5, 10, 30].map(mins => (
                 <button
                   key={mins}
                   onClick={() => setDuration(mins)}
@@ -162,7 +162,7 @@ const AdminModeSwitch = () => {
               ))}
             </div>
           </div>
-          
+
           <div className="flex gap-3 pt-2">
             <Button
               variant="primary"

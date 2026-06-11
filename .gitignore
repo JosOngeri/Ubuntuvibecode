@@ -213,3 +213,6 @@ Thumbs.db
 # Private keys only (M-Pesa certificates are public and should be committed)
 cert/*.p12
 cert/*.key
+
+# E2E test results
+tests/e2e/test-results/

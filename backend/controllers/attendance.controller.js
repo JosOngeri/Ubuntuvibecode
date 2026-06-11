@@ -484,6 +484,36 @@ const getTodayAttendance = async (req, res) => {
   }
 };
 
+const getAllAttendance = async (req, res) => {
+  logger.info('attendance.getAll', 'Entry', { userId: req.user?.id });
+  try {
+    const { rows } = await query(
+      `SELECT a.*,
+              e.first_name AS employee_first_name,
+              e.last_name  AS employee_last_name,
+              e.department AS employee_department
+       FROM attendance a
+       LEFT JOIN employees e ON e.id = a.employee_id
+       ORDER BY a.attendance_date DESC, a.created_at DESC`
+    );
+    const records = rows.map((row) => ({
+      ...Attendance.fromRow(row),
+      employeeName: `${row.employee_first_name || ''} ${row.employee_last_name || ''}`.trim(),
+      employeeId: {
+        _id: row.employee_id,
+        firstName: row.employee_first_name,
+        lastName: row.employee_last_name,
+        department: row.employee_department,
+      },
+    }));
+    logger.info('attendance.getAll', `Returning ${records.length} records`);
+    return res.json(records);
+  } catch (err) {
+    logger.error('attendance.getAll', 'DB query failed', err);
+    return res.status(500).json({ msg: 'Failed to fetch attendance', error: err.message });
+  }
+};
+
 module.exports = {
   pushBiometric,
   manualSelfPunch,
@@ -492,4 +522,5 @@ module.exports = {
   getAttendanceById,
   adjustAttendance,
   getTodayAttendance,
+  getAllAttendance,
 };

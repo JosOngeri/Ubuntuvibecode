@@ -1,5 +1,5 @@
-import React from 'react'
-import { BsCash, BsCalendarWeek, BsPeople } from 'react-icons/bs'
+import React from 'react';
+import { BsCash, BsCalendarWeek, BsPeople } from 'react-icons/bs';
 
 export default function PayrollCard({ payrollData = {}, onClick = null }) {
   const defaultData = {
@@ -8,20 +8,20 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
     contractorPayments: payrollData.contractorPayments || 8750,
     dailyTrend: payrollData.dailyTrend || 2.5,
     monthlyTrend: payrollData.monthlyTrend || 8.2,
-    contractorTrend: payrollData.contractorTrend || -3.1
-  }
+    contractorTrend: payrollData.contractorTrend || -3.1,
+  };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = amount => {
     return new Intl.NumberFormat('en-KES', {
       style: 'currency',
       currency: 'KES',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
 
   return (
-    <div 
+    <div
       className={`bg-white rounded-xl shadow-lg overflow-hidden ${onClick ? 'cursor-pointer hover:shadow-xl hover:scale-[1.02] transition-all duration-300' : 'hover:shadow-xl transition-shadow duration-300'}`}
       onClick={onClick}
     >
@@ -32,7 +32,7 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
           <BsCash className="text-2xl" />
         </div>
       </div>
-      
+
       {/* Content */}
       <div className="p-6 space-y-4">
         {/* Today's Daily Labour Wage Bill */}
@@ -43,11 +43,15 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Today's Daily Labour</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(defaultData.dailyWageBill)}</p>
+              <p className="text-xl font-bold text-gray-900">
+                {formatCurrency(defaultData.dailyWageBill)}
+              </p>
             </div>
           </div>
           <div className="text-right">
-            <p className={`text-sm font-medium ${defaultData.dailyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p
+              className={`text-sm font-medium ${defaultData.dailyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
               {defaultData.dailyTrend > 0 ? '↑' : '↓'} {Math.abs(defaultData.dailyTrend)}%
             </p>
             <p className="text-xs text-gray-500">vs yesterday</p>
@@ -62,11 +66,15 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Monthly Wage Bill</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(defaultData.monthlyWageBill)}</p>
+              <p className="text-xl font-bold text-gray-900">
+                {formatCurrency(defaultData.monthlyWageBill)}
+              </p>
             </div>
           </div>
           <div className="text-right">
-            <p className={`text-sm font-medium ${defaultData.monthlyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p
+              className={`text-sm font-medium ${defaultData.monthlyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
               {defaultData.monthlyTrend > 0 ? '↑' : '↓'} {Math.abs(defaultData.monthlyTrend)}%
             </p>
             <p className="text-xs text-gray-500">vs last month</p>
@@ -81,11 +89,15 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-600">Contractors Pending</p>
-              <p className="text-xl font-bold text-gray-900">{formatCurrency(defaultData.contractorPayments)}</p>
+              <p className="text-xl font-bold text-gray-900">
+                {formatCurrency(defaultData.contractorPayments)}
+              </p>
             </div>
           </div>
           <div className="text-right">
-            <p className={`text-sm font-medium ${defaultData.contractorTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p
+              className={`text-sm font-medium ${defaultData.contractorTrend > 0 ? 'text-green-600' : 'text-red-600'}`}
+            >
               {defaultData.contractorTrend > 0 ? '↑' : '↓'} {Math.abs(defaultData.contractorTrend)}%
             </p>
             <p className="text-xs text-gray-500">vs last period</p>
@@ -98,7 +110,11 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
             <div>
               <p className="text-sm font-medium text-gray-600">Total Payroll Commitment</p>
               <p className="text-2xl font-bold text-[#CB7246]">
-                {formatCurrency(defaultData.dailyWageBill + defaultData.monthlyWageBill + defaultData.contractorPayments)}
+                {formatCurrency(
+                  defaultData.dailyWageBill +
+                    defaultData.monthlyWageBill +
+                    defaultData.contractorPayments
+                )}
               </p>
             </div>
             <div className="px-3 py-1 bg-orange-100 text-[#CB7246] rounded-full text-sm font-medium border border-orange-200">
@@ -108,5 +124,5 @@ export default function PayrollCard({ payrollData = {}, onClick = null }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

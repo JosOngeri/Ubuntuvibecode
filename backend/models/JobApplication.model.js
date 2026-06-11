@@ -78,6 +78,10 @@ const createTable = async () => {
   `);
 };
 
+// DEPRECATED: ensureColumns() removed to prevent schema drift
+// All columns now managed via proper migration files in backend/migrations/
+// See migration: 20240602000002_add_job_application_columns.sql
+/*
 const ensureColumns = async () => {
   // Check if jobid column exists (old schema) and rename it to job_id
   try {
@@ -131,6 +135,7 @@ const ensureColumns = async () => {
   await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS interview_invitations JSONB`);
   await pool.query(`ALTER TABLE ${JOB_APPLICATION_TABLE} ADD COLUMN IF NOT EXISTS interview_feedbacks JSONB`);
 };
+*/
 
 const JobApplication = {
   async create(data) {
@@ -311,7 +316,7 @@ const JobApplication = {
   },
   async init() {
     await createTable();
-    await ensureColumns();
+    // ensureColumns() removed - columns managed via migrations
   },
 };
 

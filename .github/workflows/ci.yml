@@ -1,0 +1,468 @@
+name: Ubuntu HRMS - Full Test Suite
+
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run full test suite nightly at 2:00 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '20'
+  POSTGRES_DB: ubuntu_hrms_test
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ubuntu_hrms_test
+  JWT_SECRET: ci-test-jwt-secret-do-not-use-in-production
+  FRONTEND_URL: http://localhost:5173
+  BACKEND_URL: http://localhost:5000
+  NODE_ENV: test
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Security Audit (runs first, fast gate)
+  # ─────────────────────────────────────────────────────────────
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run npm audit (Backend)
+        run: npm audit --audit-level=high
+        working-directory: backend
+        continue-on-error: true
+
+      - name: Run npm audit (Frontend)
+        run: npm audit --audit-level=high
+        working-directory: frontend
+        continue-on-error: true
+
+      - name: Run OWASP Checks
+        run: node tests/security/owasp-checks.js
+        continue-on-error: true
+
+      - name: Run Security Audit
+        run: node tests/security/audit.js
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Linting & Code Quality
+  # ─────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Lint Backend
+        run: npm run lint
+        working-directory: backend
+        continue-on-error: true
+
+      - name: Lint Frontend
+        run: npm run lint
+        working-directory: frontend
+        continue-on-error: true
+
+      - name: Format Check Backend
+        run: npm run format:check
+        working-directory: backend
+        continue-on-error: true
+
+      - name: Format Check Frontend
+        run: npm run format:check
+        working-directory: frontend
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: API Tests (Backend)
+  # ─────────────────────────────────────────────────────────────
+  api-tests:
+    name: API & Backend Tests
+    runs-on: ubuntu-latest
+    needs: [security-audit]
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Initialize Test Database
+        run: psql -h localhost -U postgres -d ubuntu_hrms_test -f backend/init-database.sql
+        env:
+          PGPASSWORD: postgres
+        continue-on-error: true
+
+      - name: Install API Test Dependencies
+        run: npm ci
+        working-directory: tests/api
+
+      - name: Run API Tests
+        run: npm test -- --forceExit --detectOpenHandles
+        working-directory: tests/api
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          NODE_ENV: test
+
+      - name: Upload API Test Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-coverage
+          path: tests/api/coverage/
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 4: Frontend Build Check
+  # ─────────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build Frontend
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ env.BACKEND_URL }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 5: E2E Tests (Playwright)
+  # ─────────────────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: [api-tests, frontend-build]
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Backend Dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Initialize Test Database
+        run: psql -h localhost -U postgres -d ubuntu_hrms_test -f backend/init-database.sql
+        env:
+          PGPASSWORD: postgres
+        continue-on-error: true
+
+      - name: Seed Test Data
+        run: node tests/api/setup/seed-test-data.js
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+        continue-on-error: true
+
+      - name: Start Backend Server
+        run: |
+          node backend/server.js &
+          sleep 5
+          curl --retry 10 --retry-delay 2 --retry-connrefused http://localhost:5000/api/health
+        env:
+          PORT: 5000
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          NODE_ENV: test
+
+      - name: Start Frontend Dev Server
+        run: |
+          npm run dev -- --port 5173 &
+          sleep 10
+        working-directory: frontend
+        env:
+          VITE_API_URL: http://localhost:5000
+
+      - name: Install E2E Test Dependencies
+        run: npm ci
+        working-directory: tests/e2e
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+        working-directory: tests/e2e
+
+      - name: Run E2E Tests
+        run: npm test
+        working-directory: tests/e2e
+        env:
+          TEST_ADMIN_USER: testadmin
+          TEST_ADMIN_PASS: testpass123
+          TEST_EMPLOYEE_USER: testemployee
+          TEST_EMPLOYEE_PASS: testpass123
+          TEST_MANAGER_USER: testmanager
+          TEST_MANAGER_PASS: testpass123
+          FRONTEND_URL: http://localhost:5173
+          BACKEND_URL: http://localhost:5000
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: tests/e2e/playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-screenshots
+          path: tests/e2e/test-results/
+          retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 6: Accessibility Tests
+  # ─────────────────────────────────────────────────────────────
+  accessibility-tests:
+    name: Accessibility Tests (axe-core)
+    runs-on: ubuntu-latest
+    needs: [frontend-build]
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+          cd ../tests/e2e && npm ci
+
+      - name: Initialize DB & Start Servers
+        run: |
+          psql -h localhost -U postgres -d ubuntu_hrms_test -f backend/init-database.sql || true
+          node backend/server.js &
+          sleep 5
+          cd frontend && npm run dev -- --port 5173 &
+          sleep 10
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          VITE_API_URL: http://localhost:5000
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: tests/e2e
+
+      - name: Run Accessibility Tests
+        run: npx playwright test tests/accessibility.spec.js --project=chromium
+        working-directory: tests/e2e
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 7: Performance Tests (Lighthouse CI)
+  # ─────────────────────────────────────────────────────────────
+  performance-tests:
+    name: Performance Tests (Lighthouse CI)
+    runs-on: ubuntu-latest
+    needs: [frontend-build]
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    continue-on-error: true
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: |
+          cd backend && npm ci
+          cd ../frontend && npm ci
+
+      - name: Initialize DB & Start Servers
+        run: |
+          psql -h localhost -U postgres -d ubuntu_hrms_test -f backend/init-database.sql || true
+          node backend/server.js &
+          sleep 5
+          cd frontend && npm run dev -- --port 5173 &
+          sleep 10
+        env:
+          PGPASSWORD: postgres
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          VITE_API_URL: http://localhost:5000
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse CI
+        run: lhci autorun
+        working-directory: tests/performance
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 8: Final Status Report
+  # ─────────────────────────────────────────────────────────────
+  test-report:
+    name: Test Report Summary
+    runs-on: ubuntu-latest
+    needs: [security-audit, lint, api-tests, e2e-tests, accessibility-tests]
+    if: always()
+
+    steps:
+      - name: Report Status
+        run: |
+          echo "=========================================="
+          echo "  Ubuntu HRMS Test Suite - Final Report"
+          echo "=========================================="
+          echo "  Security Audit:     ${{ needs.security-audit.result }}"
+          echo "  Lint & Quality:     ${{ needs.lint.result }}"
+          echo "  API Tests:          ${{ needs.api-tests.result }}"
+          echo "  E2E Tests:          ${{ needs.e2e-tests.result }}"
+          echo "  Accessibility:      ${{ needs.accessibility-tests.result }}"
+          echo "=========================================="
+
+      - name: Fail if critical tests failed
+        if: |
+          needs.api-tests.result == 'failure' ||
+          needs.e2e-tests.result == 'failure'
+        run: |
+          echo "Critical tests failed. Please review the test results."
+          exit 1

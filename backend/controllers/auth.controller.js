@@ -30,6 +30,10 @@ const signAuthToken = (user) => new Promise((resolve, reject) => {
 const register = async (req, res) => {
   const { username, password, role, email } = req.body;
   logger.info('auth.register', 'Attempt', { username, role, email });
+  if (!username || !password) {
+    logger.warn('auth.register', 'Missing credentials', { username: !!username, password: !!password });
+    return res.status(400).json({ msg: 'Username and password are required' });
+  }
   try {
     let user = await User.findOne({ username });
     if (user) {
@@ -71,6 +75,12 @@ const login = async (req, res) => {
   const { username, password } = req.body;
   logger.info('auth.login', 'Attempt', { username });
   try {
+    // Validate input
+    if (!username || !password) {
+      logger.warn('auth.login', 'Missing credentials', { username: !!username, password: !!password });
+      return res.status(400).json({ msg: 'Username and password are required' });
+    }
+
     const user = await User.findOne({ username });
     if (!user) {
       logger.warn('auth.login', 'User not found', { username });

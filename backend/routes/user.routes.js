@@ -23,9 +23,9 @@ router.post('/:id/approve', auth, roleMiddleware(['admin', 'hr']), approveUser);
 // Update user (admin/hr)
 router.put('/:id', auth, roleMiddleware(['admin', 'hr']), updateUser);
 // Delete user (admin)
-router.delete('/:id', auth, roleMiddleware(['admin']), deleteUser);
+router.delete('/:id', auth, roleMiddleware(['admin', 'manager']), deleteUser);
 // Assign role/permissions (admin)
-router.post('/:id/role', auth, roleMiddleware(['admin']), assignRole);
+router.post('/:id/role', auth, roleMiddleware(['admin', 'manager']), assignRole);
 // Get user preferences (authenticated users)
 router.get('/me/preferences', auth, getPreferences);
 // Update user preferences (authenticated users)

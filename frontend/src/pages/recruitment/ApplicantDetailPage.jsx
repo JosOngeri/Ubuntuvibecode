@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../components/DashboardLayout';
-import api from '../../services/api';
+import api, { jobVerificationAPI } from '../../services/api';
 import { toast } from 'react-toastify';
 import { 
   BsArrowLeft, BsPerson, BsBriefcase, BsEnvelope, BsTelephone, 
   BsFileText, BsCheckCircle, BsClock, BsBuilding, BsBoxArrowRight,
   BsCalendarCheck, BsStar, BsFileEarmark, BsDownload, BsEye,
-  BsCheckCircleFill, BsCircle, BsChevronRight
+  BsCheckCircleFill, BsCircle, BsChevronRight, BsShieldCheck
 } from 'react-icons/bs';
 
 const ONBOARDING_STEPS = [
@@ -86,6 +86,9 @@ const ApplicantDetailPage = () => {
   const [employee, setEmployee] = useState(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewForm, setReviewForm] = useState({ score: 80, comments: '', recommendation: 'confirm' });
+  const [verificationResults, setVerificationResults] = useState(null);
+  const [managerRanking, setManagerRanking] = useState('');
+  const [ownerApproved, setOwnerApproved] = useState(false);
 
   useEffect(() => {
     fetchApplicationDetail();
@@ -222,6 +225,44 @@ const ApplicantDetailPage = () => {
   };
 
   const nextStep = getNextStep();
+
+  const handleVerifyApplication = async () => {
+    try {
+      await jobVerificationAPI.verifyApplication(application.jobId, id);
+      toast.success('Application verified successfully');
+      fetchVerificationResults();
+    } catch (err) {
+      toast.error('Failed to verify application');
+    }
+  };
+
+  const fetchVerificationResults = async () => {
+    try {
+      const res = await jobVerificationAPI.getVerificationResults(application.jobId, id);
+      setVerificationResults(res.data);
+    } catch (err) {
+      console.error('Failed to fetch verification results');
+    }
+  };
+
+  const handleUpdateManagerRanking = async () => {
+    try {
+      await jobVerificationAPI.updateManagerRanking(application.jobId, id, managerRanking);
+      toast.success('Manager ranking updated');
+    } catch (err) {
+      toast.error('Failed to update manager ranking');
+    }
+  };
+
+  const handleOwnerApproval = async (approved) => {
+    try {
+      await jobVerificationAPI.updateOwnerApproval(application.jobId, id, approved);
+      setOwnerApproved(approved);
+      toast.success(approved ? 'Owner approved' : 'Owner approval revoked');
+    } catch (err) {
+      toast.error('Failed to update owner approval');
+    }
+  };
 
   if (loading) {
     return (

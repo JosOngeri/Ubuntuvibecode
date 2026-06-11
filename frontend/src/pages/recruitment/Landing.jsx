@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { BsBuilding, BsGeoAlt, BsHeart, BsPeople, BsBriefcase } from 'react-icons/bs'
-import ubuntuLogo from '../../assets/logo.png'
+import { BsBuilding, BsGeoAlt, BsHeart, BsPeople } from 'react-icons/bs'
+import ubuntuLogo from '../../assets/ubuntu-header-hrms.png'
 import beforeImage from '../../assets/before.jpeg'
 import afterImage from '../../assets/after.jpeg'
 
@@ -12,10 +12,11 @@ export default function Landing() {
       <div className="relative text-white">
           <div className="absolute inset-0 bg-gradient-to-r from-[#CB7246]/90 via-[#F27C12]/90 to-[#CB7246]/90"></div>
         <div className="relative z-10 max-w-6xl mx-auto px-6 py-32">
-          <div className="absolute top-4 right-6">
+          <div className="absolute top-4 right-6 flex gap-3">
+            <Link to="/recruitment/jobs-board" className="text-white/90 hover:text-white text-sm font-medium px-4 py-2 border border-white/30 rounded-lg hover:bg-white/20 transition">View Job Opportunities</Link>
             <Link to="/login" className="text-white/90 hover:text-white text-sm font-medium px-4 py-2 border border-white/30 rounded-lg hover:bg-white/20 transition">Staff Login</Link>
           </div>
-          <div className="flex items-center justify-center space-x-12">
+          <div className="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-12">
             <div className="bg-white rounded-2xl p-8 shadow-xl">
               <img src={ubuntuLogo} alt="Ubuntu Eco Lodge Logo" className="h-32" loading="eager" />
             </div>
@@ -125,26 +126,6 @@ export default function Landing() {
               <p className="text-slate-600 text-sm">Celebrating Kenyan culture and heritage</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="bg-[#373435] text-white py-20">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center mb-6">
-            <BsBriefcase size={48} className="text-[#CB7246]" />
-          </div>
-          <h2 className="text-4xl font-bold font-serif mb-4">Join Our Team</h2>
-          <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            Be part of our mission to create sustainable luxury experiences. Explore our current openings 
-            and help us continue the transformation journey.
-          </p>
-          <Link 
-            to="/recruitment/jobs-board" 
-            className="inline-block px-8 py-4 bg-[#CB7246] text-white rounded-full font-bold text-lg hover:bg-[#F27C12] transition shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            View Job Opportunities
-          </Link>
         </div>
       </div>
 

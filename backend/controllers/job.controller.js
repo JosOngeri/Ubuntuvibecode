@@ -1466,6 +1466,34 @@ const jobController = {
       res.status(500).json({ msg: 'Failed to get all applications', error: err.message });
     }
   },
+
+  async getApplicationById(req, res) {
+    try {
+      const { appId } = req.params;
+      const application = await JobApplication.findById(appId);
+      if (!application) {
+        return res.status(404).json({ msg: 'Application not found' });
+      }
+      
+      // Fetch job details if job_id exists
+      if (application.jobId) {
+        const { rows: jobRows } = await query(
+          `SELECT id, title, department, location FROM jobs WHERE id = $1`,
+          [application.jobId]
+        );
+        if (jobRows.length > 0) {
+          application.jobTitle = jobRows[0].title;
+          application.jobDepartment = jobRows[0].department;
+          application.jobLocation = jobRows[0].location;
+        }
+      }
+      
+      res.json(application);
+    } catch (err) {
+      logger.error('job.getApplicationById', 'Failed to fetch application', err);
+      res.status(500).json({ msg: 'Failed to fetch application', error: err.message });
+    }
+  },
 };
 
 module.exports = jobController;

@@ -17,7 +17,7 @@ const DEPARTMENT_HEAD_PERMISSIONS = [
   { key: 'assess_kpis', label: 'Assess KPIs', group: 'KPI' },
   { key: 'view_department_payroll', label: 'View Department Payroll', group: 'Payroll' },
   { key: 'view_attendance_reports', label: 'View Attendance Reports', group: 'Reports' },
-  { key: 'resolve_complaints', label: 'Resolve Complaints', group: 'Communication' }
+  { key: 'resolve_complaints', label: 'Resolve Complaints', group: 'Communication' },
 ];
 
 // Mock departments - in real app, fetch from API
@@ -29,7 +29,7 @@ const DEPARTMENTS = [
   { id: 'marketing', name: 'Marketing' },
   { id: 'sales', name: 'Sales' },
   { id: 'kitchen', name: 'Kitchen' },
-  { id: 'front_office', name: 'Front Office' }
+  { id: 'front_office', name: 'Front Office' },
 ];
 
 const DepartmentHeadAssignments = ({ standalone = true }) => {
@@ -41,12 +41,12 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
   const [potentialHeads, setPotentialHeads] = useState([]);
   const [sortField, setSortField] = useState('department');
   const [sortDirection, setSortDirection] = useState('asc');
-  
+
   const [formData, setFormData] = useState({
     userId: '',
     department: '',
     permissions: ['view_employees', 'approve_leaves_department', 'assess_kpis'],
-    notes: ''
+    notes: '',
   });
 
   const fetchAssignments = async () => {
@@ -66,9 +66,9 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
       const res = await userAPI.getAll();
       const allUsers = res.data || [];
       setUsers(allUsers);
-      
+
       // Filter potential department heads (managers, supervisors, employees)
-      const potential = allUsers.filter(u => 
+      const potential = allUsers.filter(u =>
         ['manager', 'supervisor', 'employee'].includes(u.role)
       );
       setPotentialHeads(potential);
@@ -96,7 +96,7 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
         await departmentHeadAPI.createAssignment(formData);
         toast.success('Assignment created');
       }
-      
+
       setShowModal(false);
       setEditingAssignment(null);
       resetForm();
@@ -106,9 +106,9 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
     }
   };
 
-  const handleDelete = async (assignment) => {
+  const handleDelete = async assignment => {
     if (!confirm('Are you sure you want to remove this department head assignment?')) return;
-    
+
     try {
       await departmentHeadAPI.deleteAssignment(assignment.id, 'Removed by admin');
       toast.success('Assignment removed');
@@ -123,17 +123,17 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
       userId: '',
       department: '',
       permissions: ['view_employees', 'approve_leaves_department', 'assess_kpis'],
-      notes: ''
+      notes: '',
     });
   };
 
-  const openEditModal = (assignment) => {
+  const openEditModal = assignment => {
     setEditingAssignment(assignment);
     setFormData({
       userId: assignment.userId,
       department: assignment.department,
       permissions: assignment.permissions || [],
-      notes: assignment.notes || ''
+      notes: assignment.notes || '',
     });
     setShowModal(true);
   };
@@ -144,16 +144,16 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
     setShowModal(true);
   };
 
-  const getUserName = (userId) => {
+  const getUserName = userId => {
     const user = users.find(u => u.id === userId || u._id === userId);
     return user?.username || userId;
   };
 
-  const getDepartmentName = (deptId) => {
+  const getDepartmentName = deptId => {
     return DEPARTMENTS.find(d => d.id === deptId)?.name || deptId;
   };
 
-  const handleSort = (field) => {
+  const handleSort = field => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -174,34 +174,47 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
       aVal = a[sortField] || '';
       bVal = b[sortField] || '';
     }
-    const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+    const comparison = String(aVal).localeCompare(String(bVal), undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
     return sortDirection === 'asc' ? comparison : -comparison;
   });
 
   const columns = [
-    { key: 'user', label: 'Department Head', sortable: true, render: (_, row) => getUserName(row.userId) },
-    { key: 'department', label: 'Department', sortable: true, render: (_, row) => getDepartmentName(row.departmentId) },
-    { 
-      key: 'permissions', 
+    {
+      key: 'user',
+      label: 'Department Head',
+      sortable: true,
+      render: (_, row) => getUserName(row.userId),
+    },
+    {
+      key: 'department',
+      label: 'Department',
+      sortable: true,
+      render: (_, row) => getDepartmentName(row.departmentId),
+    },
+    {
+      key: 'permissions',
       label: 'Permissions',
       render: (_, row) => (
         <span className="text-sm text-slate-600">
           {row.permissions?.length || 0} permissions granted
         </span>
-      )
+      ),
     },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       label: 'Status',
       render: (_, row) => (
-        <span className={`px-2 py-1 rounded text-xs ${
-          row.isActive 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-gray-100 text-gray-600'
-        }`}>
+        <span
+          className={`px-2 py-1 rounded text-xs ${
+            row.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
           {row.isActive ? 'Active' : 'Inactive'}
         </span>
-      )
+      ),
     },
     {
       key: 'actions',
@@ -215,123 +228,133 @@ const DepartmentHeadAssignments = ({ standalone = true }) => {
             <X className="w-4 h-4" />
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const content = (
     <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Department Head Assignments</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-              Assign department heads with configurable permissions for their departments.
-            </p>
-          </div>
-          <Button onClick={openCreateModal}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Assignment
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Department Head Assignments</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            Assign department heads with configurable permissions for their departments.
+          </p>
         </div>
+        <Button onClick={openCreateModal}>
+          <Plus className="w-4 h-4 mr-2" />
+          New Assignment
+        </Button>
+      </div>
 
-        <Card>
-          <Table columns={columns} data={sortedAssignments} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
-        </Card>
+      <Card>
+        <Table
+          columns={columns}
+          data={sortedAssignments}
+          loading={loading}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onSort={handleSort}
+        />
+      </Card>
 
-        <Modal
-          isOpen={showModal}
-          onClose={() => {
-            setShowModal(false);
-            setEditingAssignment(null);
-          }}
-          title={editingAssignment ? 'Edit Assignment' : 'New Assignment'}
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Department</label>
-              <select
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="form-select w-full"
-                disabled={editingAssignment}
-              >
-                <option value="">Select department...</option>
-                {DEPARTMENTS.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => {
+          setShowModal(false);
+          setEditingAssignment(null);
+        }}
+        title={editingAssignment ? 'Edit Assignment' : 'New Assignment'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Department</label>
+            <select
+              value={formData.department}
+              onChange={e => setFormData({ ...formData, department: e.target.value })}
+              className="form-select w-full"
+              disabled={editingAssignment}
+            >
+              <option value="">Select department...</option>
+              {DEPARTMENTS.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">Department Head</label>
-              <select
-                value={formData.userId}
-                onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-                className="form-select w-full"
-                disabled={editingAssignment}
-              >
-                <option value="">Select user...</option>
-                {potentialHeads.map(u => (
-                  <option key={u.id || u._id} value={u.id || u._id}>
-                    {u.username} ({u.role})
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Department Head</label>
+            <select
+              value={formData.userId}
+              onChange={e => setFormData({ ...formData, userId: e.target.value })}
+              className="form-select w-full"
+              disabled={editingAssignment}
+            >
+              <option value="">Select user...</option>
+              {potentialHeads.map(u => (
+                <option key={u.id || u._id} value={u.id || u._id}>
+                  {u.username} ({u.role})
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Permissions</label>
-              <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded">
-                {DEPARTMENT_HEAD_PERMISSIONS.map(perm => (
-                  <label key={perm.key} className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded">
-                    <input
-                      type="checkbox"
-                      checked={formData.permissions.includes(perm.key)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFormData({ 
-                            ...formData, 
-                            permissions: [...formData.permissions, perm.key] 
-                          });
-                        } else {
-                          setFormData({ 
-                            ...formData, 
-                            permissions: formData.permissions.filter(p => p !== perm.key) 
-                          });
-                        }
-                      }}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm">{perm.label}</span>
-                    <span className="text-xs text-slate-500 ml-auto">({perm.group})</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Notes</label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                className="form-textarea w-full"
-                rows={2}
-                placeholder="Optional notes..."
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="primary" onClick={handleSubmit}>
-                {editingAssignment ? 'Update' : 'Create'}
-              </Button>
-              <Button variant="outline" onClick={() => setShowModal(false)}>
-                Cancel
-              </Button>
+          <div>
+            <label className="block text-sm font-medium mb-2">Permissions</label>
+            <div className="space-y-2 max-h-60 overflow-y-auto p-2 border rounded">
+              {DEPARTMENT_HEAD_PERMISSIONS.map(perm => (
+                <label
+                  key={perm.key}
+                  className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.permissions.includes(perm.key)}
+                    onChange={e => {
+                      if (e.target.checked) {
+                        setFormData({
+                          ...formData,
+                          permissions: [...formData.permissions, perm.key],
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          permissions: formData.permissions.filter(p => p !== perm.key),
+                        });
+                      }
+                    }}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm">{perm.label}</span>
+                  <span className="text-xs text-slate-500 ml-auto">({perm.group})</span>
+                </label>
+              ))}
             </div>
           </div>
-        </Modal>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={e => setFormData({ ...formData, notes: e.target.value })}
+              className="form-textarea w-full"
+              rows={2}
+              placeholder="Optional notes..."
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="primary" onClick={handleSubmit}>
+              {editingAssignment ? 'Update' : 'Create'}
+            </Button>
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 

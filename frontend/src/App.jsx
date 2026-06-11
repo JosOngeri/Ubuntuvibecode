@@ -27,6 +27,7 @@ import ShortlistPage from './pages/recruitment/ShortlistPage';
 import AllApplicantsPage from './pages/recruitment/AllApplicantsPage';
 import ApplicantDetailPage from './pages/recruitment/ApplicantDetailPage';
 import OnboardingPage from './pages/onboarding/index';
+import OnboardingWizard from './features/onboarding/pages/OnboardingWizard';
 import DailyLabourPage from './pages/dailyLabour/index';
 import DailyLabourerDashboard from './pages/dailyLabour/Dashboard';
 import SupervisorDashboard from './pages/supervisor/Dashboard';
@@ -46,28 +47,28 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
-import AdminEmployees from './pages/admin/Employees';
+import AdminEmployees from './features/employees/pages/Employees';
 import AdminUsers from './pages/admin/Users';
 import Permissions from './pages/admin/Permissions';
 import AdminSettings from './pages/admin/Settings';
 import UserDetail from './pages/admin/UserDetail';
-import EmployeeDetail from './pages/admin/EmployeeProfile';
+import EmployeeDetail from './features/employees/pages/EmployeeDetail';
 
 // Manager & Employee Pages
 import ManagerDashboard from './pages/manager/Dashboard';
 import ManagerLeaves from './pages/manager/Leaves';
 import EmployeeDashboard from './pages/employee/Dashboard';
 import EmployeeLeaves from './pages/employee/Leaves';
-import LeaveRequest from './pages/leave/Request';
-import LeaveApprovals from './pages/leave/Approvals';
-import LeaveStatutory from './pages/leave/Statutory';
-import Punch from './pages/employee/Punch';
+import LeaveRequest from './features/leave/pages/Request';
+import LeaveApprovals from './features/leave/pages/Approvals';
+import LeaveStatutory from './features/leave/pages/Statutory';
+import Punch from './features/attendance/pages/Punch';
 import AttendancePage from './pages/shared/Attendance';
 import AttendanceDetail from './pages/shared/AttendanceDetail';
 
 // Payroll Pages
-import PayrollDisburse from './pages/payroll/Disburse';
-import EmployeePayslips from './pages/payroll/Payslips';
+import PayrollDisburse from './features/payroll/pages/Disburse';
+import EmployeePayslips from './features/payroll/pages/Payslips';
 
 // KPI Pages
 import KpiManage from './pages/kpi/Manage';
@@ -93,11 +94,13 @@ import Training from './pages/admin/Training';
 import DocumentVault from './pages/admin/DocumentVault';
 import SupervisorAllocations from './pages/admin/SupervisorAllocations';
 import DepartmentHeadAssignments from './pages/admin/DepartmentHeadAssignments';
+import OrientationChecklists from './pages/admin/OrientationChecklists';
+import ContractorLifecycle from './pages/admin/ContractorLifecycle';
 
 // Wrapper Pages
 import DashboardPage from './pages/admin/DashboardPage';
 import PeoplePage from './pages/admin/PeoplePage';
-import AdminAttendancePage from './pages/admin/AttendancePage';
+import AdminAttendancePage from './features/attendance/pages/AttendancePage';
 import AdminPayrollPage from './pages/admin/PayrollPage';
 import PerformancePage from './pages/admin/PerformancePage';
 import ContractsPage from './pages/admin/ContractsPage';
@@ -121,22 +124,25 @@ function ApplicantDetailWrapper() {
 }
 
 function DashboardRedirect() {
-  const { user, loading } = useAuth()
-  if (loading) return (
-    <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
-      <div className="w-48 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-        <div className="h-full bg-orange-500 rounded-full animate-[loading-bar_1s_ease-in-out_infinite]"></div>
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-slate-900">
+        <div className="w-48 h-1 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-full bg-orange-500 rounded-full animate-[loading-bar_1s_ease-in-out_infinite]"></div>
+        </div>
       </div>
-    </div>
-  )
-  if (!user) return <Navigate to="/" replace />
+    );
+  if (!user) return <Navigate to="/" replace />;
 
-  if (user.role === 'owner') return <Navigate to="/admin/dashboard" replace />
-  if (user.role === 'admin' || user.role === 'hr') return <Navigate to="/admin/dashboard" replace />
-  if (user.role === 'manager' || user.role === 'supervisor') return <Navigate to="/manager/dashboard" replace />
-  if (user.role === 'contractor') return <Navigate to="/contractor/dashboard" replace />
-  if (user.role === 'daily_labourer') return <Navigate to="/daily-labour/dashboard" replace />
-  return <Navigate to="/employee/dashboard" replace />
+  if (user.role === 'owner') return <Navigate to="/admin/dashboard" replace />;
+  if (user.role === 'admin' || user.role === 'hr')
+    return <Navigate to="/admin/dashboard" replace />;
+  if (user.role === 'manager' || user.role === 'supervisor')
+    return <Navigate to="/manager/dashboard" replace />;
+  if (user.role === 'contractor') return <Navigate to="/contractor/dashboard" replace />;
+  if (user.role === 'daily_labourer') return <Navigate to="/daily-labour/dashboard" replace />;
+  return <Navigate to="/employee/dashboard" replace />;
 }
 
 function App() {
@@ -322,7 +328,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/department-head-assignments"
+              path="/admin/department-heads"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
                   <DepartmentHeadAssignments />
@@ -339,6 +345,30 @@ function App() {
               }
             />
             <Route
+              path="/admin/orientation-checklists"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'hr']}>
+                  <OrientationChecklists />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/contractor-lifecycle"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
+                  <ContractorLifecycle />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding/:applicationId"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'owner', 'manager', 'hr']}>
+                  <OnboardingWizard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/daily-labour"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
@@ -346,7 +376,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-                    <Route
+            <Route
               path="/admin/complaints"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
@@ -362,7 +392,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-                       <Route
+            <Route
               path="/admin/contractors"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'owner', 'manager']}>
@@ -608,7 +638,10 @@ function App() {
             />
             <Route path="/recruitment/jobs-board" element={<PublicJobBoard />} />
             <Route path="/recruitment/job/:jobId" element={<JobDescription />} />
-            <Route path="/recruitment/interview-feedback/:appId/:token" element={<InterviewFeedback />} />
+            <Route
+              path="/recruitment/interview-feedback/:appId/:token"
+              element={<InterviewFeedback />}
+            />
             <Route
               path="/recruitment/shortlist"
               element={
@@ -694,7 +727,9 @@ function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}>
+                <ProtectedRoute
+                  allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}
+                >
                   <DashboardRedirect />
                 </ProtectedRoute>
               }
@@ -703,7 +738,9 @@ function App() {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}>
+                <ProtectedRoute
+                  allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}
+                >
                   <ProfileIndex />
                 </ProtectedRoute>
               }
@@ -713,7 +750,9 @@ function App() {
             <Route
               path="/settings"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}>
+                <ProtectedRoute
+                  allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr']}
+                >
                   <Settings />
                 </ProtectedRoute>
               }
@@ -723,7 +762,17 @@ function App() {
             <Route
               path="/messages"
               element={
-                <ProtectedRoute allowedRoles={['admin', 'manager', 'supervisor', 'employee', 'contractor', 'hr', 'daily_labourer']}>
+                <ProtectedRoute
+                  allowedRoles={[
+                    'admin',
+                    'manager',
+                    'supervisor',
+                    'employee',
+                    'contractor',
+                    'hr',
+                    'daily_labourer',
+                  ]}
+                >
                   <MessagesPage />
                 </ProtectedRoute>
               }

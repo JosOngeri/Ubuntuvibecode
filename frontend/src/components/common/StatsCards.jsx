@@ -9,9 +9,9 @@ const StatsCards = ({ stats, layout = 'grid', onClick = null }) => {
   const gradientEnabled = getComponentSetting('StatsCards', 'gradientEnabled', true);
   const showTrends = getComponentSetting('StatsCards', 'showTrends', true);
 
-  const getGradientClass = (index) => {
+  const getGradientClass = index => {
     if (!gradientEnabled) return 'bg-slate-50 dark:bg-slate-800';
-    
+
     const gradients = [
       'bg-gradient-to-br from-orange-400 to-orange-600',
       'bg-gradient-to-br from-blue-400 to-blue-600',
@@ -20,17 +20,17 @@ const StatsCards = ({ stats, layout = 'grid', onClick = null }) => {
       'bg-gradient-to-br from-pink-400 to-pink-600',
       'bg-gradient-to-br from-cyan-400 to-cyan-600',
     ];
-    
+
     return gradients[index % gradients.length];
   };
 
-  const getTrendIcon = (trend) => {
+  const getTrendIcon = trend => {
     if (trend > 0) return <BsArrowUp className="text-emerald-500" />;
     if (trend < 0) return <BsArrowDown className="text-rose-500" />;
     return <BsDash className="text-slate-400" />;
   };
 
-  const getTrendClass = (trend) => {
+  const getTrendClass = trend => {
     if (trend > 0) return 'text-emerald-500';
     if (trend < 0) return 'text-rose-500';
     return 'text-slate-400';
@@ -53,32 +53,38 @@ const StatsCards = ({ stats, layout = 'grid', onClick = null }) => {
           {showTrends && stat.trend !== undefined && (
             <div className="absolute top-2 right-2 flex items-center gap-1 text-sm font-medium">
               {getTrendIcon(stat.trend)}
-              <span className={getTrendClass(stat.trend)}>
-                {Math.abs(stat.trend)}%
-              </span>
+              <span className={getTrendClass(stat.trend)}>{Math.abs(stat.trend)}%</span>
             </div>
           )}
 
           {/* Icon */}
           {stat.icon && (
-            <div className={`mb-2 ${gradientEnabled ? 'text-white' : 'text-slate-600 dark:text-slate-400'}`}>
+            <div
+              className={`mb-2 ${gradientEnabled ? 'text-white' : 'text-slate-600 dark:text-slate-400'}`}
+            >
               <stat.icon size={24} />
             </div>
           )}
 
           {/* Value */}
-          <div className={`text-2xl font-bold ${gradientEnabled ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
+          <div
+            className={`text-2xl font-bold ${gradientEnabled ? 'text-white' : 'text-slate-900 dark:text-white'}`}
+          >
             {stat.value}
           </div>
 
           {/* Label */}
-          <div className={`text-sm ${gradientEnabled ? 'text-white/80' : 'text-slate-600 dark:text-slate-400'}`}>
+          <div
+            className={`text-sm ${gradientEnabled ? 'text-white/80' : 'text-slate-600 dark:text-slate-400'}`}
+          >
             {stat.label}
           </div>
 
           {/* Description */}
           {stat.description && (
-            <div className={`text-xs mt-1 ${gradientEnabled ? 'text-white/60' : 'text-slate-500 dark:text-slate-500'}`}>
+            <div
+              className={`text-xs mt-1 ${gradientEnabled ? 'text-white/60' : 'text-slate-500 dark:text-slate-500'}`}
+            >
               {stat.description}
             </div>
           )}

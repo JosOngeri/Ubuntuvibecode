@@ -15,7 +15,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({
       error: error,
-      errorInfo: errorInfo
+      errorInfo: errorInfo,
     });
     logger.error('ErrorBoundary', 'Uncaught render error', error, {
       componentStack: errorInfo?.componentStack,
@@ -28,7 +28,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback error={this.state.error} errorInfo={this.state.errorInfo} onReset={this.handleReset} />;
+      return (
+        <ErrorFallback
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onReset={this.handleReset}
+        />
+      );
     }
     return this.props.children;
   }
@@ -47,12 +53,10 @@ const ErrorFallback = ({ error, errorInfo, onReset }) => {
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           We apologize for the inconvenience. An error occurred while rendering this page.
         </p>
-        
+
         {process.env.NODE_ENV === 'development' && error && (
           <div className="bg-gray-100 dark:bg-gray-700 rounded p-4 mb-6 text-left overflow-auto max-h-40">
-            <p className="text-sm font-mono text-red-600 dark:text-red-400">
-              {error.toString()}
-            </p>
+            <p className="text-sm font-mono text-red-600 dark:text-red-400">{error.toString()}</p>
             {errorInfo && (
               <p className="text-xs font-mono text-gray-600 dark:text-gray-400 mt-2">
                 {errorInfo.componentStack}
@@ -60,7 +64,7 @@ const ErrorFallback = ({ error, errorInfo, onReset }) => {
             )}
           </div>
         )}
-        
+
         <button
           onClick={onReset}
           className="inline-flex items-center gap-2 px-6 py-3 bg-[#CB7246] text-white rounded-lg hover:bg-[#F27C12] transition-colors font-medium"
@@ -68,10 +72,10 @@ const ErrorFallback = ({ error, errorInfo, onReset }) => {
           <BsArrowRepeat className="h-4 w-4" />
           Try Again
         </button>
-        
+
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => (window.location.href = '/')}
             className="text-sm text-gray-600 dark:text-gray-400 hover:text-[#CB7246] dark:hover:text-[#F27C12] transition-colors"
           >
             Go to Home Page

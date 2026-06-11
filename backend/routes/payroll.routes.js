@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const payrollController = require('../controllers/payroll.controller');
+const payrollController = require('../src/features/payroll/controllers/payroll.controller');
 
 router.post('/batch-generate', payrollController.batchGeneratePayroll);
 router.post('/calculate', payrollController.calculatePayroll);

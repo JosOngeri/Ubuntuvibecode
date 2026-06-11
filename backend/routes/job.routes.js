@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const jobController = require('../controllers/job.controller');
+const jobController = require('../src/features/recruitment/controllers/job.controller');
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const upload = require('../middleware/cvUpload');
@@ -37,24 +37,12 @@ router.post('/applications/reallocate-rating', auth, role(['admin', 'manager', '
 router.get('/applications/shortlisted/all', auth, role(['admin', 'manager', 'hr']), jobController.getShortlisted);
 router.get('/applications/all', auth, role(['admin', 'manager', 'hr']), jobController.getAllApplications);
 
+// Get single application by ID — static segment, before :appId wildcards
+router.get('/applications/:appId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationById);
+
 // Get applications by employee/applicant — static segments, before :appId wildcards
 router.get('/applications/employee/:employeeId', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByEmployee);
 router.get('/applications/applicant/:email', auth, role(['admin', 'manager', 'hr']), jobController.getApplicationsByApplicant);
-
-// Simple test endpoint
-router.post('/test-route', (req, res) => {
-  console.log('=== SIMPLE TEST ROUTE HIT ===');
-  res.json({ message: 'Simple test working' });
-});
-
-// Test endpoint - must come before wildcard routes
-router.post('/applications/:appId/interview-invite-test', (req, res) => {
-  console.log('=== TEST ENDPOINT HIT ===');
-  console.log('Params:', req.params);
-  console.log('Body:', req.body);
-  console.log('User:', req.user);
-  res.json({ message: 'Test endpoint working', params: req.params, body: req.body });
-});
 
 // :appId wildcard routes
 router.post('/applications/:applicationId/reverse-rating', auth, role(['admin', 'manager', 'hr']), jobController.reverseRating);

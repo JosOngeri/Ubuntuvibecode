@@ -57,8 +57,8 @@ app.use('/api/users', require('./routes/user.routes'));
 
 // Payroll, KPI, Leave, Contract modules
 app.use('/api/payroll', require('./routes/payroll.routes'));
-app.use(['/api/kpi', '/api/kpis'], require('./routes/kpi.routes'));
-app.use(['/api/leave', '/api/leaves'], require('./routes/leave.routes'));
+app.use('/api/kpis', require('./routes/kpi.routes'));
+app.use('/api/leaves', require('./routes/leave.routes'));
 app.use('/api/contracts', require('./routes/contract.routes'));
 app.use('/api/contractors', require('./routes/contractor.routes'));
 
@@ -66,8 +66,8 @@ app.use('/api/contractors', require('./routes/contractor.routes'));
 app.use('/api/reports', require('./routes/report.routes'));
 
 // New modules — Daily Labour, Onboarding, Complaints, Contractor Lifecycle, Assets
-app.use('/api/daily-labourers', require('./routes/dailyLabourer.routes'));
-app.use('/api/onboarding', require('./routes/onboarding.routes'));
+app.use('/api/daily-labour', require('./routes/dailyLabourer.routes'));
+app.use('/api/onboarding', require('./src/features/onboarding/routes/onboarding.routes'));
 app.use('/api/complaints', require('./routes/complaint.routes'));
 app.use('/api/contractor-lifecycle', require('./routes/contractorLifecycle.routes'));
 app.use('/api/assets', require('./routes/asset.routes'));

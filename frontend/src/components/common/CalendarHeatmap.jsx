@@ -19,7 +19,7 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
   const today = new Date();
   const monthsToShow = months;
   const monthsArray = [];
-  
+
   for (let i = monthsToShow - 1; i >= 0; i--) {
     const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
     monthsArray.push({
@@ -42,38 +42,38 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const firstDayOfWeek = new Date(year, month, 1).getDay();
     const days = [];
-    
+
     // Add empty cells for days before the 1st
     for (let i = 0; i < firstDayOfWeek; i++) {
       days.push(null);
     }
-    
+
     // Add actual days
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month, day);
       const dateStr = date.toISOString().split('T')[0];
       const record = attendanceMap[dateStr];
-      
+
       // Determine if this is a future date or before employment
       const isFuture = date > today;
       const isBeforeEmployment = dateJoined && date < new Date(dateJoined);
-      
+
       days.push({
         day,
         date: dateStr,
         record,
         isFuture,
-        isBeforeEmployment
+        isBeforeEmployment,
       });
     }
-    
+
     return days;
   };
 
   const getStatusColor = (record, isFuture, isBeforeEmployment) => {
     if (isFuture || isBeforeEmployment) return 'bg-slate-100';
     if (!record) return 'bg-slate-200';
-    
+
     const status = record.status?.toLowerCase();
     switch (status) {
       case 'present':
@@ -91,9 +91,9 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const renderMonth = (monthData) => {
+  const renderMonth = monthData => {
     const days = generateMonthDays(monthData.year, monthData.month);
-    
+
     return (
       <div className="flex-1 min-w-[200px]">
         <h4 className="text-lg font-semibold text-slate-900 mb-3 text-center dark:text-white">
@@ -101,7 +101,10 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
         </h4>
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-xs text-slate-500 font-medium dark:text-slate-400">
+            <div
+              key={day}
+              className="text-center text-xs text-slate-500 font-medium dark:text-slate-400"
+            >
               {day}
             </div>
           ))}
@@ -129,22 +132,23 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
 
   // Calculate stats
   const calculateStats = () => {
-    const allDays = monthsArray.flatMap(m => generateMonthDays(m.year, m.month))
+    const allDays = monthsArray
+      .flatMap(m => generateMonthDays(m.year, m.month))
       .filter(d => d && !d.isFuture && !d.isBeforeEmployment);
-    
+
     const total = allDays.length;
     const present = allDays.filter(d => d.record?.status?.toLowerCase() === 'present').length;
     const late = allDays.filter(d => d.record?.status?.toLowerCase() === 'late').length;
     const absent = allDays.filter(d => !d.record && !d.isFuture && !d.isBeforeEmployment).length;
     const onLeave = allDays.filter(d => d.record?.status?.toLowerCase() === 'leave').length;
-    
-    return { 
-      total, 
-      present, 
-      late, 
-      absent, 
-      onLeave, 
-      rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0 
+
+    return {
+      total,
+      present,
+      late,
+      absent,
+      onLeave,
+      rate: total > 0 ? Math.round(((present + late) / total) * 100) : 0,
     };
   };
 
@@ -159,7 +163,9 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
           <div className="text-sm text-slate-600 dark:text-slate-400">Total Days</div>
         </div>
         <div className="bg-emerald-50 dark:bg-emerald-900/30 rounded-lg p-4">
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.present}</div>
+          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {stats.present}
+          </div>
           <div className="text-sm text-emerald-600 dark:text-emerald-400">Present</div>
         </div>
         <div className="bg-amber-50 dark:bg-amber-900/30 rounded-lg p-4">
@@ -175,12 +181,12 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
           <div className="text-sm text-blue-600 dark:text-blue-400">Attendance Rate</div>
         </div>
       </div>
-      
+
       {/* Calendar Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 overflow-x-auto">
         {monthsArray.map(monthData => renderMonth(monthData))}
       </div>
-      
+
       {/* Legend */}
       {showLegend && (
         <div className="flex flex-wrap gap-4 justify-center">
@@ -206,15 +212,45 @@ const CalendarHeatmap = ({ attendance, dateJoined, months = 3 }) => {
           </div>
         </div>
       )}
-      
+
       {/* Tooltip */}
       {hoveredDay && hoveredDay.record && (
-        <div className="fixed z-50 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm" style={{ left: '50%', transform: 'translateX(-50%)', bottom: '20px' }}>
-          <div className="font-semibold">{new Date(hoveredDay.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-          <div>Status: <span className="capitalize">{hoveredDay.record.status}</span></div>
-          {hoveredDay.record.checkIn && <div>Check-in: {new Date(hoveredDay.record.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
-          {hoveredDay.record.checkOut && <div>Check-out: {new Date(hoveredDay.record.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
-          {hoveredDay.record.totalHoursWorked && <div>Hours: {hoveredDay.record.totalHoursWorked.toFixed(2)}</div>}
+        <div
+          className="fixed z-50 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-lg text-sm"
+          style={{ left: '50%', transform: 'translateX(-50%)', bottom: '20px' }}
+        >
+          <div className="font-semibold">
+            {new Date(hoveredDay.date).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </div>
+          <div>
+            Status: <span className="capitalize">{hoveredDay.record.status}</span>
+          </div>
+          {hoveredDay.record.checkIn && (
+            <div>
+              Check-in:{' '}
+              {new Date(hoveredDay.record.checkIn).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          )}
+          {hoveredDay.record.checkOut && (
+            <div>
+              Check-out:{' '}
+              {new Date(hoveredDay.record.checkOut).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+          )}
+          {hoveredDay.record.totalHoursWorked && (
+            <div>Hours: {hoveredDay.record.totalHoursWorked.toFixed(2)}</div>
+          )}
         </div>
       )}
     </div>

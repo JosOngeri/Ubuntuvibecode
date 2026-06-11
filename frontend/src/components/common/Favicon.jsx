@@ -9,13 +9,15 @@ const Favicon = () => {
       try {
         const response = await api.get('/favicons/active');
         const favicon = response.data;
-        
+
         // Set favicon URL based on type
         if (favicon.type === 'default') {
           setFaviconUrl(favicon.path);
         } else if (favicon.type === 'custom') {
           // For custom uploads, use the full path from the backend
-          setFaviconUrl(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${favicon.path}`);
+          setFaviconUrl(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${favicon.path}`
+          );
         }
       } catch (error) {
         console.error('Error fetching favicon:', error);

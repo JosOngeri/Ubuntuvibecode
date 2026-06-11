@@ -134,14 +134,17 @@ CREATE TABLE daily_labourers (
 -- ============================================
 CREATE TABLE assets (
     id BIGSERIAL PRIMARY KEY,
-    employee_id BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     name VARCHAR(255) NOT NULL,
-    category VARCHAR(100),
+    type VARCHAR(100),
+    description TEXT,
     serial_number VARCHAR(255),
+    condition VARCHAR(100) DEFAULT 'new',
+    assigned_to BIGINT REFERENCES employees(id) ON DELETE SET NULL,
     assigned_date DATE,
     return_date DATE,
-    condition VARCHAR(100),
-    status VARCHAR(50) DEFAULT 'active',
+    return_condition VARCHAR(100),
+    status VARCHAR(50) DEFAULT 'available',
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -279,12 +282,28 @@ CREATE TABLE jobs (
     employment_type VARCHAR(50),
     salary_min DECIMAL(12, 2),
     salary_max DECIMAL(12, 2),
+    salary_range VARCHAR(100),
     location VARCHAR(255),
     status VARCHAR(50) DEFAULT 'active',
     created_by BIGINT REFERENCES users(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    closing_date DATE
+    closing_date DATE,
+    responsibilities TEXT,
+    benefits TEXT,
+    qualifications JSONB DEFAULT '[]',
+    evaluation_params JSONB DEFAULT '{}',
+    advertisement_data JSONB DEFAULT '{}',
+    advertisement_image_path VARCHAR(255),
+    number_of_positions INTEGER DEFAULT 1,
+    career_level VARCHAR(100),
+    contact_person VARCHAR(255),
+    contact_phone VARCHAR(50),
+    contact_email VARCHAR(255),
+    work_schedule VARCHAR(255),
+    required_languages VARCHAR(255),
+    experience_level VARCHAR(100),
+    education_requirements TEXT
 );
 
 -- ============================================
@@ -332,6 +351,12 @@ CREATE TABLE job_applications (
     owner_notes TEXT,
     owner_reviewed_at TIMESTAMPTZ,
     owner_reviewed_by BIGINT REFERENCES users(id),
+    interview_score INTEGER,
+    interview_notes TEXT,
+    interview_status VARCHAR(50),
+    interview_date TIMESTAMPTZ,
+    interview_invitations JSONB DEFAULT '[]',
+    interview_feedbacks JSONB DEFAULT '[]',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -341,14 +366,31 @@ CREATE TABLE job_applications (
 -- ============================================
 CREATE TABLE milestones (
     id BIGSERIAL PRIMARY KEY,
-    employee_id BIGINT REFERENCES employees(id) ON DELETE CASCADE,
+    quote_id BIGINT REFERENCES contractor_quotes(id) ON DELETE SET NULL,
+    contractor_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    due_date DATE,
-    completed_date DATE,
+    deliverables JSONB DEFAULT '[]',
+    deadline DATE,
+    budget DECIMAL(12,2),
+    materials_request JSONB DEFAULT '{}',
+    labour_request JSONB DEFAULT '{}',
+    downpayment_request DECIMAL(12,2),
+    downpayment_approved BOOLEAN DEFAULT FALSE,
+    downpayment_paid BOOLEAN DEFAULT FALSE,
+    progress INTEGER DEFAULT 0,
+    photos JSONB DEFAULT '[]',
+    receipts JSONB DEFAULT '[]',
     status VARCHAR(50) DEFAULT 'pending',
-    priority VARCHAR(20) DEFAULT 'medium',
-    created_by BIGINT REFERENCES users(id),
+    verified_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    verified_at TIMESTAMPTZ,
+    kpi_score DECIMAL(5,2),
+    payment_released BOOLEAN DEFAULT FALSE,
+    payment_amount DECIMAL(12,2),
+    payment_date TIMESTAMPTZ,
+    daily_wage_mode BOOLEAN DEFAULT FALSE,
+    daily_wage_days INTEGER DEFAULT 0,
+    notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -362,10 +404,13 @@ CREATE TABLE training (
     employee_id BIGINT REFERENCES employees(id) ON DELETE CASCADE,
     course_name VARCHAR(255) NOT NULL,
     provider VARCHAR(255),
+    training_type VARCHAR(100),
     start_date DATE,
     end_date DATE,
     status VARCHAR(50) DEFAULT 'scheduled',
-    certificate_url VARCHAR(500),
+    score DECIMAL(5,2),
+    certificate_url TEXT,
+    cost DECIMAL(10,2),
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -377,14 +422,16 @@ CREATE TABLE training (
 CREATE TABLE employee_documents (
     id BIGSERIAL PRIMARY KEY,
     employee_id BIGINT REFERENCES employees(id) ON DELETE CASCADE,
-    document_type VARCHAR(100) NOT NULL,
-    document_name VARCHAR(255),
-    file_url VARCHAR(500),
-    file_size INTEGER,
-    mime_type VARCHAR(100),
+    doc_type VARCHAR(100),
+    doc_name VARCHAR(255),
+    filename VARCHAR(255),
+    url TEXT,
     expiry_date DATE,
-    status VARCHAR(50) DEFAULT 'active',
-    uploaded_by BIGINT REFERENCES users(id),
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+    notes TEXT,
+    verified BOOLEAN DEFAULT FALSE,
+    verified_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -395,11 +442,18 @@ CREATE TABLE employee_documents (
 CREATE TABLE contractor_quotes (
     id BIGSERIAL PRIMARY KEY,
     contractor_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-    job_description TEXT,
-    quote_amount DECIMAL(12, 2),
-    start_date DATE,
-    end_date DATE,
+    project_title VARCHAR(255),
+    description TEXT,
+    amount DECIMAL(12,2),
+    timeline TEXT,
     status VARCHAR(50) DEFAULT 'pending',
+    approved_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    approved_at TIMESTAMPTZ,
+    rejection_reason TEXT,
+    is_daily_wage BOOLEAN DEFAULT FALSE,
+    daily_rate DECIMAL(10,2),
+    estimated_days INTEGER,
+    attachments JSONB DEFAULT '[]',
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -438,11 +492,25 @@ CREATE TABLE favicons (
 CREATE TABLE onboarding (
     id BIGSERIAL PRIMARY KEY,
     employee_id BIGINT REFERENCES employees(id) ON DELETE CASCADE,
+    application_id BIGINT REFERENCES job_applications(id) ON DELETE SET NULL,
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    department VARCHAR(100),
+    position VARCHAR(100),
+    supervisor_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     start_date DATE,
     end_date DATE,
+    probation_end_date DATE,
     status VARCHAR(50) DEFAULT 'in_progress',
+    steps JSONB DEFAULT '[]',
+    orientation_checklist JSONB DEFAULT '[]',
+    documents JSONB DEFAULT '[]',
+    assets_assigned JSONB DEFAULT '[]',
+    probation_reviews JSONB DEFAULT '[]',
+    offer_letter_generated BOOLEAN DEFAULT FALSE,
+    offer_letter_url TEXT,
     notes TEXT,
+    confirmed_at TIMESTAMPTZ,
+    confirmed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -452,12 +520,12 @@ CREATE TABLE onboarding (
 -- ============================================
 CREATE TABLE orientation_checklists (
     id BIGSERIAL PRIMARY KEY,
-    onboarding_id BIGINT REFERENCES onboarding(id) ON DELETE CASCADE,
-    item_name VARCHAR(255) NOT NULL,
-    is_completed BOOLEAN DEFAULT FALSE,
-    completed_at TIMESTAMPTZ,
-    completed_by BIGINT REFERENCES users(id),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    role VARCHAR(100),
+    checklist JSONB DEFAULT '[]',
+    is_default BOOLEAN DEFAULT FALSE,
+    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================
@@ -480,16 +548,19 @@ CREATE TABLE salary_reminders (
 CREATE TABLE user_permission_overrides (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-    permission_key VARCHAR(100) NOT NULL,
+    permission_key VARCHAR(255) NOT NULL,
     is_granted BOOLEAN DEFAULT TRUE,
-    granted_by BIGINT REFERENCES users(id),
+    granted_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     granted_at TIMESTAMPTZ DEFAULT NOW(),
     expires_at TIMESTAMPTZ,
-    duration_type VARCHAR(20) CHECK (duration_type IN ('permanent', 'days', 'hours', 'minutes')),
+    duration_type VARCHAR(50),
     duration_value INTEGER,
+    quantity INTEGER,
     reason TEXT,
     revoked_at TIMESTAMPTZ,
-    revoked_by BIGINT REFERENCES users(id),
+    reverted_at TIMESTAMPTZ,
+    revoked_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    reverted_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     revoke_reason TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -553,21 +624,60 @@ CREATE TABLE notifications (
     type VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     message TEXT,
-    entity_type VARCHAR(50),
+    action_link TEXT,
+    status VARCHAR(50),
+    channel VARCHAR(50),
+    sent_at TIMESTAMPTZ,
+    entity_type VARCHAR(100),
     entity_id BIGINT,
     is_read BOOLEAN DEFAULT FALSE,
     read_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- COMPLAINTS TABLE
+-- ============================================
+CREATE TABLE complaints (
+    id BIGSERIAL PRIMARY KEY,
+    type VARCHAR(100),
+    category VARCHAR(100),
+    sub_category VARCHAR(100),
+    description TEXT,
+    urgency VARCHAR(50) DEFAULT 'medium',
+    status VARCHAR(50) DEFAULT 'open',
+    submitted_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    submitted_on_behalf_of BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    guest_name VARCHAR(255),
+    guest_contact VARCHAR(255),
+    guest_room VARCHAR(100),
+    respondent_id BIGINT REFERENCES employees(id) ON DELETE SET NULL,
+    assigned_to BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    department VARCHAR(100),
+    timeline JSONB DEFAULT '[]',
+    resolution TEXT,
+    resolution_date DATE,
+    complainant_confirmed BOOLEAN DEFAULT FALSE,
+    sla_deadline DATE,
+    attachments JSONB DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Messages (Chat/Complaints)
 CREATE TABLE messages (
     id BIGSERIAL PRIMARY KEY,
     sender_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    sender_name VARCHAR(255),
     recipient_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    recipient_name VARCHAR(255),
     subject VARCHAR(255),
     content TEXT NOT NULL,
-    message_type VARCHAR(50) DEFAULT 'general' CHECK (message_type IN ('general', 'complaint', 'recommendation', 'announcement')),
+    type VARCHAR(50) DEFAULT 'general',
+    tags TEXT,
+    conversation_id BIGINT,
+    attachments JSONB,
     parent_id BIGINT REFERENCES messages(id) ON DELETE CASCADE,
     is_read BOOLEAN DEFAULT FALSE,
     read_at TIMESTAMPTZ,
@@ -942,7 +1052,8 @@ VALUES
     ('DAILY_LABOUR_DEPARTMENTS', 'daily_labour', '["farm", "housekeeping", "grounds", "construction", "kitchen", "other"]', 'Department options for daily labour assignments', 'array', true, NOW(), NOW()),
     ('ATTENDANCE_LOCATIONS', 'attendance', '[]', 'Configurable GPS locations for attendance check-in', 'array', true, NOW(), NOW()),
     ('ATTENDANCE_GPS_ENABLED', 'attendance', 'true', 'Enable GPS validation for attendance', 'boolean', true, NOW(), NOW()),
-    ('ATTENDANCE_GPS_RADIUS_METERS', 'attendance', '100', 'Default GPS radius for attendance validation in meters', 'number', true, NOW(), NOW())
+    ('ATTENDANCE_GPS_RADIUS_METERS', 'attendance', '100', 'Default GPS radius for attendance validation in meters', 'number', true, NOW(), NOW()),
+    ('DEPARTMENTS', 'organization', '["Front Office", "Housekeeping", "Kitchen", "Farm", "Grounds", "Admin", "Engineering", "HR", "Finance"]', 'Organization departments available across the system for jobs, employees, reports, and filters', 'array', true, NOW(), NOW())
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- ============================================

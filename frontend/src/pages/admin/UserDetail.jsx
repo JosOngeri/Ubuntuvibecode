@@ -32,8 +32,9 @@ export default function UserDetail() {
 
   const handleDelete = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
-    
-    userAPI.delete(userId)
+
+    userAPI
+      .delete(userId)
       .then(() => {
         toast.success('User deleted successfully');
         navigate('/admin/users');
@@ -63,7 +64,7 @@ export default function UserDetail() {
     );
   }
 
-  const getRoleBadgeColor = (role) => {
+  const getRoleBadgeColor = role => {
     const colors = {
       admin: 'bg-red-100 text-red-800',
       hr: 'bg-purple-100 text-purple-800',
@@ -73,7 +74,7 @@ export default function UserDetail() {
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
 
-  const getStatusBadgeColor = (status) => {
+  const getStatusBadgeColor = status => {
     const colors = {
       active: 'bg-green-100 text-green-800',
       inactive: 'bg-gray-100 text-gray-800',
@@ -113,7 +114,9 @@ export default function UserDetail() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Username */}
             <div>
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Username</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Username
+              </label>
               <p className="text-lg font-semibold mt-1">{user.username}</p>
             </div>
 
@@ -133,7 +136,9 @@ export default function UserDetail() {
                 Role
               </label>
               <div className="mt-1">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}>
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}
+                >
                   {user.role}
                 </span>
               </div>
@@ -141,9 +146,13 @@ export default function UserDetail() {
 
             {/* Status */}
             <div>
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Status
+              </label>
               <div className="mt-1">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(user.status)}`}>
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(user.status)}`}
+                >
                   {user.status}
                 </span>
               </div>
@@ -162,7 +171,9 @@ export default function UserDetail() {
 
             {/* Updated At */}
             <div>
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Updated At</label>
+              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                Updated At
+              </label>
               <p className="text-lg font-semibold mt-1">
                 {user.updatedAt ? new Date(user.updatedAt).toLocaleDateString() : 'N/A'}
               </p>
@@ -171,16 +182,10 @@ export default function UserDetail() {
 
           {/* Actions */}
           <div className="flex gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/users')}
-            >
+            <Button variant="outline" onClick={() => navigate('/admin/users')}>
               Back to Users
             </Button>
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-            >
+            <Button variant="danger" onClick={handleDelete}>
               Delete User
             </Button>
           </div>

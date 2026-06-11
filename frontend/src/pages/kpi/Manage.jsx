@@ -1,110 +1,120 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { toast } from 'react-toastify'
-import DashboardLayout from '../../components/DashboardLayout'
-import { employeeAPI, kpiAPI } from '../../services/api'
-import { KpiEmptyState } from '../../components/common/EmptyState'
-import { useAuth } from '../../contexts/AuthContext'
+import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
+import DashboardLayout from '../../components/DashboardLayout';
+import { kpiAPI } from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
+import { KpiEmptyState } from '../../components/common/EmptyState';
+import { useAuth } from '../../contexts/AuthContext';
 
 const currentQuarter = () => {
-  const month = new Date().getMonth()
-  return `Q${Math.floor(month / 3) + 1}`
-}
+  const month = new Date().getMonth();
+  return `Q${Math.floor(month / 3) + 1}`;
+};
 
 export default function KpiManage() {
-  const { user } = useAuth()
-  const [employees, setEmployees] = useState([])
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
-  const [kpis, setKpis] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [savingGoal, setSavingGoal] = useState(false)
-  const [savingScore, setSavingScore] = useState(false)
-  const [error, setError] = useState('')
-  const [activeKpi, setActiveKpi] = useState(null)
-  const [goalForm, setGoalForm] = useState({ title: '', description: '', targetValue: '', maxScore: '100', period: currentQuarter() })
-  const [scoreForm, setScoreForm] = useState({ achievedValue: '' })
+  const { user } = useAuth();
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [kpis, setKpis] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [savingScore, setSavingScore] = useState(false);
+  const [error, setError] = useState('');
+  const [activeKpi, setActiveKpi] = useState(null);
+  const [goalForm, setGoalForm] = useState({
+    title: '',
+    description: '',
+    targetValue: '',
+    maxScore: '100',
+    period: currentQuarter(),
+  });
+  const [scoreForm, setScoreForm] = useState({ achievedValue: '' });
 
   const selectedEmployee = useMemo(
-    () => employees.find((employee) => String(employee.id || employee._id) === String(selectedEmployeeId)),
-    [employees, selectedEmployeeId],
-  )
+    () =>
+      employees.find(
+        employee => String(employee.id || employee._id) === String(selectedEmployeeId)
+      ),
+    [employees, selectedEmployeeId]
+  );
 
   const loadData = async () => {
     try {
-      setLoading(true)
-      const response = await employeeAPI.getAll()
-      const employeeList = response.data || []
-      
+      setLoading(true);
+      const response = await employeeAPI.getAll();
+      const employeeList = response.data || [];
+
       // Filter employees based on user role and hierarchy
-      let filteredEmployees = []
+      let filteredEmployees = [];
       if (user?.role === 'admin') {
         // Admin can evaluate managers
-        filteredEmployees = employeeList.filter(emp => emp.role === 'manager')
+        filteredEmployees = employeeList.filter(emp => emp.role === 'manager');
       } else if (user?.role === 'manager') {
         // Manager can evaluate supervisors
-        filteredEmployees = employeeList.filter(emp => emp.role === 'supervisor')
+        filteredEmployees = employeeList.filter(emp => emp.role === 'supervisor');
       } else if (user?.role === 'supervisor') {
         // Supervisor can evaluate employees
-        filteredEmployees = employeeList.filter(emp => emp.role === 'employee')
+        filteredEmployees = employeeList.filter(emp => emp.role === 'employee');
       } else {
         // Other roles cannot evaluate
-        filteredEmployees = []
+        filteredEmployees = [];
       }
-      
-      setEmployees(filteredEmployees)
-      if (filteredEmployees.length > 0) {
-        const firstEmployeeId = String(filteredEmployees[0].id || filteredEmployees[0]._id)
-        setSelectedEmployeeId((currentValue) => currentValue || firstEmployeeId)
-      }
-      setError('')
-    } catch (loadError) {
-      console.error('Failed to load KPI manage data', loadError)
-      setError(loadError.response?.data?.error || 'Failed to load employees')
-      toast.error('Failed to load employees')
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const loadEmployeeKpis = async (employeeId) => {
-    if (!employeeId) return
-    try {
-      const response = await kpiAPI.getEmployeeKPIs(employeeId)
-      setKpis(response.data || [])
+      setEmployees(filteredEmployees);
+      if (filteredEmployees.length > 0) {
+        const firstEmployeeId = String(filteredEmployees[0].id || filteredEmployees[0]._id);
+        setSelectedEmployeeId(currentValue => currentValue || firstEmployeeId);
+      }
+      setError('');
     } catch (loadError) {
-      console.error('Failed to load employee KPIs', loadError)
-      toast.error('Failed to load KPI assignments')
+      console.error('Failed to load KPI manage data', loadError);
+      setError(loadError.response?.data?.error || 'Failed to load employees');
+      toast.error('Failed to load employees');
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const loadEmployeeKpis = async employeeId => {
+    if (!employeeId) return;
+    try {
+      const response = await kpiAPI.getEmployeeKPIs(employeeId);
+      setKpis(response.data || []);
+    } catch (loadError) {
+      console.error('Failed to load employee KPIs', loadError);
+      toast.error('Failed to load KPI assignments');
+    }
+  };
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   useEffect(() => {
     if (selectedEmployeeId) {
-      loadEmployeeKpis(selectedEmployeeId)
+      loadEmployeeKpis(selectedEmployeeId);
     }
-  }, [selectedEmployeeId])
+  }, [selectedEmployeeId]);
 
-  const handleGoalChange = (event) => {
-    const { name, value } = event.target
-    setGoalForm((current) => ({ ...current, [name]: value }))
-  }
+  const handleGoalChange = event => {
+    const { name, value } = event.target;
+    setGoalForm(current => ({ ...current, [name]: value }));
+  };
 
-  const handleScoreChange = (event) => {
-    const { name, value } = event.target
-    setScoreForm((current) => ({ ...current, [name]: value }))
-  }
+  const handleScoreChange = event => {
+    const { name, value } = event.target;
+    setScoreForm(current => ({ ...current, [name]: value }));
+  };
 
-  const assignGoal = async (event) => {
-    event.preventDefault()
+  const assignGoal = async event => {
+    event.preventDefault();
     if (!selectedEmployeeId) {
-      toast.error('Select a team member first')
-      return
+      toast.error('Select a team member first');
+      return;
     }
 
     try {
-      setSavingGoal(true)
+      setSavingGoal(true);
       await kpiAPI.assignKPI({
         employeeId: selectedEmployeeId,
         evaluatorId: user?.id,
@@ -113,74 +123,88 @@ export default function KpiManage() {
         title: goalForm.title,
         description: goalForm.description,
         maxScore: goalForm.maxScore,
-      })
-      toast.success('KPI goal assigned')
-      setGoalForm({ title: '', description: '', targetValue: '', maxScore: '100', period: currentQuarter() })
-      await loadEmployeeKpis(selectedEmployeeId)
+      });
+      toast.success('KPI goal assigned');
+      setGoalForm({
+        title: '',
+        description: '',
+        targetValue: '',
+        maxScore: '100',
+        period: currentQuarter(),
+      });
+      await loadEmployeeKpis(selectedEmployeeId);
     } catch (assignError) {
-      const message = assignError.response?.data?.error || assignError.message || 'Failed to assign KPI'
-      toast.error(message)
+      const message =
+        assignError.response?.data?.error || assignError.message || 'Failed to assign KPI';
+      toast.error(message);
     } finally {
-      setSavingGoal(false)
+      setSavingGoal(false);
     }
-  }
+  };
 
   const getEvaluationInfo = () => {
     if (user?.role === 'admin') {
       return {
         title: 'Admin Evaluation',
-        description: 'As an Admin, you can evaluate Managers on organizational leadership, business development, and strategic planning.',
-        canEvaluate: employees.length > 0
-      }
+        description:
+          'As an Admin, you can evaluate Managers on organizational leadership, business development, and strategic planning.',
+        canEvaluate: employees.length > 0,
+      };
     } else if (user?.role === 'manager') {
       return {
         title: 'Manager Evaluation',
-        description: 'As a Manager, you can evaluate Supervisors on team leadership, resource management, and process improvement.',
-        canEvaluate: employees.length > 0
-      }
+        description:
+          'As a Manager, you can evaluate Supervisors on team leadership, resource management, and process improvement.',
+        canEvaluate: employees.length > 0,
+      };
     } else if (user?.role === 'supervisor') {
       return {
         title: 'Supervisor Evaluation',
-        description: 'As a Supervisor, you can evaluate Employees on task management, performance coaching, and work quality.',
-        canEvaluate: employees.length > 0
-      }
+        description:
+          'As a Supervisor, you can evaluate Employees on task management, performance coaching, and work quality.',
+        canEvaluate: employees.length > 0,
+      };
     } else {
       return {
         title: 'No Evaluation Access',
-        description: 'Your role does not have evaluation permissions. Please contact your administrator.',
-        canEvaluate: false
-      }
+        description:
+          'Your role does not have evaluation permissions. Please contact your administrator.',
+        canEvaluate: false,
+      };
     }
-  }
+  };
 
-  const openScoreModal = (kpi) => {
-    setActiveKpi(kpi)
-    setScoreForm({ achievedValue: kpi.achieved_value ?? '' })
-  }
+  const openScoreModal = kpi => {
+    setActiveKpi(kpi);
+    setScoreForm({ achievedValue: kpi.achieved_value ?? '' });
+  };
 
-  const evaluateGoal = async (event) => {
-    event.preventDefault()
-    if (!activeKpi) return
+  const evaluateGoal = async event => {
+    event.preventDefault();
+    if (!activeKpi) return;
 
     try {
-      setSavingScore(true)
-      await kpiAPI.evaluateKPI(activeKpi.id, { achievedValue: scoreForm.achievedValue })
-      toast.success('KPI score updated')
-      setActiveKpi(null)
-      setScoreForm({ achievedValue: '' })
-      await loadEmployeeKpis(selectedEmployeeId)
+      setSavingScore(true);
+      await kpiAPI.evaluateKPI(activeKpi.id, { achievedValue: scoreForm.achievedValue });
+      toast.success('KPI score updated');
+      setActiveKpi(null);
+      setScoreForm({ achievedValue: '' });
+      await loadEmployeeKpis(selectedEmployeeId);
     } catch (evaluateError) {
-      const message = evaluateError.response?.data?.error || evaluateError.message || 'Failed to update score'
-      toast.error(message)
+      const message =
+        evaluateError.response?.data?.error || evaluateError.message || 'Failed to update score';
+      toast.error(message);
     } finally {
-      setSavingScore(false)
+      setSavingScore(false);
     }
-  }
+  };
 
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">KPI Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
+          KPI Management
+        </h1>
         <div className="mt-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -198,10 +222,9 @@ export default function KpiManage() {
           )}
         </div>
         <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-          {getEvaluationInfo().canEvaluate 
-            ? `Select a team member to evaluate, assign quarterly goals, and record achieved metrics at the end of the cycle.`
-            : 'Contact your administrator if you need evaluation access.'
-          }
+          {getEvaluationInfo().canEvaluate
+            ? 'Select a team member to evaluate, assign quarterly goals, and record achieved metrics at the end of the cycle.'
+            : 'Contact your administrator if you need evaluation access.'}
         </p>
       </div>
 
@@ -221,16 +244,20 @@ export default function KpiManage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Assign Goal</h2>
             <label className="mt-4 block">
-              <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Team member</span>
+              <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                Team member
+              </span>
               <select
                 value={selectedEmployeeId}
-                onChange={(event) => setSelectedEmployeeId(event.target.value)}
+                onChange={event => setSelectedEmployeeId(event.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               >
                 <option value="">Select employee</option>
-                {employees.map((employee) => (
+                {employees.map(employee => (
                   <option key={employee.id || employee._id} value={employee.id || employee._id}>
-                    {[employee.firstName, employee.lastName].filter(Boolean).join(' ') || employee.email || employee.id}
+                    {[employee.firstName, employee.lastName].filter(Boolean).join(' ') ||
+                      employee.email ||
+                      employee.id}
                   </option>
                 ))}
               </select>
@@ -239,7 +266,9 @@ export default function KpiManage() {
             <form onSubmit={assignGoal} className="mt-5 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Title</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Title
+                  </span>
                   <input
                     name="title"
                     value={goalForm.title}
@@ -250,7 +279,9 @@ export default function KpiManage() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Target metric</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Target metric
+                  </span>
                   <input
                     name="targetValue"
                     value={goalForm.targetValue}
@@ -266,20 +297,26 @@ export default function KpiManage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Quarter</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Quarter
+                  </span>
                   <select
                     name="period"
                     value={goalForm.period}
                     onChange={handleGoalChange}
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                   >
-                    {['Q1', 'Q2', 'Q3', 'Q4'].map((quarter) => (
-                      <option key={quarter} value={quarter}>{quarter}</option>
+                    {['Q1', 'Q2', 'Q3', 'Q4'].map(quarter => (
+                      <option key={quarter} value={quarter}>
+                        {quarter}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Max score</span>
+                  <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                    Max score
+                  </span>
                   <input
                     name="maxScore"
                     value={goalForm.maxScore}
@@ -293,7 +330,9 @@ export default function KpiManage() {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Description</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Description
+                </span>
                 <textarea
                   name="description"
                   value={goalForm.description}
@@ -317,9 +356,13 @@ export default function KpiManage() {
           <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">Current Goals</h2>
+                <h2 className="text-lg font-semibold text-slate-950 dark:text-white">
+                  Current Goals
+                </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
-                  {selectedEmployee ? `Showing goals for ${[selectedEmployee.firstName, selectedEmployee.lastName].filter(Boolean).join(' ')}` : 'Select a team member'}
+                  {selectedEmployee
+                    ? `Showing goals for ${[selectedEmployee.firstName, selectedEmployee.lastName].filter(Boolean).join(' ')}`
+                    : 'Select a team member'}
                 </p>
               </div>
               <button
@@ -336,14 +379,21 @@ export default function KpiManage() {
                   <KpiEmptyState />
                 </div>
               ) : (
-                kpis.map((kpi) => {
-                  const progress = Math.max(0, Math.min(Number(kpi.final_score || 0), 100))
+                kpis.map(kpi => {
+                  const progress = Math.max(0, Math.min(Number(kpi.final_score || 0), 100));
                   return (
-                    <div key={kpi.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+                    <div
+                      key={kpi.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
+                    >
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <div className="text-sm font-semibold text-slate-950 dark:text-white">{kpi.definition_title}</div>
-                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{kpi.period} · Target {kpi.target_value}</div>
+                          <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                            {kpi.definition_title}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                            {kpi.period} · Target {kpi.target_value}
+                          </div>
                         </div>
                         <button
                           onClick={() => openScoreModal(kpi)}
@@ -353,14 +403,17 @@ export default function KpiManage() {
                         </button>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-                        <div className="h-2 rounded-full bg-emerald-500 transition-all" style={{ width: `${progress}%` }} />
+                        <div
+                          className="h-2 rounded-full bg-emerald-500 transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
                       </div>
                       <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                         <span>Score: {progress}%</span>
                         <span>Status: {kpi.status || 'Pending'}</span>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
             </div>
@@ -373,17 +426,26 @@ export default function KpiManage() {
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">Record Achieved Metric</h3>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{activeKpi.definition_title}</p>
+                <h3 className="text-xl font-semibold text-slate-950 dark:text-white">
+                  Record Achieved Metric
+                </h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                  {activeKpi.definition_title}
+                </p>
               </div>
-              <button onClick={() => setActiveKpi(null)} className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
+              <button
+                onClick={() => setActiveKpi(null)}
+                className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+              >
                 Close
               </button>
             </div>
 
             <form onSubmit={evaluateGoal} className="mt-5 space-y-4">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">Achieved metric</span>
+                <span className="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Achieved metric
+                </span>
                 <input
                   name="achievedValue"
                   value={scoreForm.achievedValue}
@@ -415,5 +477,5 @@ export default function KpiManage() {
         </div>
       )}
     </DashboardLayout>
-  )
+  );
 }

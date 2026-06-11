@@ -216,20 +216,23 @@ const evaluateKPI = async (req, res) => {
     }
 
     const { rows } = await query(
-      `SELECT ek.*, kd.max_score
+      `SELECT ek.target_value, kd.max_score
        FROM employee_kpis ek
        JOIN kpi_definitions kd ON kd.id = ek.definition_id
-       WHERE ek.id = $1 LIMIT 1`,
+       WHERE ek.id = $1`,
       [id]
     );
 
-    const kpi = rows[0];
-    if (!kpi) {
-      return res.status(404).json({ error: 'Employee KPI assignment not found' });
+    if (!rows[0]) {
+      logger.warn('kpi.evaluate', 'KPI not found', { id });
+      return res.status(404).json({ error: 'KPI assignment not found' });
     }
 
-    const finalScore = kpi.target_value > 0
-      ? Number(((achievedValue / Number(kpi.target_value)) * 100).toFixed(2))
+    const targetValue = Number(rows[0].target_value);
+    const maxScore = Number(rows[0].max_score);
+
+    const finalScore = targetValue > 0
+      ? Math.round((achievedValue / targetValue) * 100)
       : 0;
 
     const status = 'Completed';
@@ -269,10 +272,14 @@ const getAllAssignedKPIs = async (req, res) => {
               kd.description AS definition_description,
               kd.max_score AS definition_max_score,
               pb.bonus_amount,
-              pb.status AS bonus_status
+              pb.status AS bonus_status,
+              e.first_name,
+              e.last_name,
+              e.email
        FROM employee_kpis ek
        JOIN kpi_definitions kd ON kd.id = ek.definition_id
        LEFT JOIN pending_bonuses pb ON pb.employee_kpi_id = ek.id
+       LEFT JOIN employees e ON e.id = ek.employee_id
        ORDER BY ek.created_at DESC`
     );
 
@@ -301,20 +308,51 @@ const bulkAssignKPI = async (req, res) => {
       return res.status(400).json({ error: 'definitionId, evaluatorId, period, and targetValue are required' });
     }
 
-    const results = [];
-    for (const empId of employeeIds) {
-      const id = normalizeId(empId);
-      if (!id) continue;
-      const { rows } = await query(
-        `INSERT INTO employee_kpis (employee_id, evaluator_id, definition_id, period, target_value, status, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, 'Pending', NOW(), NOW()) RETURNING *`,
-        [id, evId, defId, p, tv]
-      );
-      if (rows[0]) results.push(rows[0]);
+    const definitionResult = await query('SELECT id FROM kpi_definitions WHERE id = $1 LIMIT 1', [defId]);
+    if (!definitionResult.rows[0]) {
+      return res.status(404).json({ error: 'KPI definition not found' });
     }
 
-    logger.info('kpi.bulkAssign', `Assigned ${results.length} KPIs`);
-    return res.status(201).json({ assigned: results.length, results });
+    const evaluatorResult = await query('SELECT id FROM users WHERE id = $1 LIMIT 1', [evId]);
+    if (!evaluatorResult.rows[0]) {
+      return res.status(404).json({ error: 'Evaluator not found' });
+    }
+
+    let assignedCount = 0;
+    const errors = [];
+
+    for (const empId of employeeIds) {
+      const normalizedEmpId = normalizeId(empId);
+      if (!normalizedEmpId) {
+        errors.push({ employeeId: empId, error: 'Invalid employee ID' });
+        continue;
+      }
+
+      try {
+        const empResult = await query('SELECT id FROM employees WHERE id = $1 LIMIT 1', [normalizedEmpId]);
+        if (!empResult.rows[0]) {
+          errors.push({ employeeId: empId, error: 'Employee not found' });
+          continue;
+        }
+
+        await query(
+          `INSERT INTO employee_kpis (employee_id, evaluator_id, definition_id, period, target_value, status, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, 'Pending', NOW(), NOW())`,
+          [normalizedEmpId, evId, defId, p, tv]
+        );
+        assignedCount++;
+      } catch (err) {
+        errors.push({ employeeId: empId, error: err.message });
+      }
+    }
+
+    logger.info('kpi.bulkAssign', 'Completed', { assigned: assignedCount, total: employeeIds.length, errors: errors.length });
+    return res.json({
+      success: true,
+      assigned: assignedCount,
+      total: employeeIds.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
   } catch (err) {
     logger.error('kpi.bulkAssign', 'DB error', err);
     return res.status(500).json({ error: err.message });
@@ -322,45 +360,71 @@ const bulkAssignKPI = async (req, res) => {
 };
 
 const selfEvaluateKPI = async (req, res) => {
+  logger.info('kpi.selfEvaluate', 'Entry', { id: req.params.id, by: req.user?.id });
   try {
     const id = normalizeId(req.params.id);
     const achievedValue = Number(req.body.achievedValue);
-    const notes = toOptionalText(req.body.notes);
 
     if (!id || Number.isNaN(achievedValue) || achievedValue < 0) {
+      logger.warn('kpi.selfEvaluate', 'Validation failed', { id, achievedValue });
       return res.status(400).json({ error: 'A valid KPI id and achievedValue are required' });
     }
 
     const { rows } = await query(
-      `UPDATE employee_kpis
-       SET achieved_value = $1, status = 'Pending Review', notes = $2, updated_at = NOW()
-       WHERE id = $3 RETURNING *`,
-      [achievedValue, notes || null, id]
+      `SELECT ek.target_value, kd.max_score, ek.employee_id
+       FROM employee_kpis ek
+       JOIN kpi_definitions kd ON kd.id = ek.definition_id
+       WHERE ek.id = $1`,
+      [id]
     );
 
     if (!rows[0]) {
-      return res.status(404).json({ error: 'Employee KPI assignment not found' });
+      logger.warn('kpi.selfEvaluate', 'KPI not found', { id });
+      return res.status(404).json({ error: 'KPI assignment not found' });
     }
 
-    return res.json(rows[0]);
+    const targetValue = Number(rows[0].target_value);
+    const maxScore = Number(rows[0].max_score);
+    const employeeId = rows[0].employee_id;
+
+    if (String(employeeId) !== String(req.user?.employeeId) && String(employeeId) !== String(req.user?.id)) {
+      logger.warn('kpi.selfEvaluate', 'Unauthorized', { id, employeeId, userId: req.user?.id });
+      return res.status(403).json({ error: 'You can only evaluate your own KPIs' });
+    }
+
+    const finalScore = targetValue > 0
+      ? Math.round((achievedValue / targetValue) * 100)
+      : 0;
+
+    const status = 'Pending Review';
+    const updateResult = await query(
+      `UPDATE employee_kpis
+       SET achieved_value = $1, final_score = $2, status = $3, updated_at = NOW()
+       WHERE id = $4 RETURNING *`,
+      [achievedValue, finalScore, status, id]
+    );
+
+    logger.info('kpi.selfEvaluate', 'Self-evaluated', { id, finalScore });
+    return res.json(updateResult.rows[0]);
   } catch (err) {
+    logger.error('kpi.selfEvaluate', 'DB error', err, { id: req.params.id });
     return res.status(500).json({ error: err.message });
   }
 };
 
 const getEmployeeKPIs = async (req, res) => {
-  logger.info('kpi.getForEmployee', 'Entry', { employeeId: req.params.id });
+  logger.info('kpi.getEmployeeKPIs', 'Entry', { employeeId: req.params.id });
   try {
     const employeeId = normalizeId(req.params.id);
     if (!employeeId) {
-      logger.warn('kpi.getForEmployee', 'Invalid id', { id: req.params.id });
-      return res.status(400).json({ error: 'Invalid employee id' });
+      return res.status(400).json({ error: 'Invalid employee ID' });
     }
 
     const { rows } = await query(
       `SELECT ek.id,
               ek.employee_id,
               ek.evaluator_id,
+              ek.definition_id,
               ek.period,
               ek.target_value,
               ek.achieved_value,

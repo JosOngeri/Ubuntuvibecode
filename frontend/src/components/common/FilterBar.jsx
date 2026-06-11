@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useSettings } from '../../contexts/SettingsContext';
 import { BsFunnel, BsX, BsCalendar, BsSearch } from 'react-icons/bs';
 
-const FilterBar = ({ 
-  filters = [], 
-  onFilterChange = null, 
-  showPresets = true, 
+const FilterBar = ({
+  filters = [],
+  onFilterChange = null,
+  showPresets = true,
   presets = [],
-  onPresetSelect = null 
+  onPresetSelect = null,
 }) => {
   const { getComponentSetting } = useSettings();
 
@@ -27,7 +27,7 @@ const FilterBar = ({
     }
   };
 
-  const handleRemoveFilter = (key) => {
+  const handleRemoveFilter = key => {
     const newFilters = { ...activeFilters };
     delete newFilters[key];
     setActiveFilters(newFilters);
@@ -45,7 +45,7 @@ const FilterBar = ({
     }
   };
 
-  const handlePresetSelect = (preset) => {
+  const handlePresetSelect = preset => {
     setActiveFilters(preset.filters);
     if (onPresetSelect) {
       onPresetSelect(preset);
@@ -55,7 +55,8 @@ const FilterBar = ({
     }
   };
 
-  const activeFilterCount = Object.keys(activeFilters).length + (searchQuery ? 1 : 0) + (dateRange.start ? 1 : 0);
+  const activeFilterCount =
+    Object.keys(activeFilters).length + (searchQuery ? 1 : 0) + (dateRange.start ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -68,7 +69,7 @@ const FilterBar = ({
             type="text"
             placeholder="Search..."
             value={searchQuery}
-            onChange={(e) => {
+            onChange={e => {
               setSearchQuery(e.target.value);
               if (onFilterChange) {
                 onFilterChange({ ...activeFilters, search: e.target.value });
@@ -84,7 +85,7 @@ const FilterBar = ({
           <input
             type="date"
             value={dateRange.start || ''}
-            onChange={(e) => {
+            onChange={e => {
               const newRange = { ...dateRange, start: e.target.value };
               setDateRange(newRange);
               if (onFilterChange) {
@@ -97,7 +98,7 @@ const FilterBar = ({
           <input
             type="date"
             value={dateRange.end || ''}
-            onChange={(e) => {
+            onChange={e => {
               const newRange = { ...dateRange, end: e.target.value };
               setDateRange(newRange);
               if (onFilterChange) {
@@ -166,7 +167,7 @@ const FilterBar = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filters.map((filter) => (
+            {filters.map(filter => (
               <div key={filter.key}>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   {filter.label}
@@ -174,11 +175,11 @@ const FilterBar = ({
                 {filter.type === 'select' ? (
                   <select
                     value={activeFilters[filter.key] || ''}
-                    onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                    onChange={e => handleFilterChange(filter.key, e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   >
                     <option value="">All</option>
-                    {filter.options.map((option) => (
+                    {filter.options.map(option => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -186,12 +187,12 @@ const FilterBar = ({
                   </select>
                 ) : filter.type === 'multiselect' ? (
                   <div className="space-y-1">
-                    {filter.options.map((option) => (
+                    {filter.options.map(option => (
                       <label key={option.value} className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
                           checked={(activeFilters[filter.key] || []).includes(option.value)}
-                          onChange={(e) => {
+                          onChange={e => {
                             const current = activeFilters[filter.key] || [];
                             const newValues = e.target.checked
                               ? [...current, option.value]
@@ -208,14 +209,14 @@ const FilterBar = ({
                   <input
                     type="date"
                     value={activeFilters[filter.key] || ''}
-                    onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                    onChange={e => handleFilterChange(filter.key, e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 ) : (
                   <input
                     type="text"
                     value={activeFilters[filter.key] || ''}
-                    onChange={(e) => handleFilterChange(filter.key, e.target.value)}
+                    onChange={e => handleFilterChange(filter.key, e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                   />
                 )}

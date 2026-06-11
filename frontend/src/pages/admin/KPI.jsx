@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getKPIs, createKPI, updateKPI, deleteKPI } from '../../services/kpi';
-import api, { employeeAPI } from '../../services/api';
+import api from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
 import PageInfoPanel from '../../components/common/PageInfoPanel';
 import { KpiEmptyState } from '../../components/common/EmptyState';
-import Card from '../../components/common/Card'
-import DashboardLayout from '../../components/DashboardLayout'
-import Button from '../../components/common/Button'
-import Input from '../../components/common/Input'
-import Table from '../../components/common/Table'
-import Modal from '../../components/common/Modal'
-import { toast } from 'react-toastify'
-import { downloadPdfReport } from '../../utils/reportExport'
+import Card from '../../components/common/Card';
+import DashboardLayout from '../../components/DashboardLayout';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import Table from '../../components/common/Table';
+import Modal from '../../components/common/Modal';
+import { toast } from 'react-toastify';
+import { downloadPdfReport } from '../../utils/reportExport';
 
 export default function KPI({ standalone = true }) {
   const navigate = useNavigate();
@@ -29,11 +30,21 @@ export default function KPI({ standalone = true }) {
 
   // Assign KPI Form State
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [assignForm, setAssignForm] = useState({ employee_id: '', kpi_definition_id: '', period: '', target_value: '' });
+  const [assignForm, setAssignForm] = useState({
+    employee_id: '',
+    kpi_definition_id: '',
+    period: '',
+    target_value: '',
+  });
 
   // Bulk Assign State
   const [showBulkModal, setShowBulkModal] = useState(false);
-  const [bulkForm, setBulkForm] = useState({ employeeIds: [], kpi_definition_id: '', period: '', target_value: '' });
+  const [bulkForm, setBulkForm] = useState({
+    employeeIds: [],
+    kpi_definition_id: '',
+    period: '',
+    target_value: '',
+  });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,9 +54,9 @@ export default function KPI({ standalone = true }) {
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
 
-  const handleSort = (field) => {
+  const handleSort = field => {
     if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
       setSortDirection('asc');
@@ -100,13 +111,12 @@ export default function KPI({ standalone = true }) {
       const [defsRes, empRes, globalRes] = await Promise.allSettled([
         getKPIs().catch(() => ({ data: [] })),
         employeeAPI.getAll().catch(() => ({ data: [] })),
-        api.get('/api/kpis/all').catch(() => ({ data: [] }))
+        api.get('/api/kpis/all').catch(() => ({ data: [] })),
       ]);
 
       if (defsRes.status === 'fulfilled') setKpiDefs(defsRes.value.data || []);
       if (empRes.status === 'fulfilled') setEmployees(empRes.value.data || []);
       if (globalRes.status === 'fulfilled') setEmployeeKpis(globalRes.value.data || []);
-      
     } catch (error) {
       console.error('Failed to load KPI data:', error);
       toast.error('Failed to load KPI data');
@@ -116,7 +126,7 @@ export default function KPI({ standalone = true }) {
   };
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
-  
+
   const handleSubmit = async e => {
     e.preventDefault();
     try {
@@ -124,7 +134,7 @@ export default function KPI({ standalone = true }) {
       const apiPayload = {
         title: form.name,
         description: form.description,
-        maxScore: Number(form.target)
+        maxScore: Number(form.target),
       };
 
       if (editing) {
@@ -134,35 +144,35 @@ export default function KPI({ standalone = true }) {
         await createKPI(apiPayload);
         toast.success('KPI definition created');
       }
-      
+
       // Reset form
       setForm({ name: '', description: '', target: '' });
       setEditing(null);
       setShowDefModal(false);
-      
+
       // Refresh data
       const res = await getKPIs();
       setKpiDefs(res.data || []);
     } catch (err) {
-      console.error("API Error:", err.response?.data || err.message);
+      console.error('API Error:', err.response?.data || err.message);
       toast.error(err.response?.data?.error || 'Failed to save KPI definition');
     }
   };
 
-  const handleEdit = kpi => { 
+  const handleEdit = kpi => {
     setForm({
       name: kpi.title || kpi.name || '',
       description: kpi.description || '',
-      target: kpi.maxScore || kpi.max_score || kpi.target || ''
-    }); 
-    setEditing(kpi._id || kpi.id); 
+      target: kpi.maxScore || kpi.max_score || kpi.target || '',
+    });
+    setEditing(kpi._id || kpi.id);
     setShowDefModal(true);
   };
 
-  const handleDelete = async id => { 
+  const handleDelete = async id => {
     if (!window.confirm('Are you sure you want to delete this KPI definition?')) return;
     try {
-      await deleteKPI(id); 
+      await deleteKPI(id);
       toast.success('KPI deleted');
       const res = await getKPIs();
       setKpiDefs(res.data || []);
@@ -171,10 +181,14 @@ export default function KPI({ standalone = true }) {
     }
   };
 
-  const getEmployeeName = (empId) => {
+  const getEmployeeName = empId => {
     if (!empId) return 'Unassigned';
-    const emp = employees.find(e => String(e.id) === String(empId) || String(e._id) === String(empId));
-    return emp ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.username || emp.email : empId;
+    const emp = employees.find(
+      e => String(e.id) === String(empId) || String(e._id) === String(empId)
+    );
+    return emp
+      ? `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.username || emp.email
+      : empId;
   };
 
   const handleAssignSubmit = async e => {
@@ -183,12 +197,12 @@ export default function KPI({ standalone = true }) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const evaluatorId = currentUser.id || currentUser._id || assignForm.employee_id;
 
-      await api.post('/api/kpis/assign', { 
+      await api.post('/api/kpis/assign', {
         employeeId: assignForm.employee_id,
         definitionId: assignForm.kpi_definition_id,
         evaluatorId: evaluatorId,
         period: assignForm.period,
-        targetValue: Number(assignForm.target_value)
+        targetValue: Number(assignForm.target_value),
       });
       toast.success('KPI assigned successfully');
       setShowAssignModal(false);
@@ -199,7 +213,7 @@ export default function KPI({ standalone = true }) {
     }
   };
 
-  const handleBulkAssign = async (e) => {
+  const handleBulkAssign = async e => {
     e.preventDefault();
     try {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -211,7 +225,9 @@ export default function KPI({ standalone = true }) {
         definitionId: bulkForm.kpi_definition_id,
         evaluatorId,
         period: bulkForm.period,
-        targetValue: Number(bulkForm.target_value || def?.target || def?.maxScore || def?.max_score || 100)
+        targetValue: Number(
+          bulkForm.target_value || def?.target || def?.maxScore || def?.max_score || 100
+        ),
       });
       toast.success(`KPI assigned to ${bulkForm.employeeIds.length} employees`);
       setShowBulkModal(false);
@@ -228,10 +244,10 @@ export default function KPI({ standalone = true }) {
       const empName = String(getEmployeeName(empId)).toLowerCase();
       const kpiTitle = String(kpi.definition_title || kpi.title || '').toLowerCase();
       const search = searchQuery.toLowerCase();
-      
+
       const matchesSearch = !search || empName.includes(search) || kpiTitle.includes(search);
       const matchesStatus = statusFilter === 'all' || (kpi.status || 'Pending') === statusFilter;
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [employeeKpis, searchQuery, statusFilter, employees]);
@@ -242,31 +258,53 @@ export default function KPI({ standalone = true }) {
       title: 'Company Global KPI Performance Report',
       rows: filteredEmployeeKpis,
       columns: [
-        { label: 'Employee', getValue: (row) => getEmployeeName(row.employee_id || row.employeeId || row.employee || row.user_id) },
-        { label: 'KPI Title', getValue: (row) => row.definition_title || row.title || 'N/A' },
-        { label: 'Period', getValue: (row) => row.period || '' },
-        { label: 'Target', getValue: (row) => String(row.target_value || '') },
-        { label: 'Achieved', getValue: (row) => String(row.achieved_value || '0') },
-        { label: 'Score (%)', getValue: (row) => String(row.final_score || '0') },
-        { label: 'Status', getValue: (row) => row.status || 'Pending' }
+        {
+          label: 'Employee',
+          getValue: row =>
+            getEmployeeName(row.employee_id || row.employeeId || row.employee || row.user_id),
+        },
+        { label: 'KPI Title', getValue: row => row.definition_title || row.title || 'N/A' },
+        { label: 'Period', getValue: row => row.period || '' },
+        { label: 'Target', getValue: row => String(row.target_value || '') },
+        { label: 'Achieved', getValue: row => String(row.achieved_value || '0') },
+        { label: 'Score (%)', getValue: row => String(row.final_score || '0') },
+        { label: 'Status', getValue: row => row.status || 'Pending' },
       ],
       metadata: [
         { label: 'Status Filter', value: statusFilter === 'all' ? 'All' : statusFilter },
-        { label: 'Total Records', value: String(filteredEmployeeKpis.length) }
+        { label: 'Total Records', value: String(filteredEmployeeKpis.length) },
       ],
     });
   };
 
   const defColumns = [
-    { key: 'name', label: 'KPI Name / Title', sortable: true, render: (_, row) => row.name || row.title },
+    {
+      key: 'name',
+      label: 'KPI Name / Title',
+      sortable: true,
+      render: (_, row) => row.name || row.title,
+    },
     { key: 'description', label: 'Description', sortable: true },
-    { key: 'target', label: 'Target Metric', sortable: true, render: (_, row) => row.target || row.maxScore || row.max_score },
-    { key: 'actions', label: 'Actions', render: (_, row) => (
+    {
+      key: 'target',
+      label: 'Target Metric',
+      sortable: true,
+      render: (_, row) => row.target || row.maxScore || row.max_score,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (_, row) => (
         <div className="flex gap-2">
-          <Button size="sm" variant="secondary" onClick={() => handleEdit(row)}>Edit</Button>
-          <Button size="sm" variant="danger" onClick={() => handleDelete(row._id || row.id)}>Delete</Button>
+          <Button size="sm" variant="secondary" onClick={() => handleEdit(row)}>
+            Edit
+          </Button>
+          <Button size="sm" variant="danger" onClick={() => handleDelete(row._id || row.id)}>
+            Delete
+          </Button>
         </div>
-    )}
+      ),
+    },
   ];
 
   const globalKpiColumns = [
@@ -285,7 +323,7 @@ export default function KPI({ standalone = true }) {
             {empName}
           </button>
         );
-      }
+      },
     },
     {
       key: 'title',
@@ -301,7 +339,7 @@ export default function KPI({ standalone = true }) {
             {title}
           </button>
         );
-      }
+      },
     },
     {
       key: 'period',
@@ -320,21 +358,37 @@ export default function KPI({ standalone = true }) {
             {period}
           </button>
         );
-      }
+      },
     },
     { key: 'target_value', label: 'Target', sortable: true, render: (_, row) => row.target_value },
-    { key: 'achieved_value', label: 'Achieved', sortable: true, render: (_, row) => row.achieved_value ?? '-' },
-    { key: 'score', label: 'Score', sortable: true, render: (_, row) => {
+    {
+      key: 'achieved_value',
+      label: 'Achieved',
+      sortable: true,
+      render: (_, row) => row.achieved_value ?? '-',
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      sortable: true,
+      render: (_, row) => {
         const score = Number(row.final_score ?? 0);
         return (
-           <div className="flex items-center gap-2 min-w-[100px] cursor-pointer" onClick={() => toast.info(`Score breakdown: ${score}%`)}>
-              <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                 <div className={`h-full ${score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.min(100, Math.max(0, score))}%` }} />
-              </div>
-              <span className="text-xs font-semibold">{score}%</span>
-           </div>
+          <div
+            className="flex items-center gap-2 min-w-[100px] cursor-pointer"
+            onClick={() => toast.info(`Score breakdown: ${score}%`)}
+          >
+            <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold">{score}%</span>
+          </div>
         );
-    }},
+      },
+    },
     {
       key: 'status',
       label: 'Status',
@@ -352,20 +406,26 @@ export default function KPI({ standalone = true }) {
             {status}
           </button>
         );
-      }
-    }
+      },
+    },
   ];
 
   // Analytics Calculations
-  const evaluatedKpis = employeeKpis.filter(k => k.final_score !== null && k.final_score !== undefined);
-  const avgScore = evaluatedKpis.length > 0 
-    ? Math.round(evaluatedKpis.reduce((sum, k) => sum + Number(k.final_score), 0) / evaluatedKpis.length) 
-    : 0;
+  const evaluatedKpis = employeeKpis.filter(
+    k => k.final_score !== null && k.final_score !== undefined
+  );
+  const avgScore =
+    evaluatedKpis.length > 0
+      ? Math.round(
+          evaluatedKpis.reduce((sum, k) => sum + Number(k.final_score), 0) / evaluatedKpis.length
+        )
+      : 0;
   const completedCount = employeeKpis.filter(k => k.status === 'Completed').length;
 
   const scoreDistribution = {
     excellent: evaluatedKpis.filter(k => Number(k.final_score) >= 85).length,
-    average: evaluatedKpis.filter(k => Number(k.final_score) >= 50 && Number(k.final_score) < 85).length,
+    average: evaluatedKpis.filter(k => Number(k.final_score) >= 50 && Number(k.final_score) < 85)
+      .length,
     poor: evaluatedKpis.filter(k => Number(k.final_score) < 50).length,
   };
   const maxDist = Math.max(...Object.values(scoreDistribution), 1);
@@ -374,7 +434,9 @@ export default function KPI({ standalone = true }) {
     <div>
       <div className="page-header mb-6">
         <h1 className="page-title">Global KPIs & Performance</h1>
-        <p className="page-subtitle">Track company-wide goals, manage KPI definitions, and view performance reports.</p>
+        <p className="page-subtitle">
+          Track company-wide goals, manage KPI definitions, and view performance reports.
+        </p>
       </div>
 
       <div className="flex space-x-4 mb-6 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
@@ -405,12 +467,18 @@ export default function KPI({ standalone = true }) {
               label="Search Employee or Goal"
               placeholder="Name or Title..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               className="min-w-[240px]"
             />
             <div className="flex flex-col gap-1 min-w-[180px]">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Status</label>
-              <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Status
+              </label>
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+              >
                 <option value="all">All Statuses</option>
                 <option value="Pending">Pending</option>
                 <option value="Evaluated">Evaluated</option>
@@ -430,7 +498,14 @@ export default function KPI({ standalone = true }) {
           {employeeKpis.length === 0 && !loading ? (
             <KpiEmptyState description="No KPIs assigned yet. Use '+ Assign KPI' or 'Bulk Assign' to get started." />
           ) : (
-            <Table columns={globalKpiColumns} data={sortData(filteredEmployeeKpis, sortField, sortDirection)} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+            <Table
+              columns={globalKpiColumns}
+              data={sortData(filteredEmployeeKpis, sortField, sortDirection)}
+              loading={loading}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
           )}
         </Card>
       )}
@@ -438,49 +513,117 @@ export default function KPI({ standalone = true }) {
       {activeTab === 'definitions' && (
         <Card>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">KPI Library</h2>
-            <Button variant="primary" onClick={() => { setForm({name:'', description:'', target:''}); setEditing(null); setShowDefModal(true); }}>
+            <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+              KPI Library
+            </h2>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setForm({ name: '', description: '', target: '' });
+                setEditing(null);
+                setShowDefModal(true);
+              }}
+            >
               + Create New Definition
             </Button>
           </div>
-          <Table columns={defColumns} data={sortData(kpiDefs, sortField, sortDirection)} loading={loading} sortField={sortField} sortDirection={sortDirection} onSort={handleSort} />
+          <Table
+            columns={defColumns}
+            data={sortData(kpiDefs, sortField, sortDirection)}
+            loading={loading}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
         </Card>
       )}
 
       {activeTab === 'reports' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200" onClick={() => setActiveTab('all')}>
-              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">Total Goals Assigned</p>
-              <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-2">{employeeKpis.length}</p>
+            <Card
+              className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              onClick={() => setActiveTab('all')}
+            >
+              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                Total Goals Assigned
+              </p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-slate-100 mt-2">
+                {employeeKpis.length}
+              </p>
               <p className="text-xs text-blue-500 mt-1">Click to view →</p>
             </Card>
-            <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200" onClick={() => { setActiveTab('all'); setStatusFilter('Completed'); }}>
-              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">Completed</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-500 mt-2">{completedCount}</p>
+            <Card
+              className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              onClick={() => {
+                setActiveTab('all');
+                setStatusFilter('Completed');
+              }}
+            >
+              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                Completed
+              </p>
+              <p className="text-3xl font-bold text-green-600 dark:text-green-500 mt-2">
+                {completedCount}
+              </p>
               <p className="text-xs text-blue-500 mt-1">Click to view →</p>
             </Card>
-            <Card className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200" onClick={() => setActiveTab('reports')}>
-              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">Average Global Score</p>
-              <p className="text-3xl font-bold text-blue-600 dark:text-blue-500 mt-2">{avgScore}%</p>
+            <Card
+              className="p-6 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+              onClick={() => setActiveTab('reports')}
+            >
+              <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-semibold">
+                Average Global Score
+              </p>
+              <p className="text-3xl font-bold text-blue-600 dark:text-blue-500 mt-2">
+                {avgScore}%
+              </p>
               <p className="text-xs text-blue-500 mt-1">Click to view →</p>
             </Card>
           </div>
 
           <Card>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6">Score Distribution</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-6">
+              Score Distribution
+            </h3>
             <div className="space-y-6">
               {[
-                { label: 'Excellent (85%+)', count: scoreDistribution.excellent, color: 'bg-green-500' },
-                { label: 'Average (50-84%)', count: scoreDistribution.average, color: 'bg-yellow-500' },
-                { label: 'Needs Improvement (<50%)', count: scoreDistribution.poor, color: 'bg-red-500' },
+                {
+                  label: 'Excellent (85%+)',
+                  count: scoreDistribution.excellent,
+                  color: 'bg-green-500',
+                },
+                {
+                  label: 'Average (50-84%)',
+                  count: scoreDistribution.average,
+                  color: 'bg-yellow-500',
+                },
+                {
+                  label: 'Needs Improvement (<50%)',
+                  count: scoreDistribution.poor,
+                  color: 'bg-red-500',
+                },
               ].map((tier, idx) => (
-                <div key={idx} className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors" onClick={() => { setActiveTab('all'); if (tier.label.includes('Excellent')) setStatusFilter('Completed'); }}>
-                  <div className="w-48 text-sm font-medium text-slate-700 dark:text-slate-300">{tier.label}</div>
-                  <div className="flex-1 h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full ${tier.color}`} style={{ width: `${(tier.count / maxDist) * 100}%` }} />
+                <div
+                  key={idx}
+                  className="flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded-lg transition-colors"
+                  onClick={() => {
+                    setActiveTab('all');
+                    if (tier.label.includes('Excellent')) setStatusFilter('Completed');
+                  }}
+                >
+                  <div className="w-48 text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {tier.label}
                   </div>
-                  <div className="w-12 text-right text-sm font-semibold text-slate-900 dark:text-slate-100">{tier.count}</div>
+                  <div className="flex-1 h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${tier.color}`}
+                      style={{ width: `${(tier.count / maxDist) * 100}%` }}
+                    />
+                  </div>
+                  <div className="w-12 text-right text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {tier.count}
+                  </div>
                 </div>
               ))}
             </div>
@@ -488,79 +631,194 @@ export default function KPI({ standalone = true }) {
         </div>
       )}
 
-      <Modal isOpen={showDefModal} onClose={() => setShowDefModal(false)} title={editing ? "Edit KPI Definition" : "Create KPI Definition"}>
+      <Modal
+        isOpen={showDefModal}
+        onClose={() => setShowDefModal(false)}
+        title={editing ? 'Edit KPI Definition' : 'Create KPI Definition'}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="KPI Name / Title" name="name" value={form.name} onChange={handleChange} required />
+          <Input
+            label="KPI Name / Title"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+          />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Description</label>
-            <textarea name="description" className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800" value={form.description} onChange={handleChange} rows={3} required />
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Description
+            </label>
+            <textarea
+              name="description"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800"
+              value={form.description}
+              onChange={handleChange}
+              rows={3}
+              required
+            />
           </div>
-          <Input label="Target Metric" name="target" type="number" value={form.target} onChange={handleChange} required />
+          <Input
+            label="Target Metric"
+            name="target"
+            type="number"
+            value={form.target}
+            onChange={handleChange}
+            required
+          />
           <div className="flex gap-2 justify-end mt-4">
-             <Button type="submit" variant="primary">{editing ? 'Update' : 'Create'}</Button>
-             <Button type="button" variant="ghost" onClick={() => setShowDefModal(false)}>Cancel</Button>
+            <Button type="submit" variant="primary">
+              {editing ? 'Update' : 'Create'}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setShowDefModal(false)}>
+              Cancel
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* Modal for Assigning a KPI to an Employee */}
-      <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign KPI to Employee">
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign KPI to Employee"
+      >
         <form onSubmit={handleAssignSubmit} className="space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Employee</label>
-            <select className="form-select" value={assignForm.employee_id} onChange={e => setAssignForm({...assignForm, employee_id: e.target.value})} required>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Employee
+            </label>
+            <select
+              className="form-select"
+              value={assignForm.employee_id}
+              onChange={e => setAssignForm({ ...assignForm, employee_id: e.target.value })}
+              required
+            >
               <option value="">Select Employee</option>
               {employees.map(emp => (
-                <option key={emp.id || emp._id} value={emp.id || emp._id}>{emp.firstName || emp.username} {emp.lastName || ''}</option>
+                <option key={emp.id || emp._id} value={emp.id || emp._id}>
+                  {emp.firstName || emp.username} {emp.lastName || ''}
+                </option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">KPI Definition</label>
-            <select className="form-select" value={assignForm.kpi_definition_id} onChange={e => {
-              const def = kpiDefs.find(d => String(d.id || d._id) === String(e.target.value));
-              setAssignForm({
-                ...assignForm, 
-                kpi_definition_id: e.target.value,
-                target_value: def ? (def.target || def.maxScore || def.max_score || '') : assignForm.target_value
-              });
-            }} required>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              KPI Definition
+            </label>
+            <select
+              className="form-select"
+              value={assignForm.kpi_definition_id}
+              onChange={e => {
+                const def = kpiDefs.find(d => String(d.id || d._id) === String(e.target.value));
+                setAssignForm({
+                  ...assignForm,
+                  kpi_definition_id: e.target.value,
+                  target_value: def
+                    ? def.target || def.maxScore || def.max_score || ''
+                    : assignForm.target_value,
+                });
+              }}
+              required
+            >
               <option value="">Select KPI from Library</option>
               {kpiDefs.map(def => (
-                <option key={def.id || def._id} value={def.id || def._id}>{def.name || def.title}</option>
+                <option key={def.id || def._id} value={def.id || def._id}>
+                  {def.name || def.title}
+                </option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Period</label>
-            <select className="form-select" value={assignForm.period} onChange={e => setAssignForm({...assignForm, period: e.target.value})} required>
+            <select
+              className="form-select"
+              value={assignForm.period}
+              onChange={e => setAssignForm({ ...assignForm, period: e.target.value })}
+              required
+            >
               <option value="">Select Period</option>
               <optgroup label={`${new Date().getFullYear()} Quarters`}>
                 {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
-                  <option key={`${q} ${new Date().getFullYear()}`} value={`${q} ${new Date().getFullYear()}`}>{q} {new Date().getFullYear()}</option>
+                  <option
+                    key={`${q} ${new Date().getFullYear()}`}
+                    value={`${q} ${new Date().getFullYear()}`}
+                  >
+                    {q} {new Date().getFullYear()}
+                  </option>
                 ))}
               </optgroup>
               <optgroup label={`${new Date().getFullYear()} Months`}>
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
-                  <option key={`${m} ${new Date().getFullYear()}`} value={`${m} ${new Date().getFullYear()}`}>{m} {new Date().getFullYear()}</option>
+                {[
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec',
+                ].map(m => (
+                  <option
+                    key={`${m} ${new Date().getFullYear()}`}
+                    value={`${m} ${new Date().getFullYear()}`}
+                  >
+                    {m} {new Date().getFullYear()}
+                  </option>
                 ))}
               </optgroup>
               <optgroup label={`${new Date().getFullYear() + 1} Quarters`}>
                 {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
-                  <option key={`${q} ${new Date().getFullYear() + 1}`} value={`${q} ${new Date().getFullYear() + 1}`}>{q} {new Date().getFullYear() + 1}</option>
+                  <option
+                    key={`${q} ${new Date().getFullYear() + 1}`}
+                    value={`${q} ${new Date().getFullYear() + 1}`}
+                  >
+                    {q} {new Date().getFullYear() + 1}
+                  </option>
                 ))}
               </optgroup>
               <optgroup label={`${new Date().getFullYear() + 1} Months`}>
-                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => (
-                  <option key={`${m} ${new Date().getFullYear() + 1}`} value={`${m} ${new Date().getFullYear() + 1}`}>{m} {new Date().getFullYear() + 1}</option>
+                {[
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec',
+                ].map(m => (
+                  <option
+                    key={`${m} ${new Date().getFullYear() + 1}`}
+                    value={`${m} ${new Date().getFullYear() + 1}`}
+                  >
+                    {m} {new Date().getFullYear() + 1}
+                  </option>
                 ))}
               </optgroup>
             </select>
           </div>
-          <Input label="Target Value" type="number" value={assignForm.target_value} onChange={e => setAssignForm({...assignForm, target_value: e.target.value})} required />
+          <Input
+            label="Target Value"
+            type="number"
+            value={assignForm.target_value}
+            onChange={e => setAssignForm({ ...assignForm, target_value: e.target.value })}
+            required
+          />
           <div className="flex gap-2 justify-end mt-4">
-             <Button type="submit" variant="primary">Assign KPI</Button>
-             <Button type="button" variant="ghost" onClick={() => setShowAssignModal(false)}>Cancel</Button>
+            <Button type="submit" variant="primary">
+              Assign KPI
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setShowAssignModal(false)}>
+              Cancel
+            </Button>
           </div>
         </form>
       </Modal>
@@ -569,20 +827,25 @@ export default function KPI({ standalone = true }) {
       <Modal isOpen={showBulkModal} onClose={() => setShowBulkModal(false)} title="Bulk Assign KPI">
         <form onSubmit={handleBulkAssign} className="space-y-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Select Employees</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Select Employees
+            </label>
             <div className="max-h-40 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg p-2 space-y-1">
               {employees.map(emp => (
-                <label key={emp.id || emp._id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded">
+                <label
+                  key={emp.id || emp._id}
+                  className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded"
+                >
                   <input
                     type="checkbox"
                     checked={bulkForm.employeeIds.includes(String(emp.id || emp._id))}
-                    onChange={(e) => {
+                    onChange={e => {
                       const id = String(emp.id || emp._id);
                       setBulkForm(prev => ({
                         ...prev,
                         employeeIds: e.target.checked
                           ? [...prev.employeeIds, id]
-                          : prev.employeeIds.filter(i => i !== id)
+                          : prev.employeeIds.filter(i => i !== id),
                       }));
                     }}
                   />
@@ -593,34 +856,65 @@ export default function KPI({ standalone = true }) {
             <p className="text-xs text-slate-500">{bulkForm.employeeIds.length} selected</p>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">KPI Definition</label>
-            <select className="form-select" value={bulkForm.kpi_definition_id} onChange={e => {
-              const def = kpiDefs.find(d => String(d.id || d._id) === String(e.target.value));
-              setBulkForm({
-                ...bulkForm,
-                kpi_definition_id: e.target.value,
-                target_value: def ? (def.target || def.maxScore || def.max_score || '') : bulkForm.target_value
-              });
-            }} required>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              KPI Definition
+            </label>
+            <select
+              className="form-select"
+              value={bulkForm.kpi_definition_id}
+              onChange={e => {
+                const def = kpiDefs.find(d => String(d.id || d._id) === String(e.target.value));
+                setBulkForm({
+                  ...bulkForm,
+                  kpi_definition_id: e.target.value,
+                  target_value: def
+                    ? def.target || def.maxScore || def.max_score || ''
+                    : bulkForm.target_value,
+                });
+              }}
+              required
+            >
               <option value="">Select KPI</option>
               {kpiDefs.map(def => (
-                <option key={def.id || def._id} value={def.id || def._id}>{def.name || def.title}</option>
+                <option key={def.id || def._id} value={def.id || def._id}>
+                  {def.name || def.title}
+                </option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Period</label>
-            <select className="form-select" value={bulkForm.period} onChange={e => setBulkForm({...bulkForm, period: e.target.value})} required>
+            <select
+              className="form-select"
+              value={bulkForm.period}
+              onChange={e => setBulkForm({ ...bulkForm, period: e.target.value })}
+              required
+            >
               <option value="">Select Period</option>
               {['Q1', 'Q2', 'Q3', 'Q4'].map(q => (
-                <option key={`${q} ${new Date().getFullYear()}`} value={`${q} ${new Date().getFullYear()}`}>{q} {new Date().getFullYear()}</option>
+                <option
+                  key={`${q} ${new Date().getFullYear()}`}
+                  value={`${q} ${new Date().getFullYear()}`}
+                >
+                  {q} {new Date().getFullYear()}
+                </option>
               ))}
             </select>
           </div>
-          <Input label="Target Value" type="number" value={bulkForm.target_value} onChange={e => setBulkForm({...bulkForm, target_value: e.target.value})} required />
+          <Input
+            label="Target Value"
+            type="number"
+            value={bulkForm.target_value}
+            onChange={e => setBulkForm({ ...bulkForm, target_value: e.target.value })}
+            required
+          />
           <div className="flex gap-2 justify-end mt-4">
-            <Button type="submit" variant="primary" disabled={bulkForm.employeeIds.length === 0}>Assign to {bulkForm.employeeIds.length} Employees</Button>
-            <Button type="button" variant="ghost" onClick={() => setShowBulkModal(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" disabled={bulkForm.employeeIds.length === 0}>
+              Assign to {bulkForm.employeeIds.length} Employees
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setShowBulkModal(false)}>
+              Cancel
+            </Button>
           </div>
         </form>
       </Modal>
@@ -631,13 +925,22 @@ export default function KPI({ standalone = true }) {
           'Go to KPI Definitions to create a new KPI (e.g. "Monthly Sales Target" with max score 100).',
           'Use Assign KPI to link a KPI definition to a specific employee for a period (Q1, Q2, etc.).',
           'Use Bulk Assign to assign the same KPI to multiple employees at once.',
-          'At period end, go to KPI Assessment page to record each employee\'s achieved score.',
+          "At period end, go to KPI Assessment page to record each employee's achieved score.",
           'Achieved scores that meet the bonus threshold will automatically create a pending bonus for payroll.',
         ]}
         faqs={[
-          { q: 'Why is no bonus generated after assessment?', a: 'The achieved score must meet or exceed the bonus threshold set on the KPI definition.' },
-          { q: 'Can an employee have multiple KPIs in one period?', a: 'Yes, assign as many KPI definitions as needed per employee per period.' },
-          { q: 'Where do KPI bonuses appear in payroll?', a: 'They appear in the gross pay section when payroll is generated for that employee and period.' },
+          {
+            q: 'Why is no bonus generated after assessment?',
+            a: 'The achieved score must meet or exceed the bonus threshold set on the KPI definition.',
+          },
+          {
+            q: 'Can an employee have multiple KPIs in one period?',
+            a: 'Yes, assign as many KPI definitions as needed per employee per period.',
+          },
+          {
+            q: 'Where do KPI bonuses appear in payroll?',
+            a: 'They appear in the gross pay section when payroll is generated for that employee and period.',
+          },
         ]}
         fetchStatus={async () => {
           const items = [];
@@ -646,16 +949,37 @@ export default function KPI({ standalone = true }) {
               api.get('/api/kpis/all').catch(() => ({ data: [] })),
               api.get('/api/employees').catch(() => ({ data: [] })),
             ]);
-            const allKpis = kpiRes.status === 'fulfilled' ? (kpiRes.value.data || []) : [];
-            const emps = empRes.status === 'fulfilled' ? (empRes.value.data || []) : [];
+            const allKpis = kpiRes.status === 'fulfilled' ? kpiRes.value.data || [] : [];
+            const emps = empRes.status === 'fulfilled' ? empRes.value.data || [] : [];
             const currentPeriod = `Q${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`;
             const assignedIds = new Set(allKpis.map(k => String(k.employee_id)));
             const unassigned = emps.filter(e => !assignedIds.has(String(e.id || e._id)));
-            if (unassigned.length > 0) items.push({ level: 'warn', message: `${unassigned.length} employee${unassigned.length > 1 ? 's have' : ' has'} no KPI assigned`, detail: `Current period: ${currentPeriod}. Use Assign KPI or Bulk Assign.` });
-            const overdue = allKpis.filter(k => k.status === 'pending' && k.period && k.period < currentPeriod);
-            if (overdue.length > 0) items.push({ level: 'error', message: `${overdue.length} KPI assessment${overdue.length > 1 ? 's are' : ' is'} overdue`, detail: 'Go to KPI Assessment to record scores for past periods.' });
-            if (items.length === 0) items.push({ level: 'success', message: 'All employees have KPIs assigned and no overdue assessments.' });
-          } catch { items.push({ level: 'info', message: 'Could not retrieve KPI status. Ensure the backend is running.' }); }
+            if (unassigned.length > 0)
+              items.push({
+                level: 'warn',
+                message: `${unassigned.length} employee${unassigned.length > 1 ? 's have' : ' has'} no KPI assigned`,
+                detail: `Current period: ${currentPeriod}. Use Assign KPI or Bulk Assign.`,
+              });
+            const overdue = allKpis.filter(
+              k => k.status === 'pending' && k.period && k.period < currentPeriod
+            );
+            if (overdue.length > 0)
+              items.push({
+                level: 'error',
+                message: `${overdue.length} KPI assessment${overdue.length > 1 ? 's are' : ' is'} overdue`,
+                detail: 'Go to KPI Assessment to record scores for past periods.',
+              });
+            if (items.length === 0)
+              items.push({
+                level: 'success',
+                message: 'All employees have KPIs assigned and no overdue assessments.',
+              });
+          } catch {
+            items.push({
+              level: 'info',
+              message: 'Could not retrieve KPI status. Ensure the backend is running.',
+            });
+          }
           return items;
         }}
       />

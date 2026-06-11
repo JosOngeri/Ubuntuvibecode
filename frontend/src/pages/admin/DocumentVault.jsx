@@ -5,31 +5,45 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Modal from '../../components/common/Modal';
 import Table from '../../components/common/Table';
-import api, { employeeAPI } from '../../services/api';
+import api from '../../services/api';
+import { employeeAPI } from '../../features/employees/services/employee.api';
 import { toast } from 'react-toastify';
 import { cn } from '../../lib/utils';
 import PageInfoPanel from '../../components/common/PageInfoPanel';
 import EmptyState from '../../components/common/EmptyState';
 import {
-  FileText, Plus, Pencil, Trash2, ShieldCheck,
-  AlertTriangle, Search, CheckCircle, Clock, XCircle
+  FileText,
+  Plus,
+  Pencil,
+  Trash2,
+  ShieldCheck,
+  AlertTriangle,
+  Search,
+  CheckCircle,
+  Clock,
+  XCircle,
 } from 'lucide-react';
 
 const DOC_TYPES = {
-  national_id:   'National ID',
-  kra_pin:       'KRA PIN',
-  nssf:          'NSSF Card',
-  nhif:          'NHIF Card',
-  certificate:   'Certificate',
-  contract:      'Contract',
-  offer_letter:  'Offer Letter',
-  passport:      'Passport',
-  other:         'Other',
+  national_id: 'National ID',
+  kra_pin: 'KRA PIN',
+  nssf: 'NSSF Card',
+  nhif: 'NHIF Card',
+  certificate: 'Certificate',
+  contract: 'Contract',
+  offer_letter: 'Offer Letter',
+  passport: 'Passport',
+  other: 'Other',
 };
 
 const EMPTY_FORM = {
-  employee_id: '', doc_type: 'national_id', doc_name: '',
-  url: '', expiry_date: '', notes: '', verified: false,
+  employee_id: '',
+  doc_type: 'national_id',
+  doc_name: '',
+  url: '',
+  expiry_date: '',
+  notes: '',
+  verified: false,
 };
 
 const ExpiryBadge = ({ expiry }) => {
@@ -37,9 +51,23 @@ const ExpiryBadge = ({ expiry }) => {
   const now = new Date();
   const exp = new Date(expiry);
   const days = Math.ceil((exp - now) / 86400000);
-  if (days < 0)  return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"><XCircle size={10} /> Expired</span>;
-  if (days <= 30) return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"><AlertTriangle size={10} /> Expires in {days}d</span>;
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"><CheckCircle size={10} /> Valid</span>;
+  if (days < 0)
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+        <XCircle size={10} /> Expired
+      </span>
+    );
+  if (days <= 30)
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+        <AlertTriangle size={10} /> Expires in {days}d
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+      <CheckCircle size={10} /> Valid
+    </span>
+  );
 };
 
 export default function DocumentVault({ standalone = true }) {
@@ -74,14 +102,18 @@ export default function DocumentVault({ standalone = true }) {
     }
   };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => {
+    fetchAll();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = docs.filter(d => {
-      const name = `${d.employee_id?.first_name || ''} ${d.employee_id?.last_name || ''} ${d.doc_name} ${DOC_TYPES[d.doc_type] || ''}`.toLowerCase();
+      const name =
+        `${d.employee_id?.first_name || ''} ${d.employee_id?.last_name || ''} ${d.doc_name} ${DOC_TYPES[d.doc_type] || ''}`.toLowerCase();
       const matchSearch = !search || name.includes(search.toLowerCase());
       const matchType = !filterType || d.doc_type === filterType;
-      const matchVerified = filterVerified === '' ? true : filterVerified === 'true' ? d.verified : !d.verified;
+      const matchVerified =
+        filterVerified === '' ? true : filterVerified === 'true' ? d.verified : !d.verified;
       return matchSearch && matchType && matchVerified;
     });
 
@@ -97,13 +129,20 @@ export default function DocumentVault({ standalone = true }) {
         aVal = a[sortField] || '';
         bVal = b[sortField] || '';
       }
-      const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true, sensitivity: 'base' });
+      const comparison = String(aVal).localeCompare(String(bVal), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
       return sortDirection === 'asc' ? comparison : -comparison;
     });
   }, [docs, search, filterType, filterVerified, sortField, sortDirection]);
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowModal(true); };
-  const openEdit = (doc) => {
+  const openCreate = () => {
+    setEditing(null);
+    setForm(EMPTY_FORM);
+    setShowModal(true);
+  };
+  const openEdit = doc => {
     setEditing(doc._id);
     setForm({
       employee_id: doc.employee_id?._id || doc.employee_id || '',
@@ -117,7 +156,7 @@ export default function DocumentVault({ standalone = true }) {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -137,27 +176,36 @@ export default function DocumentVault({ standalone = true }) {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     if (!window.confirm('Delete this document record?')) return;
     try {
       await api.delete(`/api/documents/${id}`);
       toast.success('Deleted');
       fetchAll();
-    } catch { toast.error('Failed to delete'); }
+    } catch {
+      toast.error('Failed to delete');
+    }
   };
 
-  const handleVerify = async (id) => {
+  const handleVerify = async id => {
     try {
       await api.put(`/api/documents/${id}/verify`);
       toast.success('Document marked as verified');
       fetchAll();
-    } catch { toast.error('Failed to verify'); }
+    } catch {
+      toast.error('Failed to verify');
+    }
   };
 
   const statsCards = [
     { label: 'Total Documents', value: summary.total || 0, icon: FileText, color: 'bg-blue-500' },
     { label: 'Verified', value: summary.verified || 0, icon: ShieldCheck, color: 'bg-green-500' },
-    { label: 'Expiring Soon (30d)', value: summary.expiring_soon || 0, icon: Clock, color: 'bg-amber-500' },
+    {
+      label: 'Expiring Soon (30d)',
+      value: summary.expiring_soon || 0,
+      icon: Clock,
+      color: 'bg-amber-500',
+    },
     { label: 'Expired', value: summary.expired || 0, icon: AlertTriangle, color: 'bg-red-500' },
   ];
 
@@ -181,7 +229,10 @@ export default function DocumentVault({ standalone = true }) {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {statsCards.map((s, i) => (
-          <div key={i} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center gap-3">
+          <div
+            key={i}
+            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center gap-3"
+          >
             <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', s.color)}>
               <s.icon size={18} className="text-white" />
             </div>
@@ -211,7 +262,11 @@ export default function DocumentVault({ standalone = true }) {
           className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
         >
           <option value="">All Types</option>
-          {Object.entries(DOC_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {Object.entries(DOC_TYPES).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
         </select>
         <select
           value={filterVerified}
@@ -237,9 +292,9 @@ export default function DocumentVault({ standalone = true }) {
         ) : (
           <Table
             columns={[
-              { 
-                key: 'employee', 
-                label: 'Employee', 
+              {
+                key: 'employee',
+                label: 'Employee',
                 sortable: true,
                 render: (_, row) => {
                   const emp = row.employee_id;
@@ -248,54 +303,70 @@ export default function DocumentVault({ standalone = true }) {
                       <span className="font-medium text-slate-800 dark:text-slate-200">
                         {emp ? `${emp.first_name} ${emp.last_name}` : '—'}
                       </span>
-                      {emp?.department && <span className="block text-xs text-slate-400">{emp.department}</span>}
+                      {emp?.department && (
+                        <span className="block text-xs text-slate-400">{emp.department}</span>
+                      )}
                     </div>
                   );
-                }
+                },
               },
-              { 
-                key: 'doc_name', 
-                label: 'Document', 
+              {
+                key: 'doc_name',
+                label: 'Document',
                 sortable: true,
                 render: (_, row) => (
                   <div>
                     <p className="text-slate-800 dark:text-slate-200 font-medium">{row.doc_name}</p>
                     {row.url && (
-                      <a href={row.url} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-500 hover:underline">
+                      <a
+                        href={row.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-orange-500 hover:underline"
+                      >
                         View file ↗
                       </a>
                     )}
                   </div>
-                )
+                ),
               },
-              { key: 'type', label: 'Type', sortable: true, render: (_, row) => DOC_TYPES[row.doc_type] || row.doc_type },
-              { 
-                key: 'expiry_date', 
-                label: 'Expiry', 
+              {
+                key: 'type',
+                label: 'Type',
                 sortable: true,
-                render: (val) => val ? (
-                  <div>
-                    <p className="text-xs text-slate-500">{new Date(val).toLocaleDateString()}</p>
-                    <ExpiryBadge expiry={val} />
-                  </div>
-                ) : <span className="text-slate-400 text-xs">No expiry</span>
+                render: (_, row) => DOC_TYPES[row.doc_type] || row.doc_type,
               },
-              { 
-                key: 'verified', 
-                label: 'Verified', 
+              {
+                key: 'expiry_date',
+                label: 'Expiry',
                 sortable: true,
-                render: (val, row) => val ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                    <ShieldCheck size={10} /> Verified
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => handleVerify(row._id)}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600 hover:bg-green-100 hover:text-green-700 dark:bg-slate-700 dark:text-slate-300 transition-colors"
-                  >
-                    <ShieldCheck size={10} /> Mark Verified
-                  </button>
-                )
+                render: val =>
+                  val ? (
+                    <div>
+                      <p className="text-xs text-slate-500">{new Date(val).toLocaleDateString()}</p>
+                      <ExpiryBadge expiry={val} />
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 text-xs">No expiry</span>
+                  ),
+              },
+              {
+                key: 'verified',
+                label: 'Verified',
+                sortable: true,
+                render: (val, row) =>
+                  val ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                      <ShieldCheck size={10} /> Verified
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleVerify(row._id)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600 hover:bg-green-100 hover:text-green-700 dark:bg-slate-700 dark:text-slate-300 transition-colors"
+                    >
+                      <ShieldCheck size={10} /> Mark Verified
+                    </button>
+                  ),
               },
               {
                 key: 'actions',
@@ -303,20 +374,26 @@ export default function DocumentVault({ standalone = true }) {
                 sortable: false,
                 render: (_, row) => (
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEdit(row)} className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-orange-500 transition-colors">
+                    <button
+                      onClick={() => openEdit(row)}
+                      className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-orange-500 transition-colors"
+                    >
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(row._id)} className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors">
+                    <button
+                      onClick={() => handleDelete(row._id)}
+                      className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors"
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>
-                )
+                ),
               },
             ]}
             data={filtered}
             sortField={sortField}
             sortDirection={sortDirection}
-            onSort={(field) => {
+            onSort={field => {
               if (sortField === field) {
                 setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
               } else {
@@ -330,11 +407,16 @@ export default function DocumentVault({ standalone = true }) {
 
       {/* Modal */}
       {showModal && (
-        <Modal title={editing ? 'Edit Document' : 'Add Document'} onClose={() => setShowModal(false)}>
+        <Modal
+          title={editing ? 'Edit Document' : 'Add Document'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Employee *</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Employee *
+                </label>
                 <select
                   value={form.employee_id}
                   onChange={e => setForm({ ...form, employee_id: e.target.value })}
@@ -350,14 +432,20 @@ export default function DocumentVault({ standalone = true }) {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Document Type *</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Document Type *
+                </label>
                 <select
                   value={form.doc_type}
                   onChange={e => setForm({ ...form, doc_type: e.target.value })}
                   required
                   className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none"
                 >
-                  {Object.entries(DOC_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(DOC_TYPES).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
                 </select>
               </div>
               <Input
@@ -389,11 +477,18 @@ export default function DocumentVault({ standalone = true }) {
                   onChange={e => setForm({ ...form, verified: e.target.checked })}
                   className="w-4 h-4 text-orange-500 rounded"
                 />
-                <label htmlFor="verified-check" className="text-sm text-slate-700 dark:text-slate-300">Mark as Verified</label>
+                <label
+                  htmlFor="verified-check"
+                  className="text-sm text-slate-700 dark:text-slate-300"
+                >
+                  Mark as Verified
+                </label>
               </div>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                Notes
+              </label>
               <textarea
                 value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
@@ -403,8 +498,12 @@ export default function DocumentVault({ standalone = true }) {
               />
             </div>
             <div className="flex gap-2 justify-end pt-2">
-              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button type="submit" variant="primary" loading={saving}>{editing ? 'Update' : 'Save'}</Button>
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" loading={saving}>
+                {editing ? 'Update' : 'Save'}
+              </Button>
             </div>
           </form>
         </Modal>
@@ -421,20 +520,50 @@ export default function DocumentVault({ standalone = true }) {
           'Monitor the Expiring Soon count on the stats bar to act before documents lapse.',
         ]}
         faqs={[
-          { q: 'Can employees upload their own documents?', a: 'Not directly yet — HR/Admin uploads on their behalf. Self-service upload is planned for a future version.' },
-          { q: 'What happens when a document expires?', a: 'It is flagged with an "Expired" badge and counted in the Expired stat. No automatic notifications yet — check the vault regularly.' },
-          { q: 'Is the file stored on the server?', a: 'The vault stores URLs only. Files should be hosted on a cloud service (Google Drive, Dropbox, SharePoint) and the link pasted here.' },
+          {
+            q: 'Can employees upload their own documents?',
+            a: 'Not directly yet — HR/Admin uploads on their behalf. Self-service upload is planned for a future version.',
+          },
+          {
+            q: 'What happens when a document expires?',
+            a: 'It is flagged with an "Expired" badge and counted in the Expired stat. No automatic notifications yet — check the vault regularly.',
+          },
+          {
+            q: 'Is the file stored on the server?',
+            a: 'The vault stores URLs only. Files should be hosted on a cloud service (Google Drive, Dropbox, SharePoint) and the link pasted here.',
+          },
         ]}
         fetchStatus={async () => {
           const items = [];
           try {
             const res = await api.get('/api/documents/summary').catch(() => ({ data: {} }));
             const s = res.data || {};
-            if (s.expired > 0) items.push({ level: 'error', message: `${s.expired} document${s.expired > 1 ? 's have' : ' has'} expired`, detail: 'Request updated documents from affected employees.' });
-            if (s.expiring_soon > 0) items.push({ level: 'warn', message: `${s.expiring_soon} document${s.expiring_soon > 1 ? 's expire' : ' expires'} within 30 days`, detail: 'Contact employees to provide renewed copies.' });
-            if (s.unverified > 0) items.push({ level: 'info', message: `${s.unverified} document${s.unverified > 1 ? 's are' : ' is'} unverified`, detail: 'Verify original documents and mark them verified.' });
-            if (items.length === 0) items.push({ level: 'success', message: 'All documents are verified and up to date.' });
-          } catch { items.push({ level: 'info', message: 'Could not retrieve document status.' }); }
+            if (s.expired > 0)
+              items.push({
+                level: 'error',
+                message: `${s.expired} document${s.expired > 1 ? 's have' : ' has'} expired`,
+                detail: 'Request updated documents from affected employees.',
+              });
+            if (s.expiring_soon > 0)
+              items.push({
+                level: 'warn',
+                message: `${s.expiring_soon} document${s.expiring_soon > 1 ? 's expire' : ' expires'} within 30 days`,
+                detail: 'Contact employees to provide renewed copies.',
+              });
+            if (s.unverified > 0)
+              items.push({
+                level: 'info',
+                message: `${s.unverified} document${s.unverified > 1 ? 's are' : ' is'} unverified`,
+                detail: 'Verify original documents and mark them verified.',
+              });
+            if (items.length === 0)
+              items.push({
+                level: 'success',
+                message: 'All documents are verified and up to date.',
+              });
+          } catch {
+            items.push({ level: 'info', message: 'Could not retrieve document status.' });
+          }
           return items;
         }}
       />

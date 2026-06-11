@@ -1,32 +1,32 @@
-import React, { useState, useEffect } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import api from '../services/api'
+import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 const ProtectedRoute = ({ children, allowedRoles, requireAdminMode = false }) => {
-  const { user, loading } = useAuth()
-  const location = useLocation()
-  const [currentMode, setCurrentMode] = useState(null)
-  const [modeLoading, setModeLoading] = useState(false)
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const [currentMode, setCurrentMode] = useState(null);
+  const [modeLoading, setModeLoading] = useState(false);
 
   useEffect(() => {
     if (user && user.role === 'owner') {
-      fetchCurrentMode()
+      fetchCurrentMode();
     }
-  }, [user])
+  }, [user]);
 
   const fetchCurrentMode = async () => {
     try {
-      setModeLoading(true)
-      const response = await api.get('/roles/current-mode').catch(() => ({ data: { mode: null } }))
-      setCurrentMode(response.data.mode)
+      setModeLoading(true);
+      const response = await api.get('/roles/current-mode').catch(() => ({ data: { mode: null } }));
+      setCurrentMode(response.data.mode);
     } catch (err) {
-      console.error('Error fetching current mode:', err)
-      setCurrentMode('owner') // Default to owner mode on error
+      console.error('Error fetching current mode:', err);
+      setCurrentMode('owner'); // Default to owner mode on error
     } finally {
-      setModeLoading(false)
+      setModeLoading(false);
     }
-  }
+  };
 
   if (loading || modeLoading) {
     return (
@@ -35,31 +35,31 @@ const ProtectedRoute = ({ children, allowedRoles, requireAdminMode = false }) =>
           <div className="h-full bg-orange-500 rounded-full animate-[loading-bar_1s_ease-in-out_infinite]"></div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Check role access
-  let hasAccess = true
+  let hasAccess = true;
   if (allowedRoles) {
     // Owner can access everything, but if admin mode is required, check current mode
     if (user.role === 'owner') {
       if (requireAdminMode && currentMode !== 'admin') {
-        hasAccess = false
+        hasAccess = false;
       }
     } else if (!allowedRoles.includes(user.role)) {
-      hasAccess = false
+      hasAccess = false;
     }
   }
 
   if (!hasAccess) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to="/unauthorized" replace />;
   }
 
-  return children
-}
+  return children;
+};
 
-export default ProtectedRoute
+export default ProtectedRoute;

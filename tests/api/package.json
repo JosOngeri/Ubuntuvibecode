@@ -1,0 +1,24 @@
+{
+  "name": "ubuntu-hrms-api-tests",
+  "version": "1.0.0",
+  "description": "Jest + Supertest API test suite for Ubuntu HRMS backend",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:verbose": "jest --verbose",
+    "test:single": "jest --testPathPattern"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

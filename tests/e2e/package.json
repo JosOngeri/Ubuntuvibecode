@@ -1,0 +1,37 @@
+{
+  "name": "ubuntu-hrms-e2e",
+  "version": "1.0.0",
+  "description": "Playwright E2E test suite for Ubuntu HRMS",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:mobile": "playwright test --project=mobile-chrome --project=mobile-safari",
+    "test:auth": "playwright test tests/auth.spec.js",
+    "test:dashboard": "playwright test tests/dashboard.spec.js",
+    "test:employees": "playwright test tests/employees.spec.js",
+    "test:payroll": "playwright test tests/payroll.spec.js",
+    "test:leave": "playwright test tests/leave.spec.js",
+    "test:attendance": "playwright test tests/attendance.spec.js",
+    "test:recruitment": "playwright test tests/recruitment.spec.js",
+    "test:navigation": "playwright test tests/navigation.spec.js",
+    "test:visual": "playwright test tests/visual.spec.js",
+    "test:a11y": "playwright test tests/accessibility.spec.js",
+    "test:compliance": "playwright test tests/compliance.spec.js",
+    "test:update-snapshots": "playwright test --update-snapshots",
+    "test:report": "playwright show-report",
+    "codegen": "playwright codegen http://localhost:5173"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.9.1",
+    "axe-core": "^4.9.1",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

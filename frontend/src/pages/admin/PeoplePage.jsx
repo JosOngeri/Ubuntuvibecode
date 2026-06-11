@@ -9,7 +9,7 @@ import {
   BsPersonGear,
   BsBuilding,
 } from 'react-icons/bs';
-import AdminEmployees from './Employees';
+import AdminEmployees from '../../features/employees/pages/Employees';
 import AdminUsers from './Users';
 import Permissions from './Permissions';
 import OrgChart from './OrgChart';

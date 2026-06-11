@@ -1,65 +1,76 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 
-export default function Calendar({ selectedDate, onDateChange, placeholder = "Select date" }) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [showCalendar, setShowCalendar] = useState(false)
+export default function Calendar({ selectedDate, onDateChange, placeholder = 'Select date' }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ]
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
 
-  const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
-  }
+  const getDaysInMonth = date => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
 
-  const getFirstDayOfMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay()
-  }
+  const getFirstDayOfMonth = date => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
 
-  const formatDateString = (date) => {
-    if (!date) return ''
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }
+  const formatDateString = date => {
+    if (!date) return '';
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
 
-  const handleDateClick = (day) => {
-    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
-    onDateChange(newDate)
-    setShowCalendar(false)
-  }
+  const handleDateClick = day => {
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    onDateChange(newDate);
+    setShowCalendar(false);
+  };
 
   const handlePrevMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))
-  }
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))
-  }
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  };
 
   const handlePrevYear = () => {
-    setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth()))
-  }
+    setCurrentDate(new Date(currentDate.getFullYear() - 1, currentDate.getMonth()));
+  };
 
   const handleNextYear = () => {
-    setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth()))
-  }
+    setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth()));
+  };
 
   const renderCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(currentDate)
-    const firstDay = getFirstDayOfMonth(currentDate)
-    const days = []
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
 
     // Add empty cells for days before month starts
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>)
+      days.push(<div key={`empty-${i}`} className="p-2"></div>);
     }
 
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
-      const isSelected = selectedDate && 
+      const isSelected =
+        selectedDate &&
         selectedDate.getDate() === day &&
         selectedDate.getMonth() === currentDate.getMonth() &&
-        selectedDate.getFullYear() === currentDate.getFullYear()
+        selectedDate.getFullYear() === currentDate.getFullYear();
 
       days.push(
         <button
@@ -71,11 +82,11 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
         >
           {day}
         </button>
-      )
+      );
     }
 
-    return days
-  }
+    return days;
+  };
 
   return (
     <div className="relative">
@@ -90,8 +101,18 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
         />
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <svg
+            className="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
           </svg>
         </div>
       </div>
@@ -108,8 +129,18 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
                 title="Previous year"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
               <button
@@ -118,17 +149,22 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
                 title="Previous month"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             <div className="text-center">
               <div className="font-semibold text-gray-900">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleNextMonth}
@@ -136,7 +172,12 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
                 title="Next month"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
                 </svg>
               </button>
               <button
@@ -145,8 +186,18 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
                 title="Next year"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 5l7 7-7 7"
+                  />
                 </svg>
               </button>
             </div>
@@ -162,16 +213,14 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
           </div>
 
           {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1">
-            {renderCalendarDays()}
-          </div>
+          <div className="grid grid-cols-7 gap-1">{renderCalendarDays()}</div>
 
           {/* Quick Actions */}
           <div className="flex justify-between mt-4 pt-3 border-t border-gray-200">
             <button
               onClick={() => {
-                onDateChange(new Date())
-                setShowCalendar(false)
+                onDateChange(new Date());
+                setShowCalendar(false);
               }}
               className="text-sm text-[#CB7246] hover:text-[#F27C12] transition-colors"
             >
@@ -187,5 +236,5 @@ export default function Calendar({ selectedDate, onDateChange, placeholder = "Se
         </div>
       )}
     </div>
-  )
+  );
 }

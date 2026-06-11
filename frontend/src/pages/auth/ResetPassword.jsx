@@ -1,105 +1,105 @@
-import React, { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'
-import { ToastContainer, toast } from 'react-toastify'
-import { BsCheckLg } from 'react-icons/bs'
-import axios from 'axios'
-import './Auth.css'
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify';
+import { BsCheckLg } from 'react-icons/bs';
+import axios from 'axios';
+import './Auth.css';
 
 const ResetPassword = () => {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const [token, setToken] = useState('')
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [token, setToken] = useState('');
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: '',
-  })
-  const [errors, setErrors] = useState({})
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [resetSuccess, setResetSuccess] = useState(false)
-  const [tokenValid, setTokenValid] = useState(false)
-  const [tokenError, setTokenError] = useState('')
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [tokenError, setTokenError] = useState('');
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    const resetToken = searchParams.get('token')
+    const resetToken = searchParams.get('token');
     if (!resetToken) {
-      setTokenError('Invalid or missing reset token. Please request a new password reset.')
-      return
+      setTokenError('Invalid or missing reset token. Please request a new password reset.');
+      return;
     }
 
-    setToken(resetToken)
+    setToken(resetToken);
     // Verify token validity
-    verifyToken(resetToken)
-  }, [searchParams])
+    verifyToken(resetToken);
+  }, [searchParams]);
 
-  const verifyToken = async (resetToken) => {
+  const verifyToken = async resetToken => {
     try {
       // We'll verify the token when the user tries to reset
-      setTokenValid(true)
+      setTokenValid(true);
     } catch (error) {
-      setTokenError('Token verification failed. Please request a new password reset.')
+      setTokenError('Token verification failed. Please request a new password reset.');
     }
-  }
+  };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
+  const handleChange = e => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
-    }))
-    setErrors(prev => ({ ...prev, [name]: '' }))
-  }
+      [name]: value,
+    }));
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  };
 
   const validateForm = () => {
-    const newErrors = {}
-    
+    const newErrors = {};
+
     if (!formData.password) {
-      newErrors.password = 'Password is required'
+      newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters'
+      newErrors.password = 'Password must be at least 6 characters';
     }
-    
+
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password'
+      newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = 'Passwords do not match';
     }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+
     if (!validateForm()) {
-      return
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password`, {
         token,
         newPassword: formData.password,
-      })
+      });
 
-      toast.success('Password reset successful!')
-      setResetSuccess(true)
-      
+      toast.success('Password reset successful!');
+      setResetSuccess(true);
+
       setTimeout(() => {
-        navigate('/login')
-      }, 3000)
+        navigate('/login');
+      }, 3000);
     } catch (error) {
-      const errorMsg = error.response?.data?.msg || 'Failed to reset password. Please try again.'
-      toast.error(errorMsg)
+      const errorMsg = error.response?.data?.msg || 'Failed to reset password. Please try again.';
+      toast.error(errorMsg);
       if (error.response?.status === 400 || error.response?.status === 401) {
-        setTokenError('Reset token expired or invalid. Please request a new password reset.')
+        setTokenError('Reset token expired or invalid. Please request a new password reset.');
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (tokenError) {
     return (
@@ -115,27 +115,34 @@ const ResetPassword = () => {
           </div>
 
           <div className="auth-form">
-            <div className="auth-error" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0 }}>
+            <div
+              className="auth-error"
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0 }}
+            >
               <strong>⚠️ Invalid Reset Link</strong>
-              <span style={{ fontSize: '14px', fontWeight: 'normal' }}>
-                {tokenError}
-              </span>
+              <span style={{ fontSize: '14px', fontWeight: 'normal' }}>{tokenError}</span>
             </div>
-            <Link to="/forgot-password" className="auth-link" style={{ marginTop: '24px', display: 'block', textAlign: 'center' }}>
+            <Link
+              to="/forgot-password"
+              className="auth-link"
+              style={{ marginTop: '24px', display: 'block', textAlign: 'center' }}
+            >
               Request New Reset Link
             </Link>
           </div>
 
           <div className="auth-footer">
             <p>Reset Link Lifetime:</p>
-            <ul style={{ 
-              listStyle: 'none', 
-              padding: 0, 
-              margin: 0,
-              textAlign: 'left',
-              fontSize: '12px',
-              lineHeight: '1.8'
-            }}>
+            <ul
+              style={{
+                listStyle: 'none',
+                padding: 0,
+                margin: 0,
+                textAlign: 'left',
+                fontSize: '12px',
+                lineHeight: '1.8',
+              }}
+            >
               <li>• Links expire after 1 hour</li>
               <li>• Request a new link if this one has expired</li>
               <li>• Check your email for the latest link</li>
@@ -143,7 +150,7 @@ const ResetPassword = () => {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (resetSuccess) {
@@ -152,7 +159,10 @@ const ResetPassword = () => {
         <ToastContainer position="top-right" />
         <div className="auth-card">
           <div className="auth-header">
-            <div className="auth-icon" style={{ background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)' }}>
+            <div
+              className="auth-icon"
+              style={{ background: 'linear-gradient(135deg, #16a34a 0%, #22c55e 100%)' }}
+            >
               <BsCheckLg size={48} color="white" />
             </div>
             <h1>Password Reset Successfully!</h1>
@@ -160,29 +170,39 @@ const ResetPassword = () => {
           </div>
 
           <div className="auth-form">
-            <div className="auth-success" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0 }}>
+            <div
+              className="auth-success"
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0 }}
+            >
               <span style={{ fontSize: '32px' }}>✓</span>
               <strong>All Done!</strong>
               <span style={{ fontSize: '14px', fontWeight: 'normal' }}>
-                Your password has been successfully reset. You can now sign in with your new password.
+                Your password has been successfully reset. You can now sign in with your new
+                password.
               </span>
             </div>
-            <p style={{ textAlign: 'center', marginTop: '16px', color: '#64748b', fontSize: '13px' }}>
+            <p
+              style={{ textAlign: 'center', marginTop: '16px', color: '#64748b', fontSize: '13px' }}
+            >
               Redirecting to login in 3 seconds...
             </p>
-            <Link to="/login" className="auth-link" style={{ marginTop: '12px', display: 'block', textAlign: 'center' }}>
+            <Link
+              to="/login"
+              className="auth-link"
+              style={{ marginTop: '12px', display: 'block', textAlign: 'center' }}
+            >
               Go to Sign In
             </Link>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="auth-container">
       <ToastContainer position="top-right" />
-      
+
       <div className="auth-card">
         <div className="auth-header">
           <div className="auth-icon">
@@ -194,9 +214,7 @@ const ResetPassword = () => {
 
         {!tokenValid ? (
           <div className="auth-form">
-            <div className="auth-error">
-              Verifying reset link...
-            </div>
+            <div className="auth-error">Verifying reset link...</div>
           </div>
         ) : (
           <>
@@ -258,11 +276,7 @@ const ResetPassword = () => {
                 {showPassword ? '🙈 Hide Passwords' : '👁️ Show Passwords'}
               </button>
 
-              <button
-                type="submit"
-                className="auth-button"
-                disabled={loading}
-              >
+              <button type="submit" className="auth-button" disabled={loading}>
                 {loading ? 'RESETTING PASSWORD...' : 'RESET PASSWORD'}
               </button>
             </form>
@@ -277,14 +291,16 @@ const ResetPassword = () => {
 
         <div className="auth-footer">
           <p style={{ marginBottom: '12px' }}>✓ Password Requirements:</p>
-          <ul style={{ 
-            listStyle: 'none', 
-            padding: 0, 
-            margin: 0,
-            textAlign: 'left',
-            fontSize: '12px',
-            lineHeight: '1.6'
-          }}>
+          <ul
+            style={{
+              listStyle: 'none',
+              padding: 0,
+              margin: 0,
+              textAlign: 'left',
+              fontSize: '12px',
+              lineHeight: '1.6',
+            }}
+          >
             <li>✓ At least 6 characters</li>
             <li>✓ Uppercase & lowercase letters</li>
             <li>✓ At least one number</li>
@@ -292,7 +308,7 @@ const ResetPassword = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ResetPassword
+export default ResetPassword;

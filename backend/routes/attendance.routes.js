@@ -9,11 +9,13 @@ const {
 	getAttendanceById,
 	adjustAttendance,
 	getTodayAttendance,
-} = require('../controllers/attendance.controller');
+	getAllAttendance,
+} = require('../src/features/attendance/controllers/attendance.controller');
 
 const router = express.Router();
 
 router.get('/today', auth, getTodayAttendance);
+router.get('/all', auth, roleMiddleware(['admin', 'manager', 'supervisor']), getAllAttendance);
 router.get('/me', auth, getAttendance);
 router.post('/biometrics/push', pushBiometric);  
 router.post('/manual/self', auth, manualSelfPunch);

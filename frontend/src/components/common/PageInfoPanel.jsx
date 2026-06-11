@@ -1,15 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '../../lib/utils';
 import {
-  ChevronDown, ChevronUp, BookOpen, AlertTriangle,
-  CheckCircle, Info, XCircle, Loader2, HelpCircle
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  XCircle,
+  Loader2,
+  HelpCircle,
 } from 'lucide-react';
 
 const LEVEL_CONFIG = {
-  error:   { icon: XCircle,       bg: 'bg-red-50 dark:bg-red-900/20',    border: 'border-red-200 dark:border-red-800',    text: 'text-red-700 dark:text-red-300',    badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
-  warn:    { icon: AlertTriangle,  bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-800', text: 'text-amber-700 dark:text-amber-300', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
-  info:    { icon: Info,           bg: 'bg-blue-50 dark:bg-blue-900/20',   border: 'border-blue-200 dark:border-blue-800',   text: 'text-blue-700 dark:text-blue-300',   badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
-  success: { icon: CheckCircle,    bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', text: 'text-green-700 dark:text-green-300', badge: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+  error: {
+    icon: XCircle,
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    border: 'border-red-200 dark:border-red-800',
+    text: 'text-red-700 dark:text-red-300',
+    badge: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  },
+  warn: {
+    icon: AlertTriangle,
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-800',
+    text: 'text-amber-700 dark:text-amber-300',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  },
+  info: {
+    icon: Info,
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    border: 'border-blue-200 dark:border-blue-800',
+    text: 'text-blue-700 dark:text-blue-300',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  },
+  success: {
+    icon: CheckCircle,
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    border: 'border-green-200 dark:border-green-800',
+    text: 'text-green-700 dark:text-green-300',
+    badge: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  },
 };
 
 const StatusItem = ({ level = 'info', message, detail }) => {
@@ -61,19 +92,24 @@ const PageInfoPanel = ({
     }
   };
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = tab => {
     setActiveTab(tab);
     if (tab === 'status' && !statusLoaded && fetchStatus) {
       loadStatus();
     }
   };
 
-  const errorCount  = statusItems.filter(i => i.level === 'error').length;
-  const warnCount   = statusItems.filter(i => i.level === 'warn').length;
-  const hasBadge    = (errorCount + warnCount) > 0;
+  const errorCount = statusItems.filter(i => i.level === 'error').length;
+  const warnCount = statusItems.filter(i => i.level === 'warn').length;
+  const hasBadge = errorCount + warnCount > 0;
 
   return (
-    <div className={cn('mt-6 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden', className)}>
+    <div
+      className={cn(
+        'mt-6 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden',
+        className
+      )}
+    >
       {/* Header toggle */}
       <button
         onClick={() => setOpen(p => !p)}
@@ -85,18 +121,30 @@ const PageInfoPanel = ({
             {title ? `About: ${title}` : 'Page Guide'}
           </span>
           {description && (
-            <span className="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">— {description}</span>
+            <span className="hidden sm:inline text-xs text-slate-500 dark:text-slate-400">
+              — {description}
+            </span>
           )}
           {hasBadge && (
-            <span className={cn(
-              'ml-2 text-xs font-bold rounded-full px-2 py-0.5',
-              errorCount > 0 ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-            )}>
-              {errorCount > 0 ? `${errorCount} error${errorCount > 1 ? 's' : ''}` : `${warnCount} warning${warnCount > 1 ? 's' : ''}`}
+            <span
+              className={cn(
+                'ml-2 text-xs font-bold rounded-full px-2 py-0.5',
+                errorCount > 0
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+              )}
+            >
+              {errorCount > 0
+                ? `${errorCount} error${errorCount > 1 ? 's' : ''}`
+                : `${warnCount} warning${warnCount > 1 ? 's' : ''}`}
             </span>
           )}
         </div>
-        {open ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+        {open ? (
+          <ChevronUp size={16} className="text-slate-400" />
+        ) : (
+          <ChevronDown size={16} className="text-slate-400" />
+        )}
       </button>
 
       {/* Panel body */}
@@ -129,10 +177,12 @@ const PageInfoPanel = ({
                 <AlertTriangle size={14} />
                 Status &amp; Issues
                 {hasBadge && statusLoaded && (
-                  <span className={cn(
-                    'ml-1 text-xs font-bold rounded-full px-1.5 py-0.5',
-                    errorCount > 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
-                  )}>
+                  <span
+                    className={cn(
+                      'ml-1 text-xs font-bold rounded-full px-1.5 py-0.5',
+                      errorCount > 0 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    )}
+                  >
                     {errorCount + warnCount}
                   </span>
                 )}
@@ -147,7 +197,9 @@ const PageInfoPanel = ({
               <div className="grid md:grid-cols-2 gap-6">
                 {steps.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Step-by-Step Guide</h4>
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                      Step-by-Step Guide
+                    </h4>
                     <ol className="space-y-2">
                       {steps.map((step, i) => (
                         <li key={i} className="flex items-start gap-3">
@@ -163,11 +215,15 @@ const PageInfoPanel = ({
 
                 {faqs.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Common Questions</h4>
+                    <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                      Common Questions
+                    </h4>
                     <div className="space-y-3">
                       {faqs.map((faq, i) => (
                         <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Q: {faq.q}</p>
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            Q: {faq.q}
+                          </p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">A: {faq.a}</p>
                         </div>
                       ))}
@@ -176,7 +232,9 @@ const PageInfoPanel = ({
                 )}
 
                 {steps.length === 0 && faqs.length === 0 && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400 col-span-2">No guide content configured for this page.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 col-span-2">
+                    No guide content configured for this page.
+                  </p>
                 )}
               </div>
             )}
@@ -192,12 +250,15 @@ const PageInfoPanel = ({
                 ) : statusItems.length === 0 ? (
                   <div className="flex items-center gap-2 py-4 text-green-600 dark:text-green-400">
                     <CheckCircle size={16} />
-                    <span className="text-sm font-medium">Everything looks good — no issues detected.</span>
+                    <span className="text-sm font-medium">
+                      Everything looks good — no issues detected.
+                    </span>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                      {statusItems.length} item{statusItems.length > 1 ? 's' : ''} need{statusItems.length === 1 ? 's' : ''} attention
+                      {statusItems.length} item{statusItems.length > 1 ? 's' : ''} need
+                      {statusItems.length === 1 ? 's' : ''} attention
                     </p>
                     {statusItems.map((item, i) => (
                       <StatusItem key={i} {...item} />
@@ -206,7 +267,10 @@ const PageInfoPanel = ({
                 )}
                 {statusLoaded && (
                   <button
-                    onClick={() => { setStatusLoaded(false); loadStatus(); }}
+                    onClick={() => {
+                      setStatusLoaded(false);
+                      loadStatus();
+                    }}
                     className="mt-3 text-xs text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
                   >
                     ↻ Refresh status

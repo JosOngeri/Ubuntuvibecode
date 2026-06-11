@@ -15,7 +15,9 @@ const NotificationCenter = () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const response = await api.get(`/notifications/${user.id}?status=pending&limit=20`).catch(() => ({ data: [] }));
+      const response = await api
+        .get(`/notifications/${user.id}?status=pending&limit=20`)
+        .catch(() => ({ data: [] }));
       setNotifications(response.data || []);
       setUnreadCount(response.data?.filter(n => n.status === 'pending').length || 0);
     } catch (err) {
@@ -31,12 +33,12 @@ const NotificationCenter = () => {
     return () => clearInterval(interval);
   }, [user?.id]);
 
-  const markAsRead = async (notificationId) => {
+  const markAsRead = async notificationId => {
     try {
       await api.put(`/notifications/${notificationId}/read`);
-      setNotifications(prev => prev.map(n => 
-        n.id === notificationId ? { ...n, status: 'read' } : n
-      ));
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, status: 'read' } : n))
+      );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
@@ -46,9 +48,9 @@ const NotificationCenter = () => {
   const markAllAsRead = async () => {
     try {
       await Promise.all(
-        notifications.filter(n => n.status === 'pending').map(n => 
-          api.put(`/notifications/${n.id}/read`)
-        )
+        notifications
+          .filter(n => n.status === 'pending')
+          .map(n => api.put(`/notifications/${n.id}/read`))
       );
       setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
       setUnreadCount(0);
@@ -71,7 +73,7 @@ const NotificationCenter = () => {
     return true;
   });
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = type => {
     if (type?.includes('urgent') || type?.includes('escalation')) {
       return <div className="w-2 h-2 bg-red-500 rounded-full" />;
     }
@@ -98,7 +100,9 @@ const NotificationCenter = () => {
         <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Notifications</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                Notifications
+              </h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
@@ -112,8 +116,8 @@ const NotificationCenter = () => {
               <button
                 onClick={() => setFilter('all')}
                 className={`px-3 py-1 text-sm rounded-full ${
-                  filter === 'all' 
-                    ? 'bg-blue-600 text-white' 
+                  filter === 'all'
+                    ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -122,8 +126,8 @@ const NotificationCenter = () => {
               <button
                 onClick={() => setFilter('urgent')}
                 className={`px-3 py-1 text-sm rounded-full ${
-                  filter === 'urgent' 
-                    ? 'bg-red-600 text-white' 
+                  filter === 'urgent'
+                    ? 'bg-red-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -132,8 +136,8 @@ const NotificationCenter = () => {
               <button
                 onClick={() => setFilter('normal')}
                 className={`px-3 py-1 text-sm rounded-full ${
-                  filter === 'normal' 
-                    ? 'bg-slate-600 text-white' 
+                  filter === 'normal'
+                    ? 'bg-slate-600 text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                 }`}
               >
@@ -148,7 +152,7 @@ const NotificationCenter = () => {
             ) : filteredNotifications.length === 0 ? (
               <div className="p-4 text-center text-slate-500">No notifications</div>
             ) : (
-              filteredNotifications.map((notification) => (
+              filteredNotifications.map(notification => (
                 <div
                   key={notification.id}
                   className={`p-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${

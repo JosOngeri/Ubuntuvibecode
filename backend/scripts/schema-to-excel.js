@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 
@@ -51,55 +51,47 @@ function parseSchema(sqlContent) {
 }
 
 // Generate Excel from schema
-function generateSchemaExcel(sqlPath, outputPath) {
+async function generateSchemaExcel(sqlPath, outputPath) {
   const sqlContent = fs.readFileSync(sqlPath, 'utf8');
   const tables = parseSchema(sqlContent);
-  
-  const workbook = XLSX.utils.book_new();
-  
+
+  const workbook = new ExcelJS.Workbook();
+
   // Create summary sheet
-  const summaryData = [
-    ['Table Name', 'Column Count', 'Description'],
+  const summarySheet = workbook.addWorksheet('Table Summary');
+  summarySheet.columns = [
+    { header: 'Table Name', key: 'tableName', width: 30 },
+    { header: 'Column Count', key: 'columnCount', width: 15 },
+    { header: 'Description', key: 'description', width: 40 },
   ];
-  
+
   for (const [tableName, columns] of Object.entries(tables)) {
-    summaryData.push([tableName, columns.length, '']);
+    summarySheet.addRow({ tableName, columnCount: columns.length, description: '' });
   }
-  
-  const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(workbook, summarySheet, 'Table Summary');
-  
+
   // Create individual sheets for each table
   for (const [tableName, columns] of Object.entries(tables)) {
-    const sheetData = [
-      ['Column Name', 'Data Type', 'Nullable', 'Default', 'Constraints'],
+    const worksheet = workbook.addWorksheet(tableName);
+    worksheet.columns = [
+      { header: 'Column Name', key: 'name', width: 25 },
+      { header: 'Data Type', key: 'type', width: 20 },
+      { header: 'Nullable', key: 'nullable', width: 10 },
+      { header: 'Default', key: 'default', width: 15 },
+      { header: 'Constraints', key: 'constraints', width: 40 },
     ];
-    
+
     for (const column of columns) {
-      sheetData.push([
-        column.name,
-        column.type,
-        column.nullable ? 'YES' : 'NO',
-        column.default,
-        column.constraints
-      ]);
+      worksheet.addRow({
+        name: column.name,
+        type: column.type,
+        nullable: column.nullable ? 'YES' : 'NO',
+        default: column.default,
+        constraints: column.constraints,
+      });
     }
-    
-    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-    
-    // Set column widths
-    worksheet['!cols'] = [
-      { wch: 25 }, // Column Name
-      { wch: 20 }, // Data Type
-      { wch: 10 }, // Nullable
-      { wch: 15 }, // Default
-      { wch: 40 }, // Constraints
-    ];
-    
-    XLSX.utils.book_append_sheet(workbook, worksheet, tableName);
   }
-  
-  XLSX.writeFile(workbook, outputPath);
+
+  await workbook.xlsx.writeFile(outputPath);
   console.log(`Schema Excel generated: ${outputPath}`);
   console.log(`Total tables: ${Object.keys(tables).length}`);
 }
@@ -114,7 +106,10 @@ if (!fs.existsSync(sqlPath)) {
   process.exit(1);
 }
 
-generateSchemaExcel(sqlPath, outputPath);
+generateSchemaExcel(sqlPath, outputPath).catch(err => {
+  console.error('Error generating Excel:', err);
+  process.exit(1);
+});
 
 console.log('\nUsage:');
 console.log('  node schema-to-excel.js [sql-file] [output-xlsx]');

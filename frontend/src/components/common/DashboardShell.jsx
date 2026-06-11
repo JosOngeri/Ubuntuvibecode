@@ -1,8 +1,8 @@
-import React from 'react'
-import { BsBriefcase, BsBoxArrowRight } from 'react-icons/bs'
-import TabNavigation from './TabNavigation'
-import StatsCards from './StatsCards'
-import QuickActions from './QuickActions'
+import React from 'react';
+import { BsBriefcase, BsBoxArrowRight } from 'react-icons/bs';
+import TabNavigation from './TabNavigation';
+import StatsCards from './StatsCards';
+import QuickActions from './QuickActions';
 
 const DashboardShell = ({
   title,
@@ -16,14 +16,14 @@ const DashboardShell = ({
   error,
   onRetry,
   persistKey,
-  children
+  children,
 }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -33,7 +33,9 @@ const DashboardShell = ({
           <BsBoxArrowRight className="w-8 h-8 text-red-500" />
         </div>
         <div className="text-center">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Failed to Load Dashboard</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            Failed to Load Dashboard
+          </h2>
           <p className="text-sm text-slate-500 mt-1">{error}</p>
         </div>
         {onRetry && (
@@ -45,7 +47,7 @@ const DashboardShell = ({
           </button>
         )}
       </div>
-    )
+    );
   }
 
   return (
@@ -66,7 +68,7 @@ const DashboardShell = ({
         children
       )}
     </div>
-  )
-}
+  );
+};
 
-export default DashboardShell
+export default DashboardShell;

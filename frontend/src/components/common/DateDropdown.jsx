@@ -1,10 +1,10 @@
-import React from 'react'
-import DatePicker from './DatePicker'
+import React from 'react';
+import DatePicker from './DatePicker';
 
-export default function DateDropdown({ 
-  selectedDate, 
-  onDateChange, 
-  label = "Date",
+export default function DateDropdown({
+  selectedDate,
+  onDateChange,
+  label = 'Date',
   showDay = false,
   yearRange = 10,
 }) {
@@ -16,5 +16,5 @@ export default function DateDropdown({
       showDay={showDay}
       yearRange={yearRange}
     />
-  )
+  );
 }
